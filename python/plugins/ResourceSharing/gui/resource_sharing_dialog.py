@@ -24,7 +24,7 @@ from qgis.PyQt.Qt import QSize
 from qgis.PyQt.QtCore import (
     Qt, pyqtSlot, QRegExp, QUrl, QThread)
 
-from qgis.PyQt.QtGui import QStandardItemModel, QStandardItem
+from qgis.PyQt.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 
 from qgis.PyQt.QtWidgets import (
     QListWidgetItem,
