@@ -80,9 +80,6 @@ class QgsWFSDataSourceURI
     //! Return the URI, avoiding expansion of authentication configuration, which is handled during network access
     const QString uri( bool expandAuthConfig = false ) const;
 
-    //! Return base URL (with SERVICE=WFS parameter if bIncludeServiceWFS=true)
-    QUrl baseURL( bool bIncludeServiceWFS = true ) const;
-
     //! Get WFS version. Can be auto, 1.0.0, 1.1.0 or 2.0.0.
     QString version() const;
 

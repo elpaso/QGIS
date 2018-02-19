@@ -84,6 +84,37 @@ QString QgsWFSSharedData::srsName() const
   return srsName;
 }
 
+QUrl QgsWFSSharedData::baseUrl( bool bIncludeServiceWFS, const Method &method, const QString &request ) const
+{
+  QString endpoint;
+  if ( ! request.isEmpty() )
+  {
+    switch ( method )
+    {
+      case Post:
+        endpoint = mCaps.operationPostEndpoints.contains( operation ) ?
+                   mCaps.operationPostEndpoints[operation] : mURI.param( QgsWFSConstants::URI_PARAM_URL );
+        break;
+      default:
+      case Get:
+        endpoint = mCaps.operationGetEndpoints.contains( operation ) ?
+                   mCaps.operationGetEndpoints[operation] : mURI.param( QgsWFSConstants::URI_PARAM_URL );
+        break;
+    }
+  }
+  else
+  {
+    endpoint = mURI.param( QgsWFSConstants::URI_PARAM_URL );
+  }
+
+  QUrl url( endpoint );
+  if ( bIncludeServiceWFS )
+  {
+    url.addQueryItem( QStringLiteral( "SERVICE" ), QStringLiteral( "WFS" ) );
+  }
+  return url;
+}
+
 bool QgsWFSSharedData::computeFilter( QString &errorMsg )
 {
   errorMsg.clear();

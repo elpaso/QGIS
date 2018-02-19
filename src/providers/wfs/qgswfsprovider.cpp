@@ -1168,7 +1168,7 @@ bool QgsWFSProvider::describeFeatureType( QString &geometryAttribute,
 {
   fields.clear();
 
-  QgsWFSDescribeFeatureType describeFeatureType( mShared->mURI.uri() );
+  QgsWFSDescribeFeatureType describeFeatureType( endpointForOperation( "DescribeFeatureType" ) );
   if ( !describeFeatureType.requestFeatureType( mShared->mWFSVersion,
        mShared->mURI.typeName(), forceSingularTypeNames ) )
   {
@@ -1450,7 +1450,7 @@ bool QgsWFSProvider::sendTransactionDocument( const QDomDocument &doc, QDomDocum
     return false;
   }
 
-  QgsWFSTransactionRequest request( mShared->mURI.uri() );
+  QgsWFSTransactionRequest request( mShared );
   return request.send( doc, serverResponse );
 }
 
@@ -1464,9 +1464,9 @@ QDomElement QgsWFSProvider::createTransactionElement( QDomDocument &doc ) const
   transactionElem.setAttribute( QStringLiteral( "service" ), QStringLiteral( "WFS" ) );
   transactionElem.setAttribute( QStringLiteral( "xmlns:xsi" ), QStringLiteral( "http://www.w3.org/2001/XMLSchema-instance" ) );
 
-  QUrl describeFeatureTypeURL( mShared->mURI.baseURL() );
+  QUrl describeFeatureTypeURL( mShared->baseUrl( true, QgsWFSSharedData::Method::Get, QStringLiteral( "DescribeFeatureType" ) ) );
   // For tests (since the URL contains part of random data, we need to replace it with a fixed content)
-  if ( mShared->mURI.baseURL().toString().contains( QLatin1String( "fake_qgis_http_endpoint" ) ) )
+  if ( mShared->baseUrl( true, QgsWFSSharedData::Method::Get ).toString().contains( QLatin1String( "fake_qgis_http_endpoint" ) ) )
     describeFeatureTypeURL = QUrl( QStringLiteral( "http://fake_qgis_http_endpoint" ) );
   describeFeatureTypeURL.addQueryItem( QStringLiteral( "REQUEST" ), QStringLiteral( "DescribeFeatureType" ) );
   describeFeatureTypeURL.addQueryItem( QStringLiteral( "VERSION" ), QStringLiteral( "1.0.0" ) );

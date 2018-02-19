@@ -249,7 +249,8 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
     for ( int i = 0; i < operationList.size(); ++i )
     {
       QDomElement operation = operationList.at( i ).toElement();
-      if ( operation.attribute( QStringLiteral( "name" ) ) == QLatin1String( "GetFeature" ) )
+      QString name = operation.attribute( QStringLiteral( "name" ) );
+      if ( name == QLatin1String( "GetFeature" ) )
       {
         QDomNodeList operationContraintList = operation.elementsByTagName( QStringLiteral( "Constraint" ) );
         for ( int j = 0; j < operationContraintList.size(); ++j )
@@ -297,6 +298,22 @@ void QgsWfsCapabilities::capabilitiesReplyFinished()
         }
 
         break;
+      }
+      // Search for DCP/HTTP
+      QDomNodeList operationHttpList = operation.elementsByTagName( QStringLiteral( "HTTP" ) );
+      for ( int j = 0; j < operationHttpList.size(); ++j )
+      {
+        QDomElement value = operationHttpList.at( j ).toElement();
+        QDomNodeList httpGetMethodList = value.elementsByTagName( QStringLiteral( "Get" ) );
+        QDomNodeList httpPostMethodList = value.elementsByTagName( QStringLiteral( "Post" ) );
+        if ( httpGetMethodList.size() > 0 )
+        {
+          mCaps.operationGetEndpoints[name] = httpGetMethodList.at( 0 ).toElement().attribute( QStringLiteral( "href" ) );
+        }
+        if ( httpPostMethodList.size() > 0 )
+        {
+          mCaps.operationPostEndpoints[name] = httpPostMethodList.at( 0 ).toElement().attribute( QStringLiteral( "href" ) );
+        }
       }
     }
   }

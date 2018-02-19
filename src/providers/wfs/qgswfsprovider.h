@@ -186,6 +186,7 @@ class QgsWFSProvider : public QgsVectorDataProvider
     QString convertToXML( const QVariant &value );
 
     bool processSQL( const QString &sqlString, QString &errorMsg, QString &warningMsg );
+
 };
 
 #endif /* QGSWFSPROVIDER_H */

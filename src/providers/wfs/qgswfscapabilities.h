@@ -98,6 +98,8 @@ class QgsWfsCapabilities : public QgsWfsRequest
       QList<Function> functionList;
       bool useEPSGColumnFormat; // whether to use EPSG:XXXX srsname
       QList< QString > outputFormats;
+      QMap< QString, QString> operationGetEndpoints;
+      QMap< QString, QString> operationPostEndpoints;
 
       QSet< QString > setAllTypenames;
       QMap< QString, QString> mapUnprefixedTypenameToPrefixedTypename;
@@ -109,6 +111,8 @@ class QgsWfsCapabilities : public QgsWfsRequest
 
     //! return parsed capabilities - requestCapabilities() must be called before
     const Capabilities &capabilities() const { return mCaps; }
+
+    const QString getUriForOperation( const QString &operation )
 
   signals:
     //! emitted when the capabilities have been fully parsed, or an error occurred */

@@ -154,17 +154,6 @@ const QString QgsWFSDataSourceURI::uri( bool expandAuthConfig ) const
   return theURI.uri( expandAuthConfig );
 }
 
-
-QUrl QgsWFSDataSourceURI::baseURL( bool bIncludeServiceWFS ) const
-{
-  QUrl url( mURI.param( QgsWFSConstants::URI_PARAM_URL ) );
-  if ( bIncludeServiceWFS )
-  {
-    url.addQueryItem( QStringLiteral( "SERVICE" ), QStringLiteral( "WFS" ) );
-  }
-  return url;
-}
-
 QString QgsWFSDataSourceURI::version() const
 {
   if ( !mURI.hasParam( QgsWFSConstants::URI_PARAM_VERSION ) )

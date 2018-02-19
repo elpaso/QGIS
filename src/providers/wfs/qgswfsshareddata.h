@@ -21,6 +21,8 @@
 #include "qgswfscapabilities.h"
 #include "qgsogcutils.h"
 
+#include <QUrl>
+
 /**
  * This class holds data, and logic, shared between QgsWFSProvider, QgsWFSFeatureIterator
  *  and QgsWFSFeatureDownloader. It manages the on-disk cache, as a SpatiaLite
@@ -110,6 +112,16 @@ class QgsWFSSharedData : public QObject
 
     //! Return whether the feature download is finished
     bool downloadFinished() const { return mDownloadFinished; }
+
+    //! Network request methods for operation endpoints
+    enum Method
+    {
+      Get,
+      Post
+    };
+
+    //! Return base url for WFS requests
+    QUrl baseUrl( bool bIncludeServiceWFS, const Method &method, const QString &request = QString() ) const;
 
   signals:
 
