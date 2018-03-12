@@ -69,14 +69,29 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
 
   public slots:
     void setValue( const QVariant &value ) override;
+    void attributeChanged( const QString &attribute, const QVariant &value );
+
+    /**
+     * Will be called when the feature changes
+     *
+     * Is forwarded to the slot setValue()
+     *
+     * \param feature The new feature
+     */
+    void setFeature( const QgsFeature &feature ) override;
 
   private:
+
+    void populate( );
+    bool requiresDynamicFilter( const QString &attribute );
+
     QComboBox *mComboBox = nullptr;
     QTableWidget *mTableWidget = nullptr;
     QLineEdit *mLineEdit = nullptr;
 
     QgsValueRelationFieldFormatter::ValueRelationCache mCache;
     QgsVectorLayer *mLayer = nullptr;
+    QVariantMap mFormValues;
 
     bool mEnabled = true;
 
