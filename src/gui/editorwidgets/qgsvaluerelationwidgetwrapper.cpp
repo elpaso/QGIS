@@ -23,6 +23,8 @@
 #include "qgsfilterlineedit.h"
 #include "qgsfeatureiterator.h"
 #include "qgsvaluerelationfieldformatter.h"
+#include "qgsattributeform.h"
+#include "qgsattributes.h"
 
 #include <QStringListModel>
 #include <QCompleter>
@@ -76,6 +78,9 @@ QVariant QgsValueRelationWidgetWrapper::value() const
 
 QWidget *QgsValueRelationWidgetWrapper::createWidget( QWidget *parent )
 {
+  QgsAttributeForm *form = dynamic_cast<QgsAttributeForm *>( parent );
+  if ( form )
+    connect( form, &QgsAttributeForm::attributeChanged, this, &QgsValueRelationWidgetWrapper::attributeChanged );
   if ( config( QStringLiteral( "AllowMulti" ) ).toBool() )
   {
     return new QListWidget( parent );
@@ -91,37 +96,21 @@ QWidget *QgsValueRelationWidgetWrapper::createWidget( QWidget *parent )
 
 void QgsValueRelationWidgetWrapper::initWidget( QWidget *editor )
 {
-  mCache = QgsValueRelationFieldFormatter::createCache( config() );
 
   mComboBox = qobject_cast<QComboBox *>( editor );
   mListWidget = qobject_cast<QListWidget *>( editor );
   mLineEdit = qobject_cast<QLineEdit *>( editor );
 
+  mCache = QgsValueRelationFieldFormatter::createCache( config() );
+  populate();
+
   if ( mComboBox )
   {
-    if ( config( QStringLiteral( "AllowNull" ) ).toBool() )
-    {
-      mComboBox->addItem( tr( "(no selection)" ), QVariant( field().type() ) );
-    }
-
-    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
-    {
-      mComboBox->addItem( element.value, element.key );
-    }
-
     connect( mComboBox, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ),
              this, static_cast<void ( QgsEditorWidgetWrapper::* )()>( &QgsEditorWidgetWrapper::emitValueChanged ) );
   }
   else if ( mListWidget )
   {
-    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
-    {
-      QListWidgetItem *item = nullptr;
-      item = new QListWidgetItem( element.value );
-      item->setData( Qt::UserRole, element.key );
-
-      mListWidget->addItem( item );
-    }
     connect( mListWidget, &QListWidget::itemChanged, this, static_cast<void ( QgsEditorWidgetWrapper::* )()>( &QgsEditorWidgetWrapper::emitValueChanged ) );
   }
   else if ( mLineEdit )
@@ -176,6 +165,60 @@ void QgsValueRelationWidgetWrapper::setValue( const QVariant &value )
         mLineEdit->setText( i.value );
         break;
       }
+    }
+  }
+}
+
+void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, const QVariant &value )
+{
+  mFormValues[ attribute ] = value;
+  // Update combos
+  // TODO: regexp more robust
+  if ( mComboBox && config().value( QStringLiteral( "FilterExpression" ) ).toString().contains( QStringLiteral( "CurrentFormValue('%1')" ).arg( attribute ) ) )
+  {
+    populate();
+  }
+}
+
+void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
+{
+  mFeature = feature;
+  setValue( feature.attribute( mFieldIdx ) );
+  for ( const auto &field : feature.fields() )
+  {
+    mFormValues[ field.name() ] = feature.attribute( field.name() );
+  }
+  populate();
+}
+
+void QgsValueRelationWidgetWrapper::populate( )
+{
+  mComboBox = qobject_cast<QComboBox *>( widget() );
+  mListWidget = qobject_cast<QListWidget *>( widget() );
+
+  if ( mComboBox )
+  {
+    mComboBox->clear();
+    if ( config( QStringLiteral( "AllowNull" ) ).toBool() )
+    {
+      mComboBox->addItem( tr( "(no selection)" ), QVariant( field().type() ) );
+    }
+
+    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
+    {
+      mComboBox->addItem( element.value, element.key );
+    }
+  }
+  else if ( mListWidget )
+  {
+    mListWidget->clear();
+    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
+    {
+      QListWidgetItem *item = nullptr;
+      item = new QListWidgetItem( element.value );
+      item->setData( Qt::UserRole, element.key );
+
+      mListWidget->addItem( item );
     }
   }
 }
