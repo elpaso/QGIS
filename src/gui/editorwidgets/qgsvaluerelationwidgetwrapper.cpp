@@ -101,7 +101,6 @@ void QgsValueRelationWidgetWrapper::initWidget( QWidget *editor )
   mListWidget = qobject_cast<QListWidget *>( editor );
   mLineEdit = qobject_cast<QLineEdit *>( editor );
 
-  mCache = QgsValueRelationFieldFormatter::createCache( config() );
   populate();
 
   if ( mComboBox )
@@ -115,18 +114,6 @@ void QgsValueRelationWidgetWrapper::initWidget( QWidget *editor )
   }
   else if ( mLineEdit )
   {
-    QStringList values;
-    values.reserve( mCache.size() );
-    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &i,  mCache )
-    {
-      values << i.value;
-    }
-
-    QStringListModel *m = new QStringListModel( values, mLineEdit );
-    QCompleter *completer = new QCompleter( m, mLineEdit );
-    completer->setCaseSensitivity( Qt::CaseInsensitive );
-    mLineEdit->setCompleter( completer );
-
     connect( mLineEdit, &QLineEdit::textChanged, this, [ = ]( const QString & value ) { emit valueChanged( value ); } );
   }
 }
@@ -173,8 +160,7 @@ void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, 
 {
   mFormValues[ attribute ] = value;
   // Update combos
-  // TODO: regexp more robust
-  if ( mComboBox && config().value( QStringLiteral( "FilterExpression" ) ).toString().contains( QStringLiteral( "CurrentFormValue('%1')" ).arg( attribute ) ) )
+  if ( requiresDynamicFilter( attribute ) )
   {
     populate();
   }
@@ -183,18 +169,32 @@ void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, 
 void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
 {
   mFeature = feature;
-  setValue( feature.attribute( mFieldIdx ) );
+  bool hasValidValues = false;
   for ( const auto &field : feature.fields() )
   {
-    mFormValues[ field.name() ] = feature.attribute( field.name() );
+    QVariant value = feature.attribute( field.name() );
+    if ( value.isValid( ) )
+    {
+      mFormValues[ field.name() ] = feature.attribute( field.name() );
+      hasValidValues = true;
+    }
   }
-  populate();
+  if ( hasValidValues && requiresDynamicFilter( ) )
+    populate();
+  setValue( feature.attribute( mFieldIdx ) );
 }
 
 void QgsValueRelationWidgetWrapper::populate( )
 {
-  mComboBox = qobject_cast<QComboBox *>( widget() );
-  mListWidget = qobject_cast<QListWidget *>( widget() );
+  // Initialize
+  if ( requiresDynamicFilter( ) && ! mFormValues.isEmpty( ) )
+  {
+    mCache = QgsValueRelationFieldFormatter::createDynamicCache( config(), mFormValues );
+  }
+  else if ( mCache.isEmpty() )
+  {
+    mCache = QgsValueRelationFieldFormatter::createCache( config() );
+  }
 
   if ( mComboBox )
   {
@@ -221,6 +221,30 @@ void QgsValueRelationWidgetWrapper::populate( )
       mListWidget->addItem( item );
     }
   }
+  else if ( mLineEdit )
+  {
+    QStringList values;
+    values.reserve( mCache.size() );
+    Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &i,  mCache )
+    {
+      values << i.value;
+    }
+
+    QStringListModel *m = new QStringListModel( values, mLineEdit );
+    QCompleter *completer = new QCompleter( m, mLineEdit );
+    completer->setCaseSensitivity( Qt::CaseInsensitive );
+    mLineEdit->setCompleter( completer );
+  }
+}
+
+bool QgsValueRelationWidgetWrapper::requiresDynamicFilter( const QString &attribute )
+{
+  QRegularExpression re;
+  if ( ! attribute.isEmpty() )
+    re.setPattern( QgsValueRelationFieldFormatter::CURRENT_FORM_FIELD_VALUE_RE.arg( attribute ) );
+  else
+    re.setPattern( QgsValueRelationFieldFormatter::CURRENT_FORM_FIELD_VALUE_RE.arg( QStringLiteral( ".*" ) ) );
+  return re.match( config().value( QStringLiteral( "FilterExpression" ) ).toString() ).hasMatch();
 }
 
 void QgsValueRelationWidgetWrapper::showIndeterminateState()
