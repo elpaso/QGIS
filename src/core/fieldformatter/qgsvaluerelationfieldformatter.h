@@ -18,9 +18,12 @@
 
 #include "qgis_core.h"
 #include "qgsfieldformatter.h"
+#include "qgsexpression.h"
+#include "qgsexpressioncontext.h"
 
 #include <QVector>
 #include <QVariant>
+
 
 /**
  * \ingroup core
@@ -79,6 +82,23 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
      * \since QGIS 3.2
      */
     static QStringList valueToStringList( const QVariant &value );
+
+    /**
+     * Create a cache for a value relation field.
+     * This can be used to keep the value map in the local memory
+     * if doing multiple lookups in a loop.
+     *
+     * \since QGIS 3.2
+     */
+    static QgsValueRelationFieldFormatter::ValueRelationCache createDynamicCache( const QVariantMap &config, const QVariantMap &formValues );
+
+    /**
+     * Regular expression to find dynamic filtering based on form field values
+     * \see GetCurrentFormFieldValue()
+     *
+     * \since QGIS 3.2
+     */
+    static QString CURRENT_FORM_FIELD_VALUE_RE;
 };
 
 Q_DECLARE_METATYPE( QgsValueRelationFieldFormatter::ValueRelationCache )

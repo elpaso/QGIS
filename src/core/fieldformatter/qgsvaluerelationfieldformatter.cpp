@@ -21,6 +21,8 @@
 
 #include <QSettings>
 
+QString QgsValueRelationFieldFormatter::CURRENT_FORM_FIELD_VALUE_RE = QStringLiteral( "get_current_form_field_value\\(\\s*'(%1)'\\s*\\)" );
+
 bool orderByKeyLessThan( const QgsValueRelationFieldFormatter::ValueRelationItem &p1, const QgsValueRelationFieldFormatter::ValueRelationItem &p2 )
 {
   return qgsVariantLessThan( p1.key, p2.key );
@@ -99,7 +101,7 @@ QVariant QgsValueRelationFieldFormatter::createCache( QgsVectorLayer *layer, int
 
 }
 
-QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatter::createCache( const QVariantMap &config, const QVariantMap &formValues )
+QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatter::createCache( const QVariantMap &config )
 {
   ValueRelationCache cache;
 
@@ -117,12 +119,18 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
   request.setFlags( QgsFeatureRequest::NoGeometry );
   request.setSubsetOfAttributes( QgsAttributeList() << ki << vi );
 
-  // TODO: add formValues to expression context
   if ( !config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty() )
   {
-    QgsExpressionContext context( QgsExpressionContextUtils::globalProjectLayerScopes( layer ) );
-    request.setExpressionContext( context );
-    request.setFilterExpression( config.value( QStringLiteral( "FilterExpression" ) ).toString() );
+    // Skip if there are dynamic attributes
+    QString filter = config.value( QStringLiteral( "FilterExpression" ) ).toString();
+    // Match any field name
+    QRegularExpression re( CURRENT_FORM_FIELD_VALUE_RE.arg( QStringLiteral( ".*" ) ) );
+    if ( ! re.match( filter ).hasMatch() )
+    {
+      QgsExpressionContext context( QgsExpressionContextUtils::globalProjectLayerScopes( layer ) );
+      request.setExpressionContext( context );
+      request.setFilterExpression( config.value( QStringLiteral( "FilterExpression" ) ).toString() );
+    }
   }
 
   QgsFeatureIterator fit = layer->getFeatures( request );
@@ -143,6 +151,54 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
   }
 
   return cache;
+}
+
+QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatter::createDynamicCache( const QVariantMap &config, const QVariantMap &formValues )
+{
+
+  QgsValueRelationFieldFormatter::ValueRelationCache cache;
+
+  QgsVectorLayer *layer = qobject_cast<QgsVectorLayer *>( QgsProject::instance()->mapLayer( config.value( QStringLiteral( "Layer" ) ).toString() ) );
+
+  if ( !layer )
+    return cache;
+
+  QgsFields fields = layer->fields();
+  int ki = fields.indexOf( config.value( QStringLiteral( "Key" ) ).toString() );
+  int vi = fields.indexOf( config.value( QStringLiteral( "Value" ) ).toString() );
+
+  QgsFeatureRequest request;
+
+  request.setFlags( QgsFeatureRequest::NoGeometry );
+  request.setSubsetOfAttributes( QgsAttributeList() << ki << vi );
+
+  if ( !config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty() )
+  {
+    QgsExpressionContext context( QgsExpressionContextUtils::globalProjectLayerScopes( layer ) );
+    context.appendScope( QgsExpressionContextUtils::formScope( formValues ) );
+    request.setExpressionContext( context );
+    request.setFilterExpression( config.value( QStringLiteral( "FilterExpression" ) ).toString() );
+  }
+
+  QgsFeatureIterator fit = layer->getFeatures( request );
+
+  QgsFeature f;
+  while ( fit.nextFeature( f ) )
+  {
+    cache.append( QgsValueRelationFieldFormatter::ValueRelationItem( f.attribute( ki ), f.attribute( vi ).toString() ) );
+  }
+
+  if ( config.value( QStringLiteral( "OrderByValue" ) ).toBool() )
+  {
+    std::sort( cache.begin(), cache.end(), orderByValueLessThan );
+  }
+  else
+  {
+    std::sort( cache.begin(), cache.end(), orderByKeyLessThan );
+  }
+
+  return cache;
+
 }
 
 QStringList QgsValueRelationFieldFormatter::valueToStringList( const QVariant &value )

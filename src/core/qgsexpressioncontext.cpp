@@ -736,6 +736,31 @@ class GetLayerVisibility : public QgsScopedExpressionFunction
 
 };
 
+
+class GetCurrentFormFieldValue : public QgsScopedExpressionFunction
+{
+  public:
+    GetCurrentFormFieldValue( )
+      : QgsScopedExpressionFunction( QStringLiteral( "get_current_form_field_values" ), QgsExpressionFunction::ParameterList() << QStringLiteral( "field_name" ), QStringLiteral( "Record" ) )
+    {}
+
+    QVariant func( const QVariantList &values, const QgsExpressionContext *context, QgsExpression *, const QgsExpressionNodeFunction * ) override
+    {
+      if ( ! context->hasVariable( QStringLiteral( "_current_form_field_values" ) ) )
+      {
+        return QVariant( );
+      }
+      QString fieldName = values.at( 0 ).toString();
+      return context->variable( QStringLiteral( "_current_form_field_values" ) ).toMap( ).value( fieldName, QVariant( ) );
+    }
+
+    QgsScopedExpressionFunction *clone() const override
+    {
+      return new GetCurrentFormFieldValue( );
+    }
+
+};
+
 class GetProcessingParameterValue : public QgsScopedExpressionFunction
 {
   public:
@@ -761,6 +786,15 @@ class GetProcessingParameterValue : public QgsScopedExpressionFunction
 };
 
 ///@endcond
+
+
+QgsExpressionContextScope *QgsExpressionContextUtils::formScope( const QVariantMap &formValues )
+{
+  QgsExpressionContextScope *scope = new QgsExpressionContextScope( QObject::tr( "Form" ) );
+  scope->setVariable( QStringLiteral( "_current_form_field_values" ), formValues );
+  scope->addFunction( QStringLiteral( "get_current_form_field_value" ), new GetCurrentFormFieldValue( ) );
+  return scope;
+}
 
 QgsExpressionContextScope *QgsExpressionContextUtils::projectScope( const QgsProject *project )
 {
@@ -899,6 +933,7 @@ QList<QgsExpressionContextScope *> QgsExpressionContextUtils::globalProjectLayer
     scopes << layerScope( layer );
   return scopes;
 }
+
 
 void QgsExpressionContextUtils::setLayerVariable( QgsMapLayer *layer, const QString &name, const QVariant &value )
 {
@@ -1256,6 +1291,7 @@ void QgsExpressionContextUtils::registerContextFunctions()
   QgsExpression::registerFunction( new GetLayoutItemVariables( nullptr ) );
   QgsExpression::registerFunction( new GetLayerVisibility( QList<QgsMapLayer *>() ) );
   QgsExpression::registerFunction( new GetProcessingParameterValue( QVariantMap() ) );
+  QgsExpression::registerFunction( new GetCurrentFormFieldValue( ) );
 }
 
 bool QgsScopedExpressionFunction::usesGeometry( const QgsExpressionNodeFunction *node ) const

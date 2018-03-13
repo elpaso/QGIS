@@ -740,6 +740,12 @@ class CORE_EXPORT QgsExpressionContextUtils
     static QgsExpressionContextScope *globalScope() SIP_FACTORY;
 
     /**
+     * Creates a new scope which contains functions relating to the current attribute form.
+     * \since QGIS 3.2
+     */
+    static QgsExpressionContextScope *formScope( const QVariantMap &formValues = QVariantMap( ) ) SIP_FACTORY;
+
+    /**
      * Sets a global context variable. This variable will be contained within scopes retrieved via
      * globalScope().
      * \param name variable name
@@ -823,14 +829,14 @@ class CORE_EXPORT QgsExpressionContextUtils
     static QList<QgsExpressionContextScope *> globalProjectLayerScopes( const QgsMapLayer *layer ) SIP_FACTORY;
 
     /**
-     * Sets a layer context variable. This variable will be contained within scopes retrieved via
-     * layerScope().
-     * \param layer map layer
-     * \param name variable name
-     * \param value variable value
-     * \see setLayerVariables()
-     * \see layerScope()
-     */
+      * Sets a layer context variable. This variable will be contained within scopes retrieved via
+      * layerScope().
+      * \param layer map layer
+      * \param name variable name
+      * \param value variable value
+      * \see setLayerVariables()
+      * \see layerScope()
+      */
     static void setLayerVariable( QgsMapLayer *layer, const QString &name, const QVariant &value );
 
     /**
