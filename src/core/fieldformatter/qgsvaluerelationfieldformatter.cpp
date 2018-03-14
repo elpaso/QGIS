@@ -21,7 +21,7 @@
 
 #include <QSettings>
 
-QString QgsValueRelationFieldFormatter::CURRENT_FORM_FIELD_VALUE_RE = QStringLiteral( "get_current_form_field_value\\(\\s*'(%1)'\\s*\\)" );
+QString QgsValueRelationFieldFormatter::FORM_SCOPE_FUNCTIONS_RE = QStringLiteral( "%1\\(\\s*'(%2)'\\s*\\)" );
 
 bool orderByKeyLessThan( const QgsValueRelationFieldFormatter::ValueRelationItem &p1, const QgsValueRelationFieldFormatter::ValueRelationItem &p2 )
 {
@@ -119,18 +119,12 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
   request.setFlags( QgsFeatureRequest::NoGeometry );
   request.setSubsetOfAttributes( QgsAttributeList() << ki << vi );
 
-  if ( !config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty() )
+  // Skip the filter if there are dynamic attributes
+  if ( !( config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty() || expressionRequiresFormScope( config ) ) )
   {
-    // Skip if there are dynamic attributes
-    QString filter = config.value( QStringLiteral( "FilterExpression" ) ).toString();
-    // Match any field name
-    QRegularExpression re( CURRENT_FORM_FIELD_VALUE_RE.arg( QStringLiteral( ".*" ) ) );
-    if ( ! re.match( filter ).hasMatch() )
-    {
-      QgsExpressionContext context( QgsExpressionContextUtils::globalProjectLayerScopes( layer ) );
-      request.setExpressionContext( context );
-      request.setFilterExpression( config.value( QStringLiteral( "FilterExpression" ) ).toString() );
-    }
+    QgsExpressionContext context( QgsExpressionContextUtils::globalProjectLayerScopes( layer ) );
+    request.setExpressionContext( context );
+    request.setFilterExpression( config.value( QStringLiteral( "FilterExpression" ) ).toString() );
   }
 
   QgsFeatureIterator fit = layer->getFeatures( request );
@@ -219,4 +213,20 @@ QStringList QgsValueRelationFieldFormatter::valueToStringList( const QVariant &v
     }
   }
   return checkList;
+}
+
+bool QgsValueRelationFieldFormatter::expressionRequiresFormScope( const QVariantMap &config, const QString &attribute )
+{
+  const QStringList formFunctions( QgsExpressionContextUtils::formScope()->functionNames() );
+  QRegularExpression re;
+  for ( const auto &fname : formFunctions )
+  {
+    if ( ! attribute.isEmpty() )
+      re.setPattern( QgsValueRelationFieldFormatter::FORM_SCOPE_FUNCTIONS_RE.arg( fname, attribute ) );
+    else
+      re.setPattern( QgsValueRelationFieldFormatter::FORM_SCOPE_FUNCTIONS_RE.arg( fname, QStringLiteral( ".*" ) ) );
+    if ( re.match( config.value( QStringLiteral( "FilterExpression" ) ).toString() ).hasMatch() )
+      return true;
+  }
+  return false;
 }

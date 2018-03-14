@@ -83,7 +83,6 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
   private:
 
     void populate( );
-    bool requiresDynamicFilter( const QString &attribute = QString( ) );
 
     QComboBox *mComboBox = nullptr;
     QTableWidget *mTableWidget = nullptr;

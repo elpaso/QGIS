@@ -86,7 +86,10 @@ if doing multiple lookups in a loop.
 .. versionadded:: 3.2
 %End
 
-    static QString CURRENT_FORM_FIELD_VALUE_RE;
+    static QString FORM_SCOPE_FUNCTIONS_RE;
+
+    static bool expressionRequiresFormScope( const QVariantMap &config, const QString &attribute = QString( ) );
+
 };
 
 

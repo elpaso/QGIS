@@ -63,6 +63,7 @@ class GUI_EXPORT QgsAttributeEditorContext
       , mVectorLayerTools( parentContext.mVectorLayerTools )
       , mMapCanvas( parentContext.mMapCanvas )
       , mDistanceArea( parentContext.mDistanceArea )
+      , mFormValues( parentContext.mFormValues )
       , mFormMode( formMode )
     {
       Q_ASSERT( parentContext.vectorLayerTools() );
@@ -189,6 +190,37 @@ class GUI_EXPORT QgsAttributeEditorContext
 
     inline const QgsAttributeEditorContext *parentContext() const { return mParentContext; }
 
+    /**
+     * Return current values from the currently edited form or table row
+     * \see setFormValue()
+     * \since QGIS 3.2
+     */
+    QVariantMap formValues() const { return mFormValues; }
+
+
+    /**
+     * Set a the current value of an attribute in the currently edited form or table row
+     * \param attribute the attribute name
+     * \param value the attribute value
+     * \see formValues()
+     * \since QGIS 3.2
+     */
+    void setFormValue( const QString &attribute, const QVariant &value )
+    {
+      if ( value.isValid( ) )
+        mFormValues[attribute] = value;
+    }
+
+    /**
+     * Clear the current value of an attribute in the currently edited form or table row
+     * \param attribute the attribute name
+     * \see setFormValue()
+     * \see formValues()
+     * \since QGIS 3.2
+     */
+    void clearFormValue( const QString &attribute ) {  mFormValues.remove( attribute ); }
+
+
   private:
     const QgsAttributeEditorContext *mParentContext = nullptr;
     QgsVectorLayer *mLayer = nullptr;
@@ -197,6 +229,8 @@ class GUI_EXPORT QgsAttributeEditorContext
     QgsDistanceArea mDistanceArea;
     QgsRelation mRelation;
     RelationMode mRelationMode = Undefined;
+    //! Store the values of the currently edited form or table row
+    QVariantMap mFormValues;
     FormMode mFormMode = Embed;
     bool mAllowCustomUi = true;
 };

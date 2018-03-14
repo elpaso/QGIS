@@ -98,7 +98,10 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
      *
      * \since QGIS 3.2
      */
-    static QString CURRENT_FORM_FIELD_VALUE_RE;
+    static QString FORM_SCOPE_FUNCTIONS_RE;
+
+    static bool expressionRequiresFormScope( const QVariantMap &config, const QString &attribute = QString( ) );
+
 };
 
 Q_DECLARE_METATYPE( QgsValueRelationFieldFormatter::ValueRelationCache )
