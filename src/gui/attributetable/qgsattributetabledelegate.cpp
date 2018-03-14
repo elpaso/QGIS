@@ -125,6 +125,14 @@ void QgsAttributeTableDelegate::setModelData( QWidget *editor, QAbstractItemMode
       vl->endEditCommand();
     }
   }
+  // Update editor context with changed values
+  QgsAttributeTableModel *mModel = const_cast<QgsAttributeTableModel *>( masterModel( model ) );
+  if ( mModel )
+  {
+    QgsAttributeEditorContext editorContext( mModel->editorContext( ) );
+    editorContext.setFormValue( vl->fields().names().at( fieldIdx ), newValue );
+    mModel->setEditorContext( editorContext );
+  }
 }
 
 void QgsAttributeTableDelegate::setEditorData( QWidget *editor, const QModelIndex &index ) const

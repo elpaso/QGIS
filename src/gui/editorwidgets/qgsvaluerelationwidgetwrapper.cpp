@@ -101,6 +101,8 @@ void QgsValueRelationWidgetWrapper::initWidget( QWidget *editor )
   mListWidget = qobject_cast<QListWidget *>( editor );
   mLineEdit = qobject_cast<QLineEdit *>( editor );
 
+  mFormValues = context().formValues();
+
   populate();
 
   if ( mComboBox )
@@ -160,7 +162,7 @@ void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, 
 {
   mFormValues[ attribute ] = value;
   // Update combos
-  if ( requiresDynamicFilter( attribute ) )
+  if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), attribute ) )
   {
     populate();
   }
@@ -179,7 +181,7 @@ void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
       hasValidValues = true;
     }
   }
-  if ( hasValidValues && requiresDynamicFilter( ) )
+  if ( hasValidValues && QgsValueRelationFieldFormatter::expressionRequiresFormScope( config() ) )
     populate();
   setValue( feature.attribute( mFieldIdx ) );
 }
@@ -187,7 +189,7 @@ void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
 void QgsValueRelationWidgetWrapper::populate( )
 {
   // Initialize
-  if ( requiresDynamicFilter( ) && ! mFormValues.isEmpty( ) )
+  if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) && ! mFormValues.isEmpty( ) )
   {
     mCache = QgsValueRelationFieldFormatter::createDynamicCache( config(), mFormValues );
   }
@@ -235,16 +237,6 @@ void QgsValueRelationWidgetWrapper::populate( )
     completer->setCaseSensitivity( Qt::CaseInsensitive );
     mLineEdit->setCompleter( completer );
   }
-}
-
-bool QgsValueRelationWidgetWrapper::requiresDynamicFilter( const QString &attribute )
-{
-  QRegularExpression re;
-  if ( ! attribute.isEmpty() )
-    re.setPattern( QgsValueRelationFieldFormatter::CURRENT_FORM_FIELD_VALUE_RE.arg( attribute ) );
-  else
-    re.setPattern( QgsValueRelationFieldFormatter::CURRENT_FORM_FIELD_VALUE_RE.arg( QStringLiteral( ".*" ) ) );
-  return re.match( config().value( QStringLiteral( "FilterExpression" ) ).toString() ).hasMatch();
 }
 
 void QgsValueRelationWidgetWrapper::showIndeterminateState()
