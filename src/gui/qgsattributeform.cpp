@@ -696,6 +696,16 @@ void QgsAttributeForm::onAttributeChanged( const QVariant &value )
 
   bool signalEmitted = false;
 
+  // Emit always, even if the value is et back to the old one,
+  // to allow for other widgets to update themselves
+  emit formValueChanged( eww->field().name(), value );
+
+  const QVariant oldValue = mFeature.attribute( eww->fieldIdx() );
+
+  // Safety check, if we receive the same value again, no reason to do anything
+  if ( oldValue == value && oldValue.isNull() == value.isNull() )
+    return;
+
   if ( mValuesInitialized )
     mDirty = true;
 

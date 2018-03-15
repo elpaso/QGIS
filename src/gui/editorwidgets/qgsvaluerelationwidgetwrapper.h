@@ -68,8 +68,20 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
     bool valid() const override;
 
   public slots:
+
     void setValue( const QVariant &value ) override;
-    void attributeChanged( const QString &attribute, const QVariant &value );
+
+    /**
+     * Will be called when a value in the current edited form or table row
+     * changes
+     *
+     * Update widget cache if the value is used in the filter expression and
+     * stores current field values to be used in expression form scope context
+     *
+     * \param attribute The attribute name
+     * \param value The current value
+     */
+    void formValueChanged( const QString &attribute, const QVariant &value );
 
     /**
      * Will be called when the feature changes

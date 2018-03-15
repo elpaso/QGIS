@@ -174,7 +174,8 @@ class GUI_EXPORT QgsAttributeForm : public QWidget
   signals:
 
     /**
-     * Notifies about changes of attributes
+     * Notifies about changes of attributes, this signal is not emitted when the value is set
+     * back to the original one.
      *
      * \param attribute The name of the attribute that changed.
      * \param value     The new value of the attribute.
@@ -191,6 +192,15 @@ class GUI_EXPORT QgsAttributeForm : public QWidget
      * \since QGIS 3.0.1
      */
     void widgetValueChanged( const QString &attribute, const QVariant &value, bool attributeChanged );
+
+    /**
+     * Notifies about changes of value in one of the form fields, this signal is always emitted.
+     *
+     * \param attribute The name of the attribute that changed.
+     * \param value     The new value of the attribute.
+     * \since QGIS 3.2
+     */
+    void formValueChanged( const QString &attribute, const QVariant &value );
 
     /**
      * Will be emitted before the feature is saved. Use this signal to perform sanity checks.

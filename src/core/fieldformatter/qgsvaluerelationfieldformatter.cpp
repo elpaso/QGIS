@@ -150,6 +150,9 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
 QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatter::createDynamicCache( const QVariantMap &config, const QVariantMap &formValues )
 {
 
+  qDebug( ) << formValues;
+
+
   QgsValueRelationFieldFormatter::ValueRelationCache cache;
 
   QgsVectorLayer *layer = qobject_cast<QgsVectorLayer *>( QgsProject::instance()->mapLayer( config.value( QStringLiteral( "Layer" ) ).toString() ) );

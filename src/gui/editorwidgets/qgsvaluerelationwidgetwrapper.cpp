@@ -89,7 +89,7 @@ QWidget *QgsValueRelationWidgetWrapper::createWidget( QWidget *parent )
 {
   QgsAttributeForm *form = dynamic_cast<QgsAttributeForm *>( parent );
   if ( form )
-    connect( form, &QgsAttributeForm::attributeChanged, this, &QgsValueRelationWidgetWrapper::attributeChanged );
+    connect( form, &QgsAttributeForm::formValueChanged, this, &QgsValueRelationWidgetWrapper::formValueChanged );
   if ( config( QStringLiteral( "AllowMulti" ) ).toBool() )
   {
     return new QTableWidget( parent );
@@ -110,6 +110,7 @@ void QgsValueRelationWidgetWrapper::initWidget( QWidget *editor )
   mTableWidget = qobject_cast<QTableWidget *>( editor );
   mLineEdit = qobject_cast<QLineEdit *>( editor );
 
+  // Read current initial form values from the editor context
   mFormValues = context().formValues();
 
   populate();
@@ -209,10 +210,16 @@ void QgsValueRelationWidgetWrapper::setValue( const QVariant &value )
   }
 }
 
-void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, const QVariant &value )
+void QgsValueRelationWidgetWrapper::formValueChanged( const QString &attribute, const QVariant &value )
 {
+  // Exit if the values has not changed: no need to repopulate
+  if ( mFormValues.contains( attribute ) && mFormValues[ attribute ] == value )
+  {
+    return;
+  }
+  // Store/update the value
   mFormValues[ attribute ] = value;
-  // Update combos
+  // Update combos if the value used in the filter expression has changed
   if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), attribute ) )
   {
     populate();
@@ -222,17 +229,19 @@ void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, 
 void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
 {
   mFeature = feature;
+  mFormValues.clear();
   bool hasValidValues = false;
-  for ( const auto &field : feature.fields() )
+  const QgsFields fields( feature.fields( ) );
+  for ( const auto &field : fields )
   {
-    QVariant value = feature.attribute( field.name() );
+    QVariant value = feature.attribute( field.name( ) );
     if ( value.isValid( ) )
     {
-      mFormValues[ field.name() ] = feature.attribute( field.name() );
+      mFormValues[ field.name( ) ] = feature.attribute( field.name( ) );
       hasValidValues = true;
     }
   }
-  if ( hasValidValues && QgsValueRelationFieldFormatter::expressionRequiresFormScope( config() ) )
+  if ( hasValidValues && QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) )
     populate();
   setValue( feature.attribute( mFieldIdx ) );
 }
@@ -242,19 +251,19 @@ void QgsValueRelationWidgetWrapper::populate( )
   // Initialize
   if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) && ! mFormValues.isEmpty( ) )
   {
-    mCache = QgsValueRelationFieldFormatter::createDynamicCache( config(), mFormValues );
+    mCache = QgsValueRelationFieldFormatter::createDynamicCache( config( ), mFormValues );
   }
   else if ( mCache.isEmpty() )
   {
-    mCache = QgsValueRelationFieldFormatter::createCache( config() );
+    mCache = QgsValueRelationFieldFormatter::createCache( config( ) );
   }
 
   if ( mComboBox )
   {
     mComboBox->clear();
-    if ( config( QStringLiteral( "AllowNull" ) ).toBool() )
+    if ( config( QStringLiteral( "AllowNull" ) ).toBool( ) )
     {
-      mComboBox->addItem( tr( "(no selection)" ), QVariant( field().type() ) );
+      mComboBox->addItem( tr( "(no selection)" ), QVariant( field().type( ) ) );
     }
 
     Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
