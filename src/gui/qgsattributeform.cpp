@@ -692,6 +692,10 @@ void QgsAttributeForm::onAttributeChanged( const QVariant &value )
   QgsEditorWidgetWrapper *eww = qobject_cast<QgsEditorWidgetWrapper *>( sender() );
   Q_ASSERT( eww );
 
+  // Emit always, even if the value is et back to the old one,
+  // to allow for other widgets to update themselves
+  emit formValueChanged( eww->field().name(), value );
+
   const QVariant oldValue = mFeature.attribute( eww->fieldIdx() );
 
   // Safety check, if we receive the same value again, no reason to do anything

@@ -67,8 +67,18 @@ QWidget *QgsAttributeTableDelegate::createEditor( QWidget *parent, const QStyleO
     return nullptr;
 
   int fieldIdx = index.model()->data( index, QgsAttributeTableModel::FieldIndexRole ).toInt();
-
   QgsAttributeEditorContext context( masterModel( index.model() )->editorContext(), QgsAttributeEditorContext::Popup );
+
+  // Update the editor form context with values from all the fields in the model row
+  for ( int i = 0; i < masterModel( index.model() )->columnCount( ) - 1; i++ )
+  {
+    QModelIndex idx = masterModel( index.model( ) )->index( index.row(), i );
+    bool ok;
+    const int fidx( index.model()->data( idx, QgsAttributeTableModel::FieldIndexRole ).toInt( &ok ) );
+    if ( ok )
+      context.setFormValue( vl->fields().names().at( fidx ), idx.model()->data( idx, Qt::EditRole ).toString() );
+  }
+
   QgsEditorWidgetWrapper *eww = QgsGui::editorWidgetRegistry()->create( vl, fieldIdx, nullptr, parent, context );
   QWidget *w = eww->widget();
 
@@ -125,6 +135,7 @@ void QgsAttributeTableDelegate::setModelData( QWidget *editor, QAbstractItemMode
       vl->endEditCommand();
     }
   }
+  /* TODO: check if this can be removed!
   // Update editor context with changed values
   QgsAttributeTableModel *mModel = const_cast<QgsAttributeTableModel *>( masterModel( model ) );
   if ( mModel )
@@ -133,6 +144,7 @@ void QgsAttributeTableDelegate::setModelData( QWidget *editor, QAbstractItemMode
     editorContext.setFormValue( vl->fields().names().at( fieldIdx ), newValue );
     mModel->setEditorContext( editorContext );
   }
+  */
 }
 
 void QgsAttributeTableDelegate::setEditorData( QWidget *editor, const QModelIndex &index ) const
