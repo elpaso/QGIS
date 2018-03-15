@@ -57,14 +57,14 @@ Constructor for QgsValueRelationFieldFormatter.
     virtual QVariant createCache( QgsVectorLayer *layer, int fieldIndex, const QVariantMap &config ) const;
 
 
-    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config );
+    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config, const QVariantMap &formValues = QVariantMap() );
 %Docstring
 Create a cache for a value relation field.
 This can be used to keep the value map in the local memory
 if doing multiple lookups in a loop.
 
-.. versionadded:: 3.0
-%End
+:param config: The widget configuration
+:param formValues: An optional map of current form/table row values
 
     static QStringList valueToStringList( const QVariant &value );
 %Docstring
@@ -76,14 +76,9 @@ Utility to convert an array or a string representation of and array ``value`` to
 
 .. versionadded:: 3.2
 %End
+:return: A kvp list of values for the widget
 
-    static QgsValueRelationFieldFormatter::ValueRelationCache createDynamicCache( const QVariantMap &config, const QVariantMap &formValues );
-%Docstring
-Create a cache for a value relation field.
-This can be used to keep the value map in the local memory
-if doing multiple lookups in a loop.
-
-.. versionadded:: 3.2
+.. versionadded:: 3.0
 %End
 
     static QString FORM_SCOPE_FUNCTIONS_RE;

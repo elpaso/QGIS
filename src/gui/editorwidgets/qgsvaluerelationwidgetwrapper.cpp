@@ -210,19 +210,21 @@ void QgsValueRelationWidgetWrapper::setValue( const QVariant &value )
   }
 }
 
-void QgsValueRelationWidgetWrapper::formValueChanged( const QString &attribute, const QVariant &value )
+void QgsValueRelationWidgetWrapper::formValueChanged( const QString &attribute, const QVariant &newValue )
 {
-  // Exit if the values has not changed: no need to repopulate
-  if ( mFormValues.contains( attribute ) && mFormValues[ attribute ] == value )
+  // Exit if the value has not changed: no need to repopulate
+  if ( mFormValues.contains( attribute ) && mFormValues[ attribute ] == newValue )
   {
     return;
   }
   // Store/update the value
-  mFormValues[ attribute ] = value;
+  mFormValues[ attribute ] = newValue;
   // Update combos if the value used in the filter expression has changed
   if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), attribute ) )
   {
     populate();
+    // Restore value
+    setValue( value( ) );
   }
 }
 
@@ -251,7 +253,7 @@ void QgsValueRelationWidgetWrapper::populate( )
   // Initialize
   if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) && ! mFormValues.isEmpty( ) )
   {
-    mCache = QgsValueRelationFieldFormatter::createDynamicCache( config( ), mFormValues );
+    mCache = QgsValueRelationFieldFormatter::createCache( config( ), mFormValues );
   }
   else if ( mCache.isEmpty() )
   {
@@ -279,7 +281,6 @@ void QgsValueRelationWidgetWrapper::populate( )
       QListWidgetItem *item = nullptr;
       item = new QListWidgetItem( element.value );
       item->setData( Qt::UserRole, element.key );
-
       mListWidget->addItem( item );
     }
   }

@@ -87,10 +87,13 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
      * Create a cache for a value relation field.
      * This can be used to keep the value map in the local memory
      * if doing multiple lookups in a loop.
+     * \param config The widget configuration
+     * \param formValues An optional map of current form/table row values
+     * \return A kvp list of values for the widget
      *
-     * \since QGIS 3.2
+     * \since QGIS 3.0
      */
-    static QgsValueRelationFieldFormatter::ValueRelationCache createDynamicCache( const QVariantMap &config, const QVariantMap &formValues );
+    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config, const QVariantMap &formValues = QVariantMap() );
 
     /**
      * Regular expression to find dynamic filtering based on form field values

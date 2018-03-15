@@ -101,7 +101,7 @@ QVariant QgsValueRelationFieldFormatter::createCache( QgsVectorLayer *layer, int
 
 }
 
-QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatter::createCache( const QVariantMap &config )
+QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatter::createCache( const QVariantMap &config, const QVariantMap &formValues )
 {
   ValueRelationCache cache;
 
@@ -119,10 +119,12 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
   request.setFlags( QgsFeatureRequest::NoGeometry );
   request.setSubsetOfAttributes( QgsAttributeList() << ki << vi );
 
-  // Skip the filter if there are dynamic attributes
-  if ( !( config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty() || expressionRequiresFormScope( config ) ) )
+  // Skip the filter if the form scope is required and there are no form values
+  if ( !( config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty() || ( expressionRequiresFormScope( config ) &&  formValues.isEmpty( ) ) ) )
   {
     QgsExpressionContext context( QgsExpressionContextUtils::globalProjectLayerScopes( layer ) );
+    if ( ! formValues.isEmpty() )
+      context.appendScope( QgsExpressionContextUtils::formScope( formValues ) );
     request.setExpressionContext( context );
     request.setFilterExpression( config.value( QStringLiteral( "FilterExpression" ) ).toString() );
   }
@@ -147,6 +149,7 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
   return cache;
 }
 
+/*
 QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatter::createDynamicCache( const QVariantMap &config, const QVariantMap &formValues )
 {
 
@@ -197,6 +200,7 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
   return cache;
 
 }
+*/
 
 QStringList QgsValueRelationFieldFormatter::valueToStringList( const QVariant &value )
 {
