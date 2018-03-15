@@ -72,9 +72,9 @@ QWidget *QgsAttributeTableDelegate::createEditor( QWidget *parent, const QStyleO
   // Update the editor form context with values from all the fields in the model row
   for ( int i = 0; i < masterModel( index.model() )->columnCount( ) - 1; i++ )
   {
-    QModelIndex idx = masterModel( index.model( ) )->index( index.row(), i );
+    QModelIndex idx = index.model( )->index( index.row(), i );
     bool ok;
-    const int fidx( index.model()->data( idx, QgsAttributeTableModel::FieldIndexRole ).toInt( &ok ) );
+    const int fidx( idx.model()->data( idx, QgsAttributeTableModel::FieldIndexRole ).toInt( &ok ) );
     if ( ok )
       context.setFormValue( vl->fields().names().at( fidx ), idx.model()->data( idx, Qt::EditRole ).toString() );
   }

@@ -79,9 +79,9 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
      * stores current field values to be used in expression form scope context
      *
      * \param attribute The attribute name
-     * \param value The current value
+     * \param newValue The new current value
      */
-    void formValueChanged( const QString &attribute, const QVariant &value );
+    void formValueChanged( const QString &attribute, const QVariant &newValue );
 
     /**
      * Will be called when the feature changes
