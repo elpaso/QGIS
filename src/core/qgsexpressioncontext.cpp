@@ -741,7 +741,7 @@ class GetCurrentFormFieldValue : public QgsScopedExpressionFunction
 {
   public:
     GetCurrentFormFieldValue( )
-      : QgsScopedExpressionFunction( QStringLiteral( "get_current_form_field_value" ), QgsExpressionFunction::ParameterList() << QStringLiteral( "field_name" ), QStringLiteral( "Record" ) )
+      : QgsScopedExpressionFunction( QStringLiteral( "get_current_form_field_value" ), QgsExpressionFunction::ParameterList() << QStringLiteral( "field_name" ), QStringLiteral( "Record and Attributes" ) )
     {}
 
     QVariant func( const QVariantList &values, const QgsExpressionContext *context, QgsExpression *, const QgsExpressionNodeFunction * ) override
