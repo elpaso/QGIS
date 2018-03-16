@@ -194,15 +194,6 @@ class GUI_EXPORT QgsAttributeForm : public QWidget
     void widgetValueChanged( const QString &attribute, const QVariant &value, bool attributeChanged );
 
     /**
-     * Notifies about changes of value in one of the form fields, this signal is always emitted.
-     *
-     * \param attribute The name of the attribute that changed.
-     * \param value     The new value of the attribute.
-     * \since QGIS 3.2
-     */
-    void formValueChanged( const QString &attribute, const QVariant &value );
-
-    /**
      * Will be emitted before the feature is saved. Use this signal to perform sanity checks.
      * You can set the parameter ok to false to notify the form that you don't want it to be saved.
      * If you want the form to be saved, leave the parameter untouched.
@@ -362,6 +353,8 @@ class GUI_EXPORT QgsAttributeForm : public QWidget
     void runSearchSelect( QgsVectorLayer::SelectBehavior behavior );
 
     QString createFilterExpression() const;
+
+    //void updateWidgetFeature( QgsEditorWidgetWrapper *w );
 
     //! constraints management
     void updateAllConstraints();

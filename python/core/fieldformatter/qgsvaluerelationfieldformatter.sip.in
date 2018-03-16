@@ -57,15 +57,6 @@ Constructor for QgsValueRelationFieldFormatter.
     virtual QVariant createCache( QgsVectorLayer *layer, int fieldIndex, const QVariantMap &config ) const;
 
 
-    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config, const QVariantMap &formValues = QVariantMap() );
-%Docstring
-Create a cache for a value relation field.
-This can be used to keep the value map in the local memory
-if doing multiple lookups in a loop.
-
-:param config: The widget configuration
-:param formValues: An optional map of current form/table row values
-
     static QStringList valueToStringList( const QVariant &value );
 %Docstring
 Utility to convert an array or a string representation of and array ``value`` to a string list
@@ -76,6 +67,16 @@ Utility to convert an array or a string representation of and array ``value`` to
 
 .. versionadded:: 3.2
 %End
+
+    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config, const QgsFeature &formFeature = QgsFeature() );
+%Docstring
+Create a cache for a value relation field.
+This can be used to keep the value map in the local memory
+if doing multiple lookups in a loop.
+
+:param config: The widget configuration
+:param formFeature: The feature currently being edited with current attribute values
+
 :return: A kvp list of values for the widget
 
 .. versionadded:: 3.0

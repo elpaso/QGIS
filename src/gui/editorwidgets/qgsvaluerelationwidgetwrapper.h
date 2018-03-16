@@ -81,7 +81,7 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
      * \param attribute The attribute name
      * \param newValue The new current value
      */
-    void formValueChanged( const QString &attribute, const QVariant &newValue );
+    void attributeChanged( const QString &attribute, const QVariant &newValue );
 
     /**
      * Will be called when the feature changes
@@ -91,6 +91,7 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
      * \param feature The new feature
      */
     void setFeature( const QgsFeature &feature ) override;
+
 
   private:
 
@@ -102,6 +103,7 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
 
     QgsValueRelationFieldFormatter::ValueRelationCache mCache;
     QgsVectorLayer *mLayer = nullptr;
+    //! Keep memory of the current values: to avoid rebuilding the cache when it's not needed
     QVariantMap mFormValues;
 
     bool mEnabled = true;

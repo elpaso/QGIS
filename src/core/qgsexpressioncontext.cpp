@@ -741,17 +741,18 @@ class GetCurrentFormFieldValue : public QgsScopedExpressionFunction
 {
   public:
     GetCurrentFormFieldValue( )
-      : QgsScopedExpressionFunction( QStringLiteral( "get_current_form_field_value" ), QgsExpressionFunction::ParameterList() << QStringLiteral( "field_name" ), QStringLiteral( "Record and Attributes" ) )
+      : QgsScopedExpressionFunction( QStringLiteral( "get_current_form_field_value" ), QgsExpressionFunction::ParameterList() << QStringLiteral( "field_name" ), QStringLiteral( "Form" ) )
     {}
 
     QVariant func( const QVariantList &values, const QgsExpressionContext *context, QgsExpression *, const QgsExpressionNodeFunction * ) override
     {
-      if ( ! context->hasVariable( QStringLiteral( "_current_form_field_values" ) ) )
+      QString fieldName( values.at( 0 ).toString() );
+      QgsFeature feat( context->feature() );
+      if ( fieldName.isEmpty() || ! feat.isValid( ) )
       {
-        return QVariant( );
+        return QVariant();
       }
-      QString fieldName = values.at( 0 ).toString();
-      return context->variable( QStringLiteral( "_current_form_field_values" ) ).toMap( ).value( fieldName, QVariant( ) );
+      return feat.attribute( fieldName ) ;
     }
 
     QgsScopedExpressionFunction *clone() const override
@@ -788,11 +789,12 @@ class GetProcessingParameterValue : public QgsScopedExpressionFunction
 ///@endcond
 
 
-QgsExpressionContextScope *QgsExpressionContextUtils::formScope( const QVariantMap &formValues )
+QgsExpressionContextScope *QgsExpressionContextUtils::formScope( const QgsFeature &formFeature )
 {
   QgsExpressionContextScope *scope = new QgsExpressionContextScope( QObject::tr( "Form" ) );
-  scope->setVariable( QStringLiteral( "_current_form_field_values" ), formValues );
+  scope->setFeature( formFeature );
   scope->addFunction( QStringLiteral( "get_current_form_field_value" ), new GetCurrentFormFieldValue( ) );
+  // TODO: scope->addFunction( QStringLiteral( "get_current_form_geometry" ), new GetCurrentFormFieldValue( ) );
   return scope;
 }
 

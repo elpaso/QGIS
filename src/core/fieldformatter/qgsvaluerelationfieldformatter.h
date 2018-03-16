@@ -66,15 +66,6 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
     QVariant createCache( QgsVectorLayer *layer, int fieldIndex, const QVariantMap &config ) const override;
 
     /**
-     * Create a cache for a value relation field.
-     * This can be used to keep the value map in the local memory
-     * if doing multiple lookups in a loop.
-     *
-     * \since QGIS 3.0
-     */
-    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config );
-
-    /**
      * Utility to convert an array or a string representation of and array \a value to a string list
      *
      * \param value The value to be converted
@@ -88,12 +79,12 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
      * This can be used to keep the value map in the local memory
      * if doing multiple lookups in a loop.
      * \param config The widget configuration
-     * \param formValues An optional map of current form/table row values
+     * \param formFeature The feature currently being edited with current attribute values
      * \return A kvp list of values for the widget
      *
      * \since QGIS 3.0
      */
-    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config, const QVariantMap &formValues = QVariantMap() );
+    static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config, const QgsFeature &formFeature = QgsFeature() );
 
     /**
      * Regular expression to find dynamic filtering based on form field values

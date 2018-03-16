@@ -101,7 +101,7 @@ QVariant QgsValueRelationFieldFormatter::createCache( QgsVectorLayer *layer, int
 
 }
 
-QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatter::createCache( const QVariantMap &config, const QVariantMap &formValues )
+QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatter::createCache( const QVariantMap &config, const QgsFeature &formFeature )
 {
   ValueRelationCache cache;
 
@@ -120,11 +120,11 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
   request.setSubsetOfAttributes( QgsAttributeList() << ki << vi );
 
   // Skip the filter if the form scope is required and there are no form values
-  if ( !( config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty() || ( expressionRequiresFormScope( config ) &&  formValues.isEmpty( ) ) ) )
+  if ( !( config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty() || ( expressionRequiresFormScope( config ) && ! formFeature.isValid( ) ) ) )
   {
     QgsExpressionContext context( QgsExpressionContextUtils::globalProjectLayerScopes( layer ) );
-    if ( ! formValues.isEmpty() )
-      context.appendScope( QgsExpressionContextUtils::formScope( formValues ) );
+    if ( formFeature.isValid( ) )
+      context.appendScope( QgsExpressionContextUtils::formScope( formFeature ) );
     request.setExpressionContext( context );
     request.setFilterExpression( config.value( QStringLiteral( "FilterExpression" ) ).toString() );
   }

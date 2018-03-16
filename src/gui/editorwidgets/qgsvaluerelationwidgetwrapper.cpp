@@ -89,7 +89,7 @@ QWidget *QgsValueRelationWidgetWrapper::createWidget( QWidget *parent )
 {
   QgsAttributeForm *form = dynamic_cast<QgsAttributeForm *>( parent );
   if ( form )
-    connect( form, &QgsAttributeForm::formValueChanged, this, &QgsValueRelationWidgetWrapper::formValueChanged );
+    connect( form, &QgsAttributeForm::attributeChanged, this, &QgsValueRelationWidgetWrapper::attributeChanged );
   if ( config( QStringLiteral( "AllowMulti" ) ).toBool() )
   {
     return new QTableWidget( parent );
@@ -210,23 +210,25 @@ void QgsValueRelationWidgetWrapper::setValue( const QVariant &value )
   }
 }
 
-void QgsValueRelationWidgetWrapper::formValueChanged( const QString &attribute, const QVariant &newValue )
+void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, const QVariant &newValue )
 {
   // Exit if the value has not changed: no need to repopulate
   if ( mFormValues.contains( attribute ) && mFormValues[ attribute ] == newValue )
   {
     return;
   }
-  // Store/update the value
   mFormValues[ attribute ] = newValue;
   // Update combos if the value used in the filter expression has changed
+  mFeature.setAttribute( attribute, newValue );
   if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), attribute ) )
   {
     populate();
     // Restore value
     setValue( value( ) );
   }
+  qDebug( ) << "Attribute " << attribute << " changed to " << newValue;
 }
+
 
 void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
 {
@@ -248,12 +250,13 @@ void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
   setValue( feature.attribute( mFieldIdx ) );
 }
 
+
 void QgsValueRelationWidgetWrapper::populate( )
 {
   // Initialize
   if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) && ! mFormValues.isEmpty( ) )
   {
-    mCache = QgsValueRelationFieldFormatter::createCache( config( ), mFormValues );
+    mCache = QgsValueRelationFieldFormatter::createCache( config( ), mFeature );
   }
   else if ( mCache.isEmpty() )
   {

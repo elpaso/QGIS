@@ -743,7 +743,7 @@ class CORE_EXPORT QgsExpressionContextUtils
      * Creates a new scope which contains functions relating to the current attribute form.
      * \since QGIS 3.2
      */
-    static QgsExpressionContextScope *formScope( const QVariantMap &formValues = QVariantMap( ) ) SIP_FACTORY;
+    static QgsExpressionContextScope *formScope( const QgsFeature &formFeature = QgsFeature( ) ) SIP_FACTORY;
 
     /**
      * Sets a global context variable. This variable will be contained within scopes retrieved via

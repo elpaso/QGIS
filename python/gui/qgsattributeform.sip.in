@@ -161,16 +161,6 @@ Notifies about changes of attributes
 .. versionadded:: 3.0.1
 %End
 
-    void formValueChanged( const QString &attribute, const QVariant &value );
-%Docstring
-Notifies about changes of value in one of the form fields, this signal is always emitted.
-
-:param attribute: The name of the attribute that changed.
-:param value:     The new value of the attribute.
-
-.. versionadded:: 3.2
-%End
-
 
     void featureSaved( const QgsFeature &feature );
 %Docstring
