@@ -128,6 +128,10 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
     request.setExpressionContext( context );
     request.setFilterExpression( config.value( QStringLiteral( "FilterExpression" ) ).toString() );
   }
+  else
+  {
+    qDebug( ) << "Skipping cache filters ...";
+  }
 
   QgsFeatureIterator fit = layer->getFeatures( request );
 
@@ -224,16 +228,36 @@ QStringList QgsValueRelationFieldFormatter::valueToStringList( const QVariant &v
 
 bool QgsValueRelationFieldFormatter::expressionRequiresFormScope( const QVariantMap &config, const QString &attribute )
 {
+  const QStringList formVariables( QgsExpressionContextUtils::formScope()->variableNames() );
+  const QString filter( config.value( QStringLiteral( "FilterExpression" ) ).toString() );
+  for ( const auto &vname : formVariables )
+  {
+    if ( filter.contains( vname ) )
+    {
+      return true;
+    }
+  }
   const QStringList formFunctions( QgsExpressionContextUtils::formScope()->functionNames() );
   QRegularExpression re;
   for ( const auto &fname : formFunctions )
   {
-    if ( ! attribute.isEmpty() )
-      re.setPattern( QgsValueRelationFieldFormatter::FORM_SCOPE_FUNCTIONS_RE.arg( fname, attribute ) );
-    else
-      re.setPattern( QgsValueRelationFieldFormatter::FORM_SCOPE_FUNCTIONS_RE.arg( fname, QStringLiteral( ".*" ) ) );
-    if ( re.match( config.value( QStringLiteral( "FilterExpression" ) ).toString() ).hasMatch() )
+    if ( QgsExpressionContextUtils::formScope()->function( fname )->parameters().count( ) == 0
+         && filter.contains( fname ) )
+    {
       return true;
+    }
+    if ( ! attribute.isEmpty() )
+    {
+      re.setPattern( QgsValueRelationFieldFormatter::FORM_SCOPE_FUNCTIONS_RE.arg( fname, attribute ) );
+    }
+    else
+    {
+      re.setPattern( QgsValueRelationFieldFormatter::FORM_SCOPE_FUNCTIONS_RE.arg( fname, QStringLiteral( ".*" ) ) );
+    }
+    if ( re.match( filter ).hasMatch() )
+    {
+      return true;
+    }
   }
   return false;
 }

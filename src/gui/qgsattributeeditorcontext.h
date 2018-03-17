@@ -63,7 +63,7 @@ class GUI_EXPORT QgsAttributeEditorContext
       , mVectorLayerTools( parentContext.mVectorLayerTools )
       , mMapCanvas( parentContext.mMapCanvas )
       , mDistanceArea( parentContext.mDistanceArea )
-      , mFormValues( parentContext.mFormValues )
+      , mFormFeature( parentContext.mFormFeature )
       , mFormMode( formMode )
     {
       Q_ASSERT( parentContext.vectorLayerTools() );
@@ -191,34 +191,18 @@ class GUI_EXPORT QgsAttributeEditorContext
     inline const QgsAttributeEditorContext *parentContext() const { return mParentContext; }
 
     /**
-     * Return current values from the currently edited form or table row
-     * \see setFormValue()
+     * Return current feature from the currently edited form or table row
+     * \see setFormFeature()
      * \since QGIS 3.2
      */
-    QVariantMap formValues() const { return mFormValues; }
-
-
-    /**
-     * Set a the current value of an attribute in the currently edited form or table row
-     * \param attribute the attribute name
-     * \param value the attribute value
-     * \see formValues()
-     * \since QGIS 3.2
-     */
-    void setFormValue( const QString &attribute, const QVariant &value )
-    {
-      if ( value.isValid( ) )
-        mFormValues[attribute] = value;
-    }
+    const QgsFeature formFeature() const { return mFormFeature; }
 
     /**
-     * Clear the current value of an attribute in the currently edited form or table row
-     * \param attribute the attribute name
-     * \see setFormValue()
-     * \see formValues()
+     * Set current \a feature for the currently edited form or table row
+     * \see formFeature()
      * \since QGIS 3.2
      */
-    void clearFormValue( const QString &attribute ) {  mFormValues.remove( attribute ); }
+    void setFormFeature( const QgsFeature &feature ) { mFormFeature = feature ; }
 
 
   private:
@@ -230,7 +214,7 @@ class GUI_EXPORT QgsAttributeEditorContext
     QgsRelation mRelation;
     RelationMode mRelationMode = Undefined;
     //! Store the values of the currently edited form or table row
-    QVariantMap mFormValues;
+    QgsFeature mFormFeature;
     FormMode mFormMode = Embed;
     bool mAllowCustomUi = true;
 };

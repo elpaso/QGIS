@@ -87,14 +87,21 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
     static QgsValueRelationFieldFormatter::ValueRelationCache createCache( const QVariantMap &config, const QgsFeature &formFeature = QgsFeature() );
 
     /**
+     * Check if the expression from the \a config requires a form scope. An optional \a attribute name can be specified.
+     * \param config The widget configuration
+     * \param attribute An optional attribute to check if the form function has that particular attribute as an argument.
+     * \return true if the expression requires a form scope
+     * \since QGIS 3.2
+     */
+    static bool expressionRequiresFormScope( const QVariantMap &config, const QString &attribute = QString( ) );
+
+    /**
      * Regular expression to find dynamic filtering based on form field values
      * \see GetCurrentFormFieldValue()
      *
      * \since QGIS 3.2
      */
     static QString FORM_SCOPE_FUNCTIONS_RE;
-
-    static bool expressionRequiresFormScope( const QVariantMap &config, const QString &attribute = QString( ) );
 
 };
 

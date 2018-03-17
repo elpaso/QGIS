@@ -82,9 +82,19 @@ if doing multiple lookups in a loop.
 .. versionadded:: 3.0
 %End
 
-    static QString FORM_SCOPE_FUNCTIONS_RE;
-
     static bool expressionRequiresFormScope( const QVariantMap &config, const QString &attribute = QString( ) );
+%Docstring
+Check if the expression from the ``config`` requires a form scope. An optional ``attribute`` name can be specified.
+
+:param config: The widget configuration
+:param attribute: An optional attribute to check if the form function has that particular attribute as an argument.
+
+:return: true if the expression requires a form scope
+
+.. versionadded:: 3.2
+%End
+
+    static QString FORM_SCOPE_FUNCTIONS_RE;
 
 };
 

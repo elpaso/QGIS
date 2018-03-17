@@ -747,7 +747,7 @@ class GetCurrentFormFieldValue : public QgsScopedExpressionFunction
     QVariant func( const QVariantList &values, const QgsExpressionContext *context, QgsExpression *, const QgsExpressionNodeFunction * ) override
     {
       QString fieldName( values.at( 0 ).toString() );
-      QgsFeature feat( context->feature() );
+      const QgsFeature feat( context->feature() );
       if ( fieldName.isEmpty() || ! feat.isValid( ) )
       {
         return QVariant();
@@ -761,6 +761,7 @@ class GetCurrentFormFieldValue : public QgsScopedExpressionFunction
     }
 
 };
+
 
 class GetProcessingParameterValue : public QgsScopedExpressionFunction
 {
@@ -794,7 +795,7 @@ QgsExpressionContextScope *QgsExpressionContextUtils::formScope( const QgsFeatur
   QgsExpressionContextScope *scope = new QgsExpressionContextScope( QObject::tr( "Form" ) );
   scope->setFeature( formFeature );
   scope->addFunction( QStringLiteral( "get_current_form_field_value" ), new GetCurrentFormFieldValue( ) );
-  // TODO: scope->addFunction( QStringLiteral( "get_current_form_geometry" ), new GetCurrentFormFieldValue( ) );
+  // TODO: scope->setVariable( QStringLiteral( "current_form_geometry" ), formFeature.geometry( ), true );
   return scope;
 }
 

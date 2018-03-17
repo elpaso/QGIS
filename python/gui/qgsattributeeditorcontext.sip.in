@@ -180,37 +180,20 @@ QGIS forms
 
     const QgsAttributeEditorContext *parentContext() const;
 
-    QVariantMap formValues() const;
+    const QgsFeature formFeature() const;
 %Docstring
-Return current values from the currently edited form or table row
+Return current feature from the currently edited form or table row
 
-.. seealso:: :py:func:`setFormValue`
+.. seealso:: :py:func:`setFormFeature`
 
 .. versionadded:: 3.2
 %End
 
-
-    void setFormValue( const QString &attribute, const QVariant &value );
+    void setFormFeature( const QgsFeature &feature );
 %Docstring
-Set a the current value of an attribute in the currently edited form or table row
+Set current ``feature`` for the currently edited form or table row
 
-:param attribute: the attribute name
-:param value: the attribute value
-
-.. seealso:: :py:func:`formValues`
-
-.. versionadded:: 3.2
-%End
-
-    void clearFormValue( const QString &attribute );
-%Docstring
-Clear the current value of an attribute in the currently edited form or table row
-
-:param attribute: the attribute name
-
-.. seealso:: :py:func:`setFormValue`
-
-.. seealso:: :py:func:`formValues`
+.. seealso:: :py:func:`formFeature`
 
 .. versionadded:: 3.2
 %End

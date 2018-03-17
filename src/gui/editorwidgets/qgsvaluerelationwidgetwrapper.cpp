@@ -111,14 +111,12 @@ void QgsValueRelationWidgetWrapper::initWidget( QWidget *editor )
   mLineEdit = qobject_cast<QLineEdit *>( editor );
 
   // Read current initial form values from the editor context
-  mFormValues = context().formValues();
-
-  populate();
+  setFeature( context().formFeature() );
 
   if ( mComboBox )
   {
     connect( mComboBox, static_cast<void ( QComboBox::* )( int )>( &QComboBox::currentIndexChanged ),
-             this, static_cast<void ( QgsEditorWidgetWrapper::* )()>( &QgsEditorWidgetWrapper::emitValueChanged ) );
+             this, static_cast<void ( QgsEditorWidgetWrapper::* )()>( &QgsEditorWidgetWrapper::emitValueChanged ), Qt::UniqueConnection );
   }
   else if ( mTableWidget )
   {
@@ -152,7 +150,7 @@ void QgsValueRelationWidgetWrapper::initWidget( QWidget *editor )
       mTableWidget->setItem( row, column, item );
       column++;
     }
-    connect( mTableWidget, &QTableWidget::itemChanged, this, static_cast<void ( QgsEditorWidgetWrapper::* )()>( &QgsEditorWidgetWrapper::emitValueChanged ) );
+    connect( mTableWidget, &QTableWidget::itemChanged, this, static_cast<void ( QgsEditorWidgetWrapper::* )()>( &QgsEditorWidgetWrapper::emitValueChanged ), Qt::UniqueConnection );
   }
   else if ( mLineEdit )
   {
@@ -166,7 +164,7 @@ void QgsValueRelationWidgetWrapper::initWidget( QWidget *editor )
     QCompleter *completer = new QCompleter( m, mLineEdit );
     completer->setCaseSensitivity( Qt::CaseInsensitive );
     mLineEdit->setCompleter( completer );
-    connect( mLineEdit, &QLineEdit::textChanged, this, [ = ]( const QString & value ) { emit valueChanged( value ); } );
+    connect( mLineEdit, &QLineEdit::textChanged, this, [ = ]( const QString & value ) { emit valueChanged( value ); }, Qt::UniqueConnection );
   }
 }
 
@@ -217,7 +215,10 @@ void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, 
   {
     return;
   }
-  mFormValues[ attribute ] = newValue;
+  if ( newValue.isValid( ) )
+    mFormValues[ attribute ] = newValue;
+  else
+    mFormValues.remove( attribute );
   // Update combos if the value used in the filter expression has changed
   mFeature.setAttribute( attribute, newValue );
   if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), attribute ) )
@@ -232,21 +233,22 @@ void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, 
 
 void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
 {
+  qDebug( ) << "Set feature attributes: " << feature.attributes();
   mFeature = feature;
   mFormValues.clear();
   bool hasValidValues = false;
   const QgsFields fields( feature.fields( ) );
   for ( const auto &field : fields )
   {
-    QVariant value = feature.attribute( field.name( ) );
+    const QVariant value = feature.attribute( field.name( ) );
     if ( value.isValid( ) )
     {
-      mFormValues[ field.name( ) ] = feature.attribute( field.name( ) );
+      mFormValues[ field.name( ) ] = value;
       hasValidValues = true;
     }
   }
-  if ( hasValidValues && QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) )
-    populate();
+  //if ( hasValidValues && QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) )
+  populate();
   setValue( feature.attribute( mFieldIdx ) );
 }
 
@@ -256,10 +258,12 @@ void QgsValueRelationWidgetWrapper::populate( )
   // Initialize
   if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) && ! mFormValues.isEmpty( ) )
   {
+    qDebug( ) << "Creating filtered cache for " << mFieldIdx << " form values: " << mFormValues;
     mCache = QgsValueRelationFieldFormatter::createCache( config( ), mFeature );
   }
   else if ( mCache.isEmpty() )
   {
+    qDebug( ) << "Creating full cache for " << mFieldIdx << " form values: " << mFormValues;
     mCache = QgsValueRelationFieldFormatter::createCache( config( ) );
   }
 
@@ -271,10 +275,12 @@ void QgsValueRelationWidgetWrapper::populate( )
       mComboBox->addItem( tr( "(no selection)" ), QVariant( field().type( ) ) );
     }
 
+    //mComboBox->blockSignals( true );
     Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
     {
       mComboBox->addItem( element.value, element.key );
     }
+    //mComboBox->blockSignals( false );
   }
   else if ( mListWidget )
   {
