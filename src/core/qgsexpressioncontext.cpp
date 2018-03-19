@@ -795,7 +795,7 @@ QgsExpressionContextScope *QgsExpressionContextUtils::formScope( const QgsFeatur
   QgsExpressionContextScope *scope = new QgsExpressionContextScope( QObject::tr( "Form" ) );
   scope->setFeature( formFeature );
   scope->addFunction( QStringLiteral( "get_current_form_field_value" ), new GetCurrentFormFieldValue( ) );
-  // TODO: scope->setVariable( QStringLiteral( "current_form_geometry" ), formFeature.geometry( ), true );
+  scope->setVariable( QStringLiteral( "current_form_geometry" ), formFeature.geometry( ), true );
   return scope;
 }
 

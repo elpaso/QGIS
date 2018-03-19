@@ -740,7 +740,8 @@ class CORE_EXPORT QgsExpressionContextUtils
     static QgsExpressionContextScope *globalScope() SIP_FACTORY;
 
     /**
-     * Creates a new scope which contains functions relating to the current attribute form.
+     * Creates a new scope which contains functions and variables from the current attribute form/table feature.
+     * The variables and values in this scope will reflect the current state of the form/row being edited.
      * \since QGIS 3.2
      */
     static QgsExpressionContextScope *formScope( const QgsFeature &formFeature = QgsFeature( ) ) SIP_FACTORY;

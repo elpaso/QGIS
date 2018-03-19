@@ -119,8 +119,10 @@ QgsValueRelationFieldFormatter::ValueRelationCache QgsValueRelationFieldFormatte
   request.setFlags( QgsFeatureRequest::NoGeometry );
   request.setSubsetOfAttributes( QgsAttributeList() << ki << vi );
 
-  // Skip the filter if the form scope is required and there are no form values
-  if ( !( config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty() || ( expressionRequiresFormScope( config ) && ! formFeature.isValid( ) ) ) )
+  // Skip the filter and build a full cache if the form scope is required and the feature
+  // is not valid (there are not attribute values required for the filter)
+  if ( !( config.value( QStringLiteral( "FilterExpression" ) ).toString().isEmpty()
+          || ( expressionRequiresFormScope( config ) && ! formFeature.isValid( ) ) ) )
   {
     QgsExpressionContext context( QgsExpressionContextUtils::globalProjectLayerScopes( layer ) );
     if ( formFeature.isValid( ) )

@@ -210,24 +210,34 @@ void QgsValueRelationWidgetWrapper::setValue( const QVariant &value )
 
 void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, const QVariant &newValue )
 {
-  // Exit if the value has not changed: no need to repopulate
-  if ( mFormValues.contains( attribute ) && mFormValues[ attribute ] == newValue )
+  QVariantMap attrs;
+  for ( const auto &f : mFeature.fields() )
   {
-    return;
+    if ( mFeature.attribute( f.name() ).isValid() )
+      attrs[ f.name() ] = mFeature.attribute( f.name() );
   }
-  if ( newValue.isValid( ) )
-    mFormValues[ attribute ] = newValue;
-  else
-    mFormValues.remove( attribute );
-  // Update combos if the value used in the filter expression has changed
-  mFeature.setAttribute( attribute, newValue );
-  if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), attribute ) )
+  qDebug( ) << "Feature attrs: " << attrs;
+  qDebug( ) << "Form values: " << mFormValues;
+  Q_ASSERT( attrs == mFormValues );
+
+  // Do nothing if the value has not changed
+  if ( ! mFormValues.contains( attribute ) || mFormValues[ attribute ] != newValue )
   {
-    populate();
-    // Restore value
-    setValue( value( ) );
+    // Only keep valid values
+    if ( newValue.isValid( ) )
+      mFormValues[ attribute ] = newValue;
+    else
+      mFormValues.remove( attribute );
+    mFeature.setAttribute( attribute, newValue );
+    // Update combos if the value used in the filter expression has changed
+    if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), attribute ) )
+    {
+      populate();
+      // Restore value
+      setValue( value( ) );
+    }
+    qDebug( ) << "Attribute " << attribute << " changed to " << newValue;
   }
-  qDebug( ) << "Attribute " << attribute << " changed to " << newValue;
 }
 
 
@@ -236,7 +246,6 @@ void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
   qDebug( ) << "Set feature attributes: " << feature.attributes();
   mFeature = feature;
   mFormValues.clear();
-  bool hasValidValues = false;
   const QgsFields fields( feature.fields( ) );
   for ( const auto &field : fields )
   {
@@ -244,13 +253,13 @@ void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
     if ( value.isValid( ) )
     {
       mFormValues[ field.name( ) ] = value;
-      hasValidValues = true;
     }
   }
-  //if ( hasValidValues && QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) )
   populate();
   setValue( feature.attribute( mFieldIdx ) );
+  blockSignals( false );
 }
+
 
 
 void QgsValueRelationWidgetWrapper::populate( )
@@ -269,18 +278,19 @@ void QgsValueRelationWidgetWrapper::populate( )
 
   if ( mComboBox )
   {
+    // To avoid double signals on new features
+    mComboBox->blockSignals( true );
     mComboBox->clear();
     if ( config( QStringLiteral( "AllowNull" ) ).toBool( ) )
     {
       mComboBox->addItem( tr( "(no selection)" ), QVariant( field().type( ) ) );
     }
 
-    //mComboBox->blockSignals( true );
     Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
     {
       mComboBox->addItem( element.value, element.key );
     }
-    //mComboBox->blockSignals( false );
+    mComboBox->blockSignals( false );
   }
   else if ( mListWidget )
   {
