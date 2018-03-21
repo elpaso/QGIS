@@ -210,15 +210,17 @@ void QgsValueRelationWidgetWrapper::setValue( const QVariant &value )
 
 void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, const QVariant &newValue )
 {
-  QVariantMap attrs;
-  for ( const auto &f : mFeature.fields() )
-  {
-    if ( mFeature.attribute( f.name() ).isValid() )
-      attrs[ f.name() ] = mFeature.attribute( f.name() );
-  }
-  qDebug( ) << "Feature attrs: " << attrs;
-  qDebug( ) << "Form values: " << mFormValues;
-  Q_ASSERT( attrs == mFormValues );
+  /*
+   QVariantMap attrs;
+   for ( const auto &f : mFeature.fields() )
+   {
+     if ( mFeature.attribute( f.name() ).isValid() )
+       attrs[ f.name() ] = mFeature.attribute( f.name() );
+   }
+   qDebug( ) << "Feature attrs: " << attrs;
+   qDebug( ) << "Form values: " << mFormValues;
+   //Q_ASSERT( attrs == mFormValues );
+   */
 
   // Do nothing if the value has not changed
   if ( ! mFormValues.contains( attribute ) || mFormValues[ attribute ] != newValue )
@@ -230,7 +232,7 @@ void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, 
       mFormValues.remove( attribute );
     mFeature.setAttribute( attribute, newValue );
     // Update combos if the value used in the filter expression has changed
-    if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), attribute ) )
+    if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), mFeature ) )
     {
       populate();
       // Restore value
@@ -244,6 +246,8 @@ void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, 
 void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
 {
   qDebug( ) << "Set feature attributes: " << feature.attributes();
+  qDebug( ) << "Set feature isValid : " << feature.isValid();
+  qDebug( ) << "Set feature geometry : " << feature.geometry().asWkt();
   mFeature = feature;
   mFormValues.clear();
   const QgsFields fields( feature.fields( ) );
@@ -255,9 +259,10 @@ void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
       mFormValues[ field.name( ) ] = value;
     }
   }
+  //blockSignals( true );
   populate();
   setValue( feature.attribute( mFieldIdx ) );
-  blockSignals( false );
+  //blockSignals( false );
 }
 
 
@@ -265,7 +270,7 @@ void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
 void QgsValueRelationWidgetWrapper::populate( )
 {
   // Initialize
-  if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ) ) && ! mFormValues.isEmpty( ) )
+  if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ), mFeature ) )
   {
     qDebug( ) << "Creating filtered cache for " << mFieldIdx << " form values: " << mFormValues;
     mCache = QgsValueRelationFieldFormatter::createCache( config( ), mFeature );
@@ -278,7 +283,7 @@ void QgsValueRelationWidgetWrapper::populate( )
 
   if ( mComboBox )
   {
-    // To avoid double signals on new features
+    // Block to avoid double signals on new features
     mComboBox->blockSignals( true );
     mComboBox->clear();
     if ( config( QStringLiteral( "AllowNull" ) ).toBool( ) )

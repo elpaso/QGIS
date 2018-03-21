@@ -89,11 +89,11 @@ class CORE_EXPORT QgsValueRelationFieldFormatter : public QgsFieldFormatter
     /**
      * Check if the expression from the \a config requires a form scope. An optional \a attribute name can be specified.
      * \param config The widget configuration
-     * \param attribute An optional attribute to check if the form function has that particular attribute as an argument.
+     * \param feature An optional feature, used to check if any form function take a valid attribute value as an argument.
      * \return true if the expression requires a form scope
      * \since QGIS 3.2
      */
-    static bool expressionRequiresFormScope( const QVariantMap &config, const QString &attribute = QString( ) );
+    static bool expressionRequiresFormScope( const QVariantMap &config, const QgsFeature &feature = QgsFeature( ) );
 
     /**
      * Regular expression to find dynamic filtering based on form field values

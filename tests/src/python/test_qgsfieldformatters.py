@@ -133,6 +133,49 @@ class TestQgsValueRelationFieldFormatter(unittest.TestCase):
         _test(['1', '2', '3'], ["1", "2", "3"])
         _test('not an array', ['not an array'])
 
+    def test_expressionRequiresFormScope(self):
+        """
+        Value source layer: value_layer
+            - key: foreign_key
+            - value: decode
+            - filter: filter_key
+        Related layer: main_layer 
+            - key: foreign_key (related to value_layer.foreign_key)
+            - filter: fi_key (related to value_layer.filter_key)
+        Unrelated layer: unrelated_layer
+            - field: id
+            - field: name
+
+        """
+        # Main layer
+        main_layer = QgsVectorLayer("none?field=foreign_key:integer&field=fi_key:integer",
+                                    "first_layer", "memory")
+        self.assertTrue(main_layer.isValid())
+        f1 = QgsFeature(main_layer.fields())
+        f1.setAttributes([123, 1])
+        main_layer.dataProvider().addFeatures([f1])
+
+        # Values
+        value_layer = QgsVectorLayer("none?field=pkid:integer&field=decoded:string&field=filter_key:integer",
+                                     "second_layer", "memory")
+        self.assertTrue(value_layer.isValid())
+        QgsProject.instance().addMapLayer(value_layer)
+        f2 = QgsFeature(value_layer.fields())
+        f2.setAttributes([123, 'decoded_val', 1])
+        f3 = QgsFeature(value_layer.fields())
+        f3.setAttributes([124, 'decoded_val_2', 2])
+        value_layer.dataProvider().addFeatures([f3])
+
+        self.assertFalse(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": ""}))
+        self.assertFalse(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": ""}, f1))
+
+        self.assertTrue(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": "\"filter_key\" = get_current_form_field_value('fi_key')"}, f1))
+        self.assertFalse(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": "\"filter_key\" = get_current_form_field_value('wrong_fi_key')"}, f1))
+        self.assertFalse(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": "\"filter_key\" = get_current_form_field_value('fi_key')"}, f2))
+
+        from IPython import embed
+        embed()
+
 
 class TestQgsRelationReferenceFieldFormatter(unittest.TestCase):
 
