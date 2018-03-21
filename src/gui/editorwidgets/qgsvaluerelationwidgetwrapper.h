@@ -107,6 +107,7 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
     QVariantMap mFormValues;
 
     bool mEnabled = true;
+    QString mExpression;
 
     friend class QgsValueRelationWidgetFactory;
     friend class TestQgsValueRelationWidgetWrapper;

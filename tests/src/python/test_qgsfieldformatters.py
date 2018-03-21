@@ -16,7 +16,8 @@ import qgis  # NOQA
 
 from qgis.core import (QgsFeature, QgsProject, QgsRelation, QgsVectorLayer,
                        QgsValueMapFieldFormatter, QgsValueRelationFieldFormatter,
-                       QgsRelationReferenceFieldFormatter, QgsRangeFieldFormatter, QgsSettings)
+                       QgsRelationReferenceFieldFormatter, QgsRangeFieldFormatter,
+                       QgsSettings, QgsGeometry, QgsPointXY)
 
 from qgis.PyQt.QtCore import QCoreApplication, QLocale
 from qgis.testing import start_app, unittest
@@ -134,47 +135,37 @@ class TestQgsValueRelationFieldFormatter(unittest.TestCase):
         _test('not an array', ['not an array'])
 
     def test_expressionRequiresFormScope(self):
-        """
-        Value source layer: value_layer
-            - key: foreign_key
-            - value: decode
-            - filter: filter_key
-        Related layer: main_layer 
-            - key: foreign_key (related to value_layer.foreign_key)
-            - filter: fi_key (related to value_layer.filter_key)
-        Unrelated layer: unrelated_layer
-            - field: id
-            - field: name
 
-        """
-        # Main layer
-        main_layer = QgsVectorLayer("none?field=foreign_key:integer&field=fi_key:integer",
-                                    "first_layer", "memory")
-        self.assertTrue(main_layer.isValid())
-        f1 = QgsFeature(main_layer.fields())
-        f1.setAttributes([123, 1])
-        main_layer.dataProvider().addFeatures([f1])
+        res = list(QgsValueRelationFieldFormatter.expressionFormAttributes("get_current_form_field_value('ONE') AND get_current_form_field_value('TWO')"))
+        res = sorted(res)
+        self.assertEqual(res, ['ONE', 'TWO'])
 
-        # Values
-        value_layer = QgsVectorLayer("none?field=pkid:integer&field=decoded:string&field=filter_key:integer",
-                                     "second_layer", "memory")
-        self.assertTrue(value_layer.isValid())
-        QgsProject.instance().addMapLayer(value_layer)
-        f2 = QgsFeature(value_layer.fields())
-        f2.setAttributes([123, 'decoded_val', 1])
-        f3 = QgsFeature(value_layer.fields())
-        f3.setAttributes([124, 'decoded_val_2', 2])
-        value_layer.dataProvider().addFeatures([f3])
+        res = list(QgsValueRelationFieldFormatter.expressionFormVariables("current_form_geometry"))
+        self.assertEqual(res, ['current_form_geometry'])
 
-        self.assertFalse(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": ""}))
-        self.assertFalse(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": ""}, f1))
+        self.assertFalse(QgsValueRelationFieldFormatter.expressionRequiresFormScope(""))
+        self.assertTrue(QgsValueRelationFieldFormatter.expressionRequiresFormScope("get_current_form_field_value('TWO')"))
+        self.assertTrue(QgsValueRelationFieldFormatter.expressionRequiresFormScope("get_current_form_field_value ( 'TWO' )"))
+        self.assertTrue(QgsValueRelationFieldFormatter.expressionRequiresFormScope("current_form_geometry"))
 
-        self.assertTrue(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": "\"filter_key\" = get_current_form_field_value('fi_key')"}, f1))
-        self.assertFalse(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": "\"filter_key\" = get_current_form_field_value('wrong_fi_key')"}, f1))
-        self.assertFalse(QgsValueRelationFieldFormatter.expressionRequiresFormScope({"FilterExpression": "\"filter_key\" = get_current_form_field_value('fi_key')"}, f2))
+        self.assertTrue(QgsValueRelationFieldFormatter.expressionIsUsable("", QgsFeature()))
+        self.assertFalse(QgsValueRelationFieldFormatter.expressionIsUsable("current_form_geometry", QgsFeature()))
+        self.assertFalse(QgsValueRelationFieldFormatter.expressionIsUsable("get_current_form_field_value ( 'TWO' )", QgsFeature()))
 
-        from IPython import embed
-        embed()
+        layer = QgsVectorLayer("none?field=pkid:integer&field=decoded:string",
+                               "layer", "memory")
+        self.assertTrue(layer.isValid())
+        QgsProject.instance().addMapLayer(layer)
+        f = QgsFeature(layer.fields())
+        f.setAttributes([1, 'value'])
+        point = QgsGeometry.fromPointXY(QgsPointXY(123, 456))
+        f.setGeometry(point)
+        self.assertTrue(QgsValueRelationFieldFormatter.expressionIsUsable("current_form_geometry", f))
+        self.assertFalse(QgsValueRelationFieldFormatter.expressionIsUsable("get_current_form_field_value ( 'TWO' )", f))
+        self.assertTrue(QgsValueRelationFieldFormatter.expressionIsUsable("get_current_form_field_value ( 'pkid' )", f))
+        self.assertTrue(QgsValueRelationFieldFormatter.expressionIsUsable("@current_form_geometry get_current_form_field_value ( 'pkid' )", f))
+
+        QgsProject.instance().removeMapLayer(layer.id())
 
 
 class TestQgsRelationReferenceFieldFormatter(unittest.TestCase):

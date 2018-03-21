@@ -90,6 +90,9 @@ QWidget *QgsValueRelationWidgetWrapper::createWidget( QWidget *parent )
   QgsAttributeForm *form = dynamic_cast<QgsAttributeForm *>( parent );
   if ( form )
     connect( form, &QgsAttributeForm::attributeChanged, this, &QgsValueRelationWidgetWrapper::attributeChanged );
+
+  mExpression = config().value( QStringLiteral( "FilterExpression" ) ).toString();
+
   if ( config( QStringLiteral( "AllowMulti" ) ).toBool() )
   {
     return new QTableWidget( parent );
@@ -230,9 +233,11 @@ void QgsValueRelationWidgetWrapper::attributeChanged( const QString &attribute, 
       mFormValues[ attribute ] = newValue;
     else
       mFormValues.remove( attribute );
+    // Always update the feature
     mFeature.setAttribute( attribute, newValue );
     // Update combos if the value used in the filter expression has changed
-    if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config(), mFeature ) )
+    if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( mExpression )
+         && QgsValueRelationFieldFormatter::expressionFormAttributes( mExpression ).contains( attribute ) )
     {
       populate();
       // Restore value
@@ -259,10 +264,10 @@ void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
       mFormValues[ field.name( ) ] = value;
     }
   }
-  //blockSignals( true );
+  blockSignals( true );
   populate();
   setValue( feature.attribute( mFieldIdx ) );
-  //blockSignals( false );
+  blockSignals( false );
 }
 
 
@@ -270,7 +275,8 @@ void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
 void QgsValueRelationWidgetWrapper::populate( )
 {
   // Initialize
-  if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( config( ), mFeature ) )
+
+  if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( mExpression ) )
   {
     qDebug( ) << "Creating filtered cache for " << mFieldIdx << " form values: " << mFormValues;
     mCache = QgsValueRelationFieldFormatter::createCache( config( ), mFeature );
@@ -299,6 +305,7 @@ void QgsValueRelationWidgetWrapper::populate( )
   }
   else if ( mListWidget )
   {
+    mListWidget->blockSignals( true );
     mListWidget->clear();
     Q_FOREACH ( const QgsValueRelationFieldFormatter::ValueRelationItem &element, mCache )
     {
@@ -307,6 +314,7 @@ void QgsValueRelationWidgetWrapper::populate( )
       item->setData( Qt::UserRole, element.key );
       mListWidget->addItem( item );
     }
+    mListWidget->blockSignals( false );
   }
   else if ( mLineEdit )
   {
