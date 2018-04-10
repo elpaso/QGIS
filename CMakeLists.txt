@@ -28,6 +28,18 @@ SET(CMAKE_COLOR_MAKEFILE ON)
 # set path to additional CMake modules
 SET(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
+# Configure OpenCL if available
+option(USE_OPENCL "Use OpenCL" ON)
+if (USE_OPENCL)
+    FIND_PACKAGE(OpenCL)
+    if(${OpenCL_FOUND})
+        SET (USE_OPENCL TRUE CACHE BOOL "Use OpenCL")
+        IF(USE_OPENCL)
+          SET(HAVE_OPENCL TRUE)
+        ENDIF(USE_OPENCL)
+    endif(${OpenCL_FOUND})
+endif(USE_OPENCL)
+
 # Configure CCache if available
 option(USE_CCACHE "Use ccache" ON)
 if (USE_CCACHE)
