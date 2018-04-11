@@ -115,17 +115,18 @@ int QgsNineCellFilter::processRaster( QgsFeedback *feedback )
   cl::Buffer scanLine2Buffer( CL_MEM_READ_ONLY, sizeof( float ) * ( xSize + 2 ), nullptr, &errorCode );
   cl::Buffer scanLine3Buffer( CL_MEM_READ_ONLY, sizeof( float ) * ( xSize + 2 ), nullptr, &errorCode );
 
-  char *source_str = new char [QFileInfo( "/home/ale/dev/QGIS/src/analysis/raster/slope.cl" ).size() + 1];
+  QString source_str;
 
   QFile file( "/home/ale/dev/QGIS/src/analysis/raster/slope.cl" );
-  file.open( QIODevice::ReadOnly | QIODevice::Text );
-
-  file.read( source_str, file.size() );
-  source_str[QFileInfo( "/home/ale/dev/QGIS/src/analysis/raster/slope.cl" ).size()] = '\0';
-  file.close();
+  if ( file.open( QFile::ReadOnly | QFile::Text ) )
+  {
+    QTextStream in( &file );
+    source_str = in.readAll();
+    file.close();
+  }
 
   // Create a program from the kernel source
-  cl::Program program( source_str, true, &errorCode );
+  cl::Program program( source_str.toStdString().c_str(), true, &errorCode );
 
   auto buildInfo = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>( cl::Device::getDefault(), &errorCode );
   for ( auto &pair : buildInfo )
@@ -252,8 +253,6 @@ int QgsNineCellFilter::processRaster( QgsFeedback *feedback )
   CPLFree( scanLine1 );
   CPLFree( scanLine2 );
   CPLFree( scanLine3 );
-
-  delete source_str;
 
   if ( feedback && feedback->isCanceled() )
   {
