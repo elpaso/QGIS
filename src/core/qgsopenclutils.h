@@ -42,9 +42,11 @@ class CORE_EXPORT QgsOpenClUtils
     static void enable();
     static void disable();
 
-    static std::unique_ptr<cl::Program> loadProgram( const QString &path );
+    static std::unique_ptr<cl::Program> programFromString( const QString &programSource );
+    static std::unique_ptr<cl::Program> programFromPath( const QString &path );
 
     static QLatin1String SETTINGS_KEY;
+    static QLatin1String LOGMESSAGE_TAG;
   private:
     QgsOpenClUtils();
 };

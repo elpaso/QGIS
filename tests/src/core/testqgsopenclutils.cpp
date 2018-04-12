@@ -28,7 +28,8 @@ class TestQgsOpenClUtils: public QObject
     void TestEnable();
     void TestDisable();
     void TestAvailable();
-    void testLoadProgram();
+    void testProgramFromPath();
+    void testProgramFromString();
 
 };
 
@@ -49,13 +50,25 @@ void TestQgsOpenClUtils::TestAvailable()
   QVERIFY( QgsOpenClUtils::available() );
 }
 
-void TestQgsOpenClUtils::testLoadProgram()
+void TestQgsOpenClUtils::testProgramFromPath()
 {
   std::unique_ptr<cl::Program> program;
-  program = QgsOpenClUtils::loadProgram( QStringLiteral( " " ) ) ;
+  program = QgsOpenClUtils::programFromPath( QStringLiteral( " " ) ) ;
   QCOMPARE( program.get(), nullptr );
-  program = QgsOpenClUtils::loadProgram( QStringLiteral( "/home/ale/dev/QGIS/src/analysis/raster/slope.cl" ) );
+  program = QgsOpenClUtils::programFromPath( QStringLiteral( "/home/ale/dev/QGIS/src/analysis/raster/slope.cl" ) );
   QVERIFY( program.get() != nullptr );
+}
+
+void TestQgsOpenClUtils::testProgramFromString()
+{
+  std::unique_ptr<cl::Program> program;
+  program = QgsOpenClUtils::programFromString( QStringLiteral( "" ) ) ;
+  QCOMPARE( program.get(), nullptr );
+  program = QgsOpenClUtils::programFromString( QStringLiteral( "__kernel void f(){}" ) );
+  QVERIFY( program.get() != nullptr );
+  program = QgsOpenClUtils::programFromString( QStringLiteral( "__kernel void f(){ syntaxError" ) ) ;
+  QCOMPARE( program.get(), nullptr );
+
 }
 
 

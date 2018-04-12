@@ -20,8 +20,10 @@
 
 #include <QTextStream>
 #include <QFile>
+#include <QDebug>
 
 QLatin1String QgsOpenClUtils::SETTINGS_KEY = QLatin1Literal( "OpenClEnabled" );
+QLatin1String QgsOpenClUtils::LOGMESSAGE_TAG = QLatin1Literal( "OpenCL" );
 
 bool QgsOpenClUtils::enabled()
 {
@@ -30,33 +32,45 @@ bool QgsOpenClUtils::enabled()
 
 bool QgsOpenClUtils::available()
 {
-  std::vector<cl::Platform> platforms;
-  cl::Platform::get( &platforms );
-  cl::Platform plat;
-  // TODO: should we also accept > 1.1 ?
-  for ( auto &p : platforms )
+  static bool initialized;
+  static bool _available;
+
+  if ( !initialized )
   {
-    std::string platver = p.getInfo<CL_PLATFORM_VERSION>();
-    QgsDebugMsg( QStringLiteral( "Found platform %1: %2" ).arg( QString::fromStdString( platver ), QString::fromStdString( p.getInfo<CL_PLATFORM_NAME>() ) ) );
-    if ( platver.find( "OpenCL 1.1" ) != std::string::npos )
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get( &platforms );
+    cl::Platform plat;
+    for ( auto &p : platforms )
     {
-      plat = p;
+      std::string platver = p.getInfo<CL_PLATFORM_VERSION>();
+      QgsDebugMsg( QStringLiteral( "Found platform %1: %2" ).arg( QString::fromStdString( platver ), QString::fromStdString( p.getInfo<CL_PLATFORM_NAME>() ) ) );
+      if ( platver.find( "OpenCL 1." ) != std::string::npos )
+      {
+        std::vector<cl::Device> devices;
+        // Check for a GPU device
+        p.getDevices( CL_DEVICE_TYPE_GPU, &devices );
+        if ( devices.size() > 0 )
+        {
+          // Got one!
+          plat = p;
+          break;
+        }
+      }
     }
+    if ( plat() == 0 )
+    {
+      QgsMessageLog::logMessage( QObject::tr( "No OpenCL 1.x platform with GPU found." ), LOGMESSAGE_TAG, Qgis::Warning );
+      _available = false;
+    }
+    cl::Platform newP = cl::Platform::setDefault( plat );
+    if ( newP != plat )
+    {
+      QgsMessageLog::logMessage( QObject::tr( "Error setting default platform." ), LOGMESSAGE_TAG, Qgis::Warning );
+      _available = false;
+    }
+    _available = true;
   }
-  if ( plat() == 0 )
-  {
-    QgsMessageLog::logMessage( QObject::tr( "No OpenCL 1.1 platform found." ), QStringLiteral( "OpenCL" ), Qgis::Warning );
-    return false;
-  }
-  cl::Platform newP = cl::Platform::setDefault( plat );
-  if ( newP != plat )
-  {
-    QgsMessageLog::logMessage( QObject::tr( "Error setting default platform." ), QStringLiteral( "OpenCL" ), Qgis::Warning );
-    return false;
-  }
-  std::string platname = plat.getInfo<CL_PLATFORM_NAME>();
-  QgsMessageLog::logMessage( QObject::tr( "OpenCL platform found: %1" ).arg( QString::fromStdString( platname ) ), QStringLiteral( "OpenCL" ), Qgis::Info );
-  return true;
+  return _available;
 }
 
 void QgsOpenClUtils::enable()
@@ -69,7 +83,35 @@ void QgsOpenClUtils::disable()
   QgsSettings().setValue( SETTINGS_KEY, false, QgsSettings::Section::Core );
 }
 
-std::unique_ptr<cl::Program> QgsOpenClUtils::loadProgram( const QString &path )
+std::unique_ptr<cl::Program> QgsOpenClUtils::programFromString( const QString &programSource )
+{
+
+  if ( programSource.isEmpty() )
+    return nullptr;
+
+  // Create a program from the kernel source
+  std::unique_ptr<cl::Program> program = qgis::make_unique<cl::Program>( programSource.toStdString().c_str(), false );
+  try
+  {
+    program->build();
+  }
+  catch ( cl::BuildError e )
+  {
+    cl::BuildLogType build_logs = e.getBuildLog();
+    QString build_log;
+    if ( build_logs.size() > 0 )
+      build_log = QString::fromStdString( build_logs[0].second );
+    else
+      build_log = QObject::tr( "Build logs not available!" );
+    QgsMessageLog::logMessage( QObject::tr( "Error building OpenCL program:" )
+                               .arg( build_log ), LOGMESSAGE_TAG, Qgis::Critical );
+    return nullptr;
+  }
+  return program;
+
+}
+
+std::unique_ptr<cl::Program> QgsOpenClUtils::programFromPath( const QString &path )
 {
   // Try to load the program sources
   QString source_str;
@@ -81,10 +123,9 @@ std::unique_ptr<cl::Program> QgsOpenClUtils::loadProgram( const QString &path )
   QTextStream in( &file );
   source_str = in.readAll();
   file.close();
-
-  // Create a program from the kernel source
-  std::unique_ptr<cl::Program> program = qgis::make_unique<cl::Program>( source_str.toStdString().c_str(), true );
+  auto program = programFromString( source_str );
+  if ( !program )
+    QgsMessageLog::logMessage( QObject::tr( "Error loading OpenCL program from: %1" ).arg( path ), LOGMESSAGE_TAG, Qgis::Critical );
   return program;
 }
-
 

@@ -26,10 +26,7 @@
 #include <iterator>
 
 #ifdef HAVE_OPENCL
-#define CL_HPP_ENABLE_EXCEPTIONS
-#define CL_HPP_MINIMUM_OPENCL_VERSION 110
-#define CL_HPP_TARGET_OPENCL_VERSION 110
-#include <CL/cl2.hpp>
+#include "qgsopenclutils.h"
 #endif
 
 
@@ -115,24 +112,7 @@ int QgsNineCellFilter::processRaster( QgsFeedback *feedback )
   cl::Buffer scanLine2Buffer( CL_MEM_READ_ONLY, sizeof( float ) * ( xSize + 2 ), nullptr, &errorCode );
   cl::Buffer scanLine3Buffer( CL_MEM_READ_ONLY, sizeof( float ) * ( xSize + 2 ), nullptr, &errorCode );
 
-  QString source_str;
-
-  QFile file( "/home/ale/dev/QGIS/src/analysis/raster/slope.cl" );
-  if ( file.open( QFile::ReadOnly | QFile::Text ) )
-  {
-    QTextStream in( &file );
-    source_str = in.readAll();
-    file.close();
-  }
-
-  // Create a program from the kernel source
-  cl::Program program( source_str.toStdString().c_str(), true, &errorCode );
-
-  auto buildInfo = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>( cl::Device::getDefault(), &errorCode );
-  for ( auto &pair : buildInfo )
-  {
-    qDebug() << pair;
-  }
+  std::unique_ptr<cl::Program> program = QgsOpenClUtils::programFromPath( "/home/ale/dev/QGIS/src/analysis/raster/slope.cl" );
 
   // Create the OpenCL kernel
   auto kernel =
@@ -142,7 +122,7 @@ int QgsNineCellFilter::processRaster( QgsFeedback *feedback )
     cl::Buffer &,
     cl::Buffer &,
     cl::Buffer &
-    > ( program, "processNineCellWindow" );
+    > ( *program.get(), "processNineCellWindow" );
 
 #endif
 

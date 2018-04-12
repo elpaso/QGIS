@@ -102,8 +102,8 @@ __kernel void processNineCellWindow( __global float *scanLine1,
   }
   else
   {
-    double res = sqrt( derX * derX + derY * derY );
+    float res = sqrt( derX * derX + derY * derY );
     res = atanpi( res );
-    resultLine[i] = (float)res * 180.0;
+    resultLine[i] = res * 180.0;
   }
 }
