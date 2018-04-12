@@ -59,6 +59,11 @@ MACRO (ADD_QGIS_TEST TESTSRC)
     ${GEOS_LIBRARY}
     ${GDAL_LIBRARY}
     qgis_core)
+  IF(HAVE_OPENCL)
+        TARGET_LINK_LIBRARIES(${TESTNAME}
+            ${OpenCL_LIBRARY})
+  ENDIF(HAVE_OPENCL)
+
   ADD_TEST(${TESTNAME} ${CMAKE_BINARY_DIR}/output/bin/${TESTNAME} -maxwarnings 10000)
 ENDMACRO (ADD_QGIS_TEST)
 
@@ -185,6 +190,14 @@ SET(TESTS
  testqgsvectorlayer.cpp
  testziplayer.cpp
     )
+
+IF(HAVE_OPENCL)
+    SET(TESTS ${TESTS}
+        testqgsopenclutils.cpp
+        )
+    INCLUDE_DIRECTORIES(${OpenCL_INCLUDE_DIR})
+ENDIF(HAVE_OPENCL)
+
 
 IF(WITH_QTWEBKIT)
   SET(TESTS ${TESTS}
