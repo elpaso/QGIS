@@ -78,10 +78,12 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
      * Update widget cache if the value is used in the filter expression and
      * stores current field values to be used in expression form scope context
      *
-     * \param attribute The attribute name
-     * \param newValue The new current value
+     * \param attribute The name of the attribute that changed.
+     * \param newValue     The new value of the attribute.
+     * \param attributeChanged If true, it corresponds to an actual change of the feature attribute
+     * \since QGIS 3.2.0
      */
-    void attributeChanged( const QString &attribute, const QVariant &newValue );
+    void widgetValueChanged( const QString &attribute, const QVariant &newValue, bool attributeChanged );
 
     /**
      * Will be called when the feature changes
