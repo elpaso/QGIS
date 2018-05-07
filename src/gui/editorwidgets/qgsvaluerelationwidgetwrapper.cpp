@@ -330,15 +330,13 @@ void QgsValueRelationWidgetWrapper::showIndeterminateState()
 {
   if ( mTableWidget )
   {
-    mTableWidget->blockSignals( true );
     for ( int j = 0; j < mTableWidget->rowCount(); j++ )
     {
       for ( int i = 0; i < config( QStringLiteral( "NofColumns" ) ).toInt(); ++i )
       {
-        mTableWidget->item( j, i )->setCheckState( Qt::PartiallyChecked );
+        whileBlocking( mTableWidget )->item( j, i )->setCheckState( Qt::PartiallyChecked );
       }
     }
-    mTableWidget->blockSignals( false );
   }
   else if ( mComboBox )
   {
