@@ -167,7 +167,7 @@ void QgsValueRelationWidgetWrapper::setValue( const QVariant &value )
       }
     }
     mTableWidget->blockSignals( false );
-    // let's trigger the signal now, once for all
+    // let's trigger the signal now, once and for all
     if ( lastChangedItem )
       lastChangedItem->setCheckState( checkList.contains( lastChangedItem->data( Qt::UserRole ).toString() ) ? Qt::Checked : Qt::Unchecked );
 
@@ -191,28 +191,10 @@ void QgsValueRelationWidgetWrapper::setValue( const QVariant &value )
 
 void QgsValueRelationWidgetWrapper::widgetValueChanged( const QString &attribute, const QVariant &newValue, bool attributeChanged )
 {
-  /*
-   QVariantMap attrs;
-   for ( const auto &f : mFeature.fields() )
-   {
-     if ( mFeature.attribute( f.name() ).isValid() )
-       attrs[ f.name() ] = mFeature.attribute( f.name() );
-   }
-   qDebug( ) << "Feature attrs: " << attrs;
-   qDebug( ) << "Form values: " << mFormValues;
-   //Q_ASSERT( attrs == mFormValues );
-   */
 
   // Do nothing if the value has not changed
   if ( attributeChanged )
-    //if ( ! mFormValues.contains( attribute ) || mFormValues[ attribute ] != value )
   {
-    // Only keep valid values
-    if ( newValue.isValid( ) )
-      mFormValues[ attribute ] = newValue;
-    else
-      mFormValues.remove( attribute );
-    // Always update the feature
     mFeature.setAttribute( attribute, newValue );
     // Update combos if the value used in the filter expression has changed
     if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( mExpression )
@@ -222,65 +204,57 @@ void QgsValueRelationWidgetWrapper::widgetValueChanged( const QString &attribute
       // Restore value
       setValue( value( ) );
     }
-    qDebug( ) << "Attribute " << attribute << " changed to " << newValue;
   }
 }
 
 
 void QgsValueRelationWidgetWrapper::setFeature( const QgsFeature &feature )
 {
-  qDebug( ) << "Set feature attributes: " << feature.attributes();
-  qDebug( ) << "Set feature isValid : " << feature.isValid();
-  qDebug( ) << "Set feature geometry : " << feature.geometry().asWkt();
   mFeature = feature;
-  mFormValues.clear();
-  const QgsFields fields( feature.fields( ) );
-  for ( const auto &field : fields )
+  whileBlocking( this )->populate();
+  whileBlocking( this )->setValue( feature.attribute( mFieldIdx ) );
+  // A bit of logic to set the default value if AllowNull is false and this is a new feature
+  // Note that this needs to be here after the cache has been created/updated by populate()
+  // and signals unblocked (we want this to propagate to the feature itself)
+  if ( mFeature.isValid()
+       && ! mFeature.attribute( mFieldIdx ).isValid()
+       && mCache.size() > 0
+       && ! config( QStringLiteral( "AllowNull" ) ).toBool( ) )
   {
-    const QVariant value = feature.attribute( field.name( ) );
-    if ( value.isValid( ) )
+    // This is deferred because at the time the feature is set in one widget it is not
+    // set in the next, which is typically the "down" in a drill-down
+    QTimer::singleShot( 0, [ = ]
     {
-      mFormValues[ field.name( ) ] = value;
-    }
+      setValue( mCache.at( 0 ).key );
+    } );
   }
-  blockSignals( true );
-  populate();
-  setValue( feature.attribute( mFieldIdx ) );
-  blockSignals( false );
 }
-
 
 
 void QgsValueRelationWidgetWrapper::populate( )
 {
-  // Initialize
-
+  // Initialize, note that signals are blocked, to avoid double signals on new features
   if ( QgsValueRelationFieldFormatter::expressionRequiresFormScope( mExpression ) )
   {
-    qDebug( ) << "Creating filtered cache for " << mFieldIdx << " form values: " << mFormValues;
     mCache = QgsValueRelationFieldFormatter::createCache( config( ), mFeature );
   }
   else if ( mCache.isEmpty() )
   {
-    qDebug( ) << "Creating full cache for " << mFieldIdx << " form values: " << mFormValues;
     mCache = QgsValueRelationFieldFormatter::createCache( config( ) );
   }
 
   if ( mComboBox )
   {
-    // Block to avoid double signals on new features
-    mComboBox->blockSignals( true );
     mComboBox->clear();
     if ( config( QStringLiteral( "AllowNull" ) ).toBool( ) )
     {
-      mComboBox->addItem( tr( "(no selection)" ), QVariant( field().type( ) ) );
+      whileBlocking( mComboBox )->addItem( tr( "(no selection)" ), QVariant( field().type( ) ) );
     }
 
     for ( const QgsValueRelationFieldFormatter::ValueRelationItem &element : qgis::as_const( mCache ) )
     {
-      mComboBox->addItem( element.value, element.key );
+      whileBlocking( mComboBox )->addItem( element.value, element.key );
     }
-    mComboBox->blockSignals( false );
   }
   else if ( mTableWidget )
   {
@@ -293,8 +267,7 @@ void QgsValueRelationWidgetWrapper::populate( )
     else
       mTableWidget->setColumnCount( 1 );
 
-    mTableWidget->blockSignals( true );
-    mTableWidget->clear();
+    whileBlocking( mTableWidget )->clear();
     int row = 0, column = 0;
     for ( const QgsValueRelationFieldFormatter::ValueRelationItem &element : qgis::as_const( mCache ) )
     {
@@ -306,10 +279,9 @@ void QgsValueRelationWidgetWrapper::populate( )
       QTableWidgetItem *item = nullptr;
       item = new QTableWidgetItem( element.value );
       item->setData( Qt::UserRole, element.key );
-      mTableWidget->setItem( row, column, item );
+      whileBlocking( mTableWidget )->setItem( row, column, item );
       column++;
     }
-    mTableWidget->blockSignals( false );
   }
   else if ( mLineEdit )
   {

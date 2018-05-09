@@ -88,7 +88,8 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
     /**
      * Will be called when the feature changes
      *
-     * Is forwarded to the slot setValue()
+     * Is forwarded to the slot setValue() and updates the widget cache if
+     * the filter expression context contains values from the current feature
      *
      * \param feature The new feature
      */
@@ -105,8 +106,6 @@ class GUI_EXPORT QgsValueRelationWidgetWrapper : public QgsEditorWidgetWrapper
 
     QgsValueRelationFieldFormatter::ValueRelationCache mCache;
     QgsVectorLayer *mLayer = nullptr;
-    //! Keep memory of the current values: to avoid rebuilding the cache when it's not needed
-    QVariantMap mFormValues;
 
     bool mEnabled = true;
     QString mExpression;
