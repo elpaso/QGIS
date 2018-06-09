@@ -299,13 +299,12 @@ bool QgsField::convertCompatible( QVariant &v ) const
   }
 
   // Give it a chance to convert to double since for not '.' locales
-  // we accept both comma and dot as decimal point
   if ( d->type == QVariant::Double && QLocale().decimalPoint() != '.' )
   {
     QVariant tmp( v );
-    if ( d->type == QVariant::Double && !tmp.convert( d->type ) )
+    if ( !tmp.convert( d->type ) )
     {
-      v = v.toString().replace( ',', '.' );
+      v = QLocale().toDouble( v.toString( ) );
     }
   }
 
