@@ -3,8 +3,8 @@
 
  ---------------------
  begin                : 17.10.2018
- copyright            : (C) 2018 by ale
- email                : [your-email-here]
+ copyright            : (C) 2018 by Alessandro Pasotti
+ email                : elpaso@itopen.it
  ***************************************************************************
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -16,47 +16,26 @@
 #ifndef QGSLAYERTREEVIEWBADLAYERINDICATORPROVIDER_H
 #define QGSLAYERTREEVIEWBADLAYERINDICATORPROVIDER_H
 
-#include "qgslayertreeviewindicator.h"
+#include "qgslayertreeviewindicatorprovider.h"
 
 #include <QObject>
-#include <QSet>
-#include <memory>
-
-class QgsLayerTreeNode;
-class QgsLayerTreeView;
-class QgsVectorLayer;
 
 
 //! Indicators for bad layers
-class QgsLayerTreeViewBadLayerIndicatorProvider : public QObject
+class QgsLayerTreeViewBadLayerIndicatorProvider : public QgsLayerTreeViewIndicatorProvider
 {
     Q_OBJECT
 
   public:
     explicit QgsLayerTreeViewBadLayerIndicatorProvider( QgsLayerTreeView *view );
 
-  signals:
-
   private slots:
-    //! Connects to signals of layers newly added to the tree
-    void onAddedChildren( QgsLayerTreeNode *node, int indexFrom, int indexTo );
-    //! Disconnects from layers about to be removed from the tree
-    void onWillRemoveChildren( QgsLayerTreeNode *node, int indexFrom, int indexTo );
-    void onLayerLoaded();
-    //! Adds/removes indicator of a layer
-    void onDataSourceChanged();
-
-    void onIndicatorClicked( const QModelIndex &index );
+    void onIndicatorClicked(const QModelIndex& index) override;
 
   private:
-
-    std::unique_ptr< QgsLayerTreeViewIndicator > newIndicator();
-    void addOrRemoveIndicator( QgsLayerTreeNode *node, QgsVectorLayer *vlayer );
-
-    QgsLayerTreeView *mLayerTreeView = nullptr;
-    QIcon mIcon;
-    QSet<QgsLayerTreeViewIndicator *> mIndicators;
-
+    QString iconName() override;
+    QString tooltipText() override;
+    bool acceptLayer(QgsMapLayer* layer) override;
 };
 
 #endif // QGSLAYERTREEVIEWBADLAYERINDICATORPROVIDER_H

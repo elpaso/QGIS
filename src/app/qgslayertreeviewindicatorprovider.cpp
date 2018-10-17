@@ -1,5 +1,5 @@
 /***************************************************************************
-  qgslayertreeviewbadlayerindicatorprovider.cpp - QgsLayerTreeViewBadLayerIndicatorProvider
+  qgslayertreeviewindicatorprovider.cpp - QgsLayerTreeViewIndicatorProvider
 
  ---------------------
  begin                : 17.10.2018
@@ -13,31 +13,30 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
+#include "qgslayertreeviewindicatorprovider.h"
 
-#include "qgslayertreeviewbadlayerindicatorprovider.h"
 #include "qgslayertree.h"
-#include "qgslayertreeview.h"
-#include "qgslayertreeutils.h"
 #include "qgslayertreemodel.h"
+#include "qgslayertreeutils.h"
+#include "qgslayertreeview.h"
 #include "qgsvectorlayer.h"
 #include "qgisapp.h"
 
-QgsLayerTreeViewBadLayerIndicatorProvider::QgsLayerTreeViewBadLayerIndicatorProvider( QgsLayerTreeView *view )
+QgsLayerTreeViewIndicatorProvider::QgsLayerTreeViewIndicatorProvider( QgsLayerTreeView *view )
   : QObject( view )
   , mLayerTreeView( view )
 {
-  mIcon = QgsApplication::getThemeIcon( QStringLiteral( "/mIndicatorBadLayer.svg" ) );
 
   QgsLayerTree *tree = mLayerTreeView->layerTreeModel()->rootGroup();
   onAddedChildren( tree, 0, tree->children().count() - 1 );
 
-  connect( tree, &QgsLayerTree::addedChildren, this, &QgsLayerTreeViewBadLayerIndicatorProvider::onAddedChildren );
-  connect( tree, &QgsLayerTree::willRemoveChildren, this, &QgsLayerTreeViewBadLayerIndicatorProvider::onWillRemoveChildren );
-
+  connect( tree, &QgsLayerTree::addedChildren, this, &QgsLayerTreeViewIndicatorProvider::onAddedChildren );
+  connect( tree, &QgsLayerTree::willRemoveChildren, this, &QgsLayerTreeViewIndicatorProvider::onWillRemoveChildren );
 }
 
-void QgsLayerTreeViewBadLayerIndicatorProvider::onAddedChildren( QgsLayerTreeNode *node, int indexFrom, int indexTo )
+void QgsLayerTreeViewIndicatorProvider::onAddedChildren( QgsLayerTreeNode *node, int indexFrom, int indexTo )
 {
+  // recursively populate indicators
   QList<QgsLayerTreeNode *> children = node->children();
   for ( int i = indexFrom; i <= indexTo; ++i )
   {
@@ -51,25 +50,24 @@ void QgsLayerTreeViewBadLayerIndicatorProvider::onAddedChildren( QgsLayerTreeNod
     {
       if ( QgsLayerTreeLayer *layerNode = dynamic_cast< QgsLayerTreeLayer * >( childNode ) )
       {
-        if ( QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layerNode->layer() ) )
+        if ( layerNode->layer() )
         {
-          if ( QgsLayerTreeUtils::countMapLayerInTree( mLayerTreeView->layerTreeModel()->rootGroup(), vlayer ) == 1 )
-            connect( vlayer, &QgsVectorLayer::dataSourceChanged, this, &QgsLayerTreeViewBadLayerIndicatorProvider::onDataSourceChanged );
-          addOrRemoveIndicator( childNode, vlayer );
+          connectSignals( layerNode->layer() );
+          addOrRemoveIndicator( childNode, layerNode->layer() );
         }
-        else if ( !layerNode->layer() )
+        else
         {
           // wait for layer to be loaded (e.g. when loading project, first the tree is loaded, afterwards the references to layers are resolved)
-          connect( layerNode, &QgsLayerTreeLayer::layerLoaded, this, &QgsLayerTreeViewBadLayerIndicatorProvider::onLayerLoaded );
+          connect( layerNode, &QgsLayerTreeLayer::layerLoaded, this, &QgsLayerTreeViewIndicatorProvider::onLayerLoaded );
         }
       }
     }
   }
 }
 
-void QgsLayerTreeViewBadLayerIndicatorProvider::onWillRemoveChildren( QgsLayerTreeNode *node, int indexFrom, int indexTo )
+void QgsLayerTreeViewIndicatorProvider::onWillRemoveChildren( QgsLayerTreeNode *node, int indexFrom, int indexTo )
 {
-  // recursively disconnect from providers' dataChanged() signal
+  // recursively call disconnect signals
 
   QList<QgsLayerTreeNode *> children = node->children();
   for ( int i = indexFrom; i <= indexTo; ++i )
@@ -83,16 +81,13 @@ void QgsLayerTreeViewBadLayerIndicatorProvider::onWillRemoveChildren( QgsLayerTr
     else if ( QgsLayerTree::isLayer( childNode ) )
     {
       QgsLayerTreeLayer *childLayerNode = QgsLayerTree::toLayer( childNode );
-      if ( QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( childLayerNode->layer() ) )
-      {
-        if ( QgsLayerTreeUtils::countMapLayerInTree( mLayerTreeView->layerTreeModel()->rootGroup(), childLayerNode->layer() ) == 1 )
-          disconnect( vlayer, &QgsVectorLayer::dataSourceChanged, this, &QgsLayerTreeViewBadLayerIndicatorProvider::onDataSourceChanged );
-      }
+      if ( QgsLayerTreeUtils::countMapLayerInTree( mLayerTreeView->layerTreeModel()->rootGroup(), childLayerNode->layer() ) == 1 )
+          disconnectSignals( childLayerNode->layer() );
     }
   }
 }
 
-void QgsLayerTreeViewBadLayerIndicatorProvider::onLayerLoaded()
+void QgsLayerTreeViewIndicatorProvider::onLayerLoaded()
 {
   QgsLayerTreeLayer *layerNode = qobject_cast<QgsLayerTreeLayer *>( sender() );
   if ( !layerNode )
@@ -102,59 +97,60 @@ void QgsLayerTreeViewBadLayerIndicatorProvider::onLayerLoaded()
   {
     if ( vlayer )
     {
-      connect( vlayer, &QgsVectorLayer::dataSourceChanged, this, &QgsLayerTreeViewBadLayerIndicatorProvider::onDataSourceChanged );
+      connectSignals( vlayer );
       addOrRemoveIndicator( layerNode, vlayer );
     }
   }
 }
 
-void QgsLayerTreeViewBadLayerIndicatorProvider::onDataSourceChanged()
+void QgsLayerTreeViewIndicatorProvider::onLayerChanged()
 {
-  QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( sender() );
-  if ( !vlayer )
+  QgsMapLayer *layer = qobject_cast<QgsMapLayer *>( sender() );
+  if ( !layer )
     return;
 
   // walk the tree and find layer node that needs to be updated
   const QList<QgsLayerTreeLayer *> layerNodes = mLayerTreeView->layerTreeModel()->rootGroup()->findLayers();
   for ( QgsLayerTreeLayer *node : layerNodes )
   {
-    if ( node->layer() && node->layer() == vlayer )
+    if ( node->layer() && node->layer() == layer )
     {
-      addOrRemoveIndicator( node, vlayer );
+      addOrRemoveIndicator( node, layer );
       break;
     }
   }
 }
 
-void QgsLayerTreeViewBadLayerIndicatorProvider::onIndicatorClicked( const QModelIndex &index )
+void QgsLayerTreeViewIndicatorProvider::connectSignals(QgsMapLayer* layer)
 {
-  QgsLayerTreeNode *node = mLayerTreeView->layerTreeModel()->index2node( index );
-  if ( !QgsLayerTree::isLayer( node ) )
-    return;
-
-  QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( QgsLayerTree::toLayer( node )->layer() );
+  QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layer );
   if ( !vlayer )
     return;
-
-  // TODO: Open set data source dialog
-  //QgisApp::instance()->makeMemoryLayerPermanent( vlayer );
+  connect( vlayer, &QgsVectorLayer::dataSourceChanged, this, &QgsLayerTreeViewIndicatorProvider::onLayerChanged );
 }
 
-std::unique_ptr<QgsLayerTreeViewIndicator> QgsLayerTreeViewBadLayerIndicatorProvider::newIndicator()
+void QgsLayerTreeViewIndicatorProvider::disconnectSignals(QgsMapLayer* layer)
+{
+  QgsVectorLayer *vlayer = qobject_cast<QgsVectorLayer *>( layer );
+  if ( !vlayer )
+    return;
+  disconnect( vlayer, &QgsVectorLayer::dataSourceChanged, this, &QgsLayerTreeViewIndicatorProvider::onLayerChanged );
+}
+
+std::unique_ptr< QgsLayerTreeViewIndicator > QgsLayerTreeViewIndicatorProvider::newIndicator()
 {
   std::unique_ptr< QgsLayerTreeViewIndicator > indicator = qgis::make_unique< QgsLayerTreeViewIndicator >( this );
-  indicator->setIcon( mIcon );
-  indicator->setToolTip( tr( "<b>Bad layer!</b><br>Layer data source could not be found, click here to set a new data source." ) );
-  connect( indicator.get(), &QgsLayerTreeViewIndicator::clicked, this, &QgsLayerTreeViewBadLayerIndicatorProvider::onIndicatorClicked );
+  indicator->setIcon( QgsApplication::getThemeIcon( iconName() ) );
+  indicator->setToolTip( tooltipText() );
+  connect( indicator.get(), &QgsLayerTreeViewIndicator::clicked, this, &QgsLayerTreeViewIndicatorProvider::onIndicatorClicked );
   mIndicators.insert( indicator.get() );
   return indicator;
 }
 
-
-void QgsLayerTreeViewBadLayerIndicatorProvider::addOrRemoveIndicator( QgsLayerTreeNode *node, QgsVectorLayer *vlayer )
+void QgsLayerTreeViewIndicatorProvider::addOrRemoveIndicator(QgsLayerTreeNode *node, QgsMapLayer* layer )
 {
 
-  if ( ! vlayer->isValid() )
+  if ( acceptLayer( layer ) )
   {
     const QList<QgsLayerTreeViewIndicator *> nodeIndicators = mLayerTreeView->indicators( node );
 
@@ -184,6 +180,7 @@ void QgsLayerTreeViewBadLayerIndicatorProvider::addOrRemoveIndicator( QgsLayerTr
         return;
       }
     }
+
     // no indicator was there before, nothing to do
   }
 }
