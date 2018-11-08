@@ -15,7 +15,7 @@ jobs:
 
       - run:
           name: Build QGIS
-          command: |
+          command:
             override:
               - >-
               mkdir build
