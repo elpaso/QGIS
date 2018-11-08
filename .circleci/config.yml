@@ -1,0 +1,20 @@
+version: 2
+jobs:
+  build:
+    docker:
+
+      - image: qgis/qgis3-build-deps:latest
+        environment:
+          DISPLAY: ":99"
+
+    working_directory: /qgis-build
+
+    steps:
+
+      - checkout
+
+      - run:
+          name: Build QGIS
+          command: |
+            /build-qgis.sh
+
