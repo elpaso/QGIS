@@ -113,6 +113,9 @@ class ANALYSIS_EXPORT QgsRasterCalculator
      * a description of the error can be obtained by calling lastError().
     */
     Result processCalculation( QgsFeedback *feedback = nullptr );
+#ifdef HAVE_OPENCL
+    Result processCalculationGPU( QgsFeedback *feedback = nullptr );
+#endif
 
     /**
      * Returns a description of the last error encountered.

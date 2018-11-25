@@ -52,12 +52,12 @@ class TestQgsRasterCalculator : public QObject
     void dualOpRasterRaster(); //test dual op on raster ref and raster ref
 
     void calcWithLayers();
-    void calcWithReprojectedLayers();
 
     void errors();
 
   private:
 
+    void calcWithReprojectedLayers();
     QgsRasterLayer *mpLandsatRasterLayer = nullptr;
     QgsRasterLayer *mpLandsatRasterLayer4326 = nullptr;
 };

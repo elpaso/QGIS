@@ -43,6 +43,7 @@ class TestQgsOpenClUtils: public QObject
     void TestDisable();
     void TestAvailable();
     void testMakeRunProgram();
+    void testMakeRunProgramUnlimitedArgs();
     void testProgramSource();
     void testContext();
     void testDevices();
@@ -139,6 +140,47 @@ void TestQgsOpenClUtils::testMakeRunProgram()
   // Run twice to check for valid command queue in the second call
   _testMakeRunProgram();
   _testMakeRunProgram();
+}
+
+void TestQgsOpenClUtils::testMakeRunProgramUnlimitedArgs()
+{
+  cl_int err = 0;
+
+  QVERIFY( err == 0 );
+
+  cl::Context ctx = QgsOpenClUtils::context();
+  cl::CommandQueue queue( ctx );
+
+  std::vector<float> a_vec = {1, 10, 100};
+  std::vector<float> b_vec = {1, 10, 100};
+  std::vector<float> c_vec = {-1, -1, -1};
+  cl::Buffer a_buf( queue, a_vec.begin(), a_vec.end(), true );
+  cl::Buffer b_buf( queue, b_vec.begin(), b_vec.end(), true );
+  cl::Buffer c_buf( queue, c_vec.begin(), c_vec.end(), false );
+
+  cl::Program program = QgsOpenClUtils::buildProgram( ctx, QString::fromStdString( source() ) );
+
+  auto kernel = cl::KernelFunctor <> ( program, "vectorAdd" );
+
+  cl::Kernel _kernel = kernel.getKernel();
+
+  _kernel.setArg( 0, a_buf );
+  _kernel.setArg( 1, b_buf );
+  _kernel.setArg( 2, c_buf );
+
+  // Run the kernel
+  queue.enqueueNDRangeKernel(
+    _kernel,
+    0,
+    cl::NDRange( 3 )
+  );
+
+
+  cl::copy( queue, c_buf, c_vec.begin(), c_vec.end() );
+  for ( size_t i = 0; i < c_vec.size(); ++i )
+  {
+    QCOMPARE( c_vec[i], a_vec[i] + b_vec[i] );
+  }
 }
 
 void TestQgsOpenClUtils::_testMakeRunProgram()

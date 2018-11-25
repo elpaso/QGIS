@@ -31,6 +31,12 @@
 #include <cpl_string.h>
 #include <gdalwarper.h>
 
+#ifdef HAVE_OPENCL
+#include "qgsopenclutils.h"
+#include "qgsgdalutils.h"
+#include <QRegularExpression>
+#endif
+
 QgsRasterCalculator::QgsRasterCalculator( const QString &formulaString, const QString &outputFile, const QString &outputFormat,
     const QgsRectangle &outputExtent, int nOutputColumns, int nOutputRows, const QVector<QgsRasterCalculatorEntry> &rasterEntries )
   : mFormulaString( formulaString )
@@ -60,7 +66,13 @@ QgsRasterCalculator::QgsRasterCalculator( const QString &formulaString, const QS
 
 QgsRasterCalculator::Result QgsRasterCalculator::processCalculation( QgsFeedback *feedback )
 {
+
   mLastError.clear();
+
+
+#ifdef HAVE_OPENCL
+  return processCalculationGPU( feedback );
+#endif
 
   //prepare search string / tree
   std::unique_ptr< QgsRasterCalcNode > calcNode( QgsRasterCalcNode::parseRasterCalcString( mFormulaString, mLastError ) );
@@ -97,9 +109,9 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculation( QgsFeedback
       proj.setInput( it->raster->dataProvider() );
       proj.setPrecision( QgsRasterProjector::Exact );
 
-      QgsRasterBlockFeedback *rasterBlockFeedback = new QgsRasterBlockFeedback();
-      QObject::connect( feedback, &QgsFeedback::canceled, rasterBlockFeedback, &QgsRasterBlockFeedback::cancel );
-      block.reset( proj.block( it->bandNumber, mOutputRectangle, mNumOutputColumns, mNumOutputRows, rasterBlockFeedback ) );
+      std::unique_ptr<QgsRasterBlockFeedback> rasterBlockFeedback = qgis::make_unique<QgsRasterBlockFeedback>();
+      QObject::connect( feedback, &QgsFeedback::canceled, rasterBlockFeedback.get(), &QgsRasterBlockFeedback::cancel );
+      block.reset( proj.block( it->bandNumber, mOutputRectangle, mNumOutputColumns, mNumOutputRows, rasterBlockFeedback.get() ) );
       if ( rasterBlockFeedback->isCanceled() )
       {
         qDeleteAll( inputBlocks );
@@ -195,6 +207,260 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculation( QgsFeedback
   }
   return Success;
 }
+
+#ifdef HAVE_OPENCL
+QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedback *feedback )
+{
+  //prepare search string / tree
+  std::unique_ptr< QgsRasterCalcNode > calcNode( QgsRasterCalcNode::parseRasterCalcString( mFormulaString, mLastError ) );
+  if ( !calcNode )
+  {
+    //error
+    return ParserError;
+  }
+
+  // Safety check
+  for ( const auto &r : mRasterEntries )
+  {
+    if ( !r.raster ) // no raster layer in entry
+    {
+      mLastError = QObject::tr( "No raster layer for entry %1" ).arg( r.ref );
+      return InputLayerError;
+    }
+
+    if ( r.bandNumber <= 0 || r.bandNumber > r.raster->bandCount() )
+    {
+      mLastError = QObject::tr( "Band number %1 is not valid for entry %2" ).arg( r.bandNumber ).arg( r.ref );
+      return BandError;
+    }
+  }
+
+  QRegularExpression re( R"re("([^"@]+@\d+)")re" );
+  re.setPatternOptions( QRegularExpression::MultilineOption );
+  QRegularExpressionMatchIterator it = re.globalMatch( mFormulaString );
+  QSet<QString> capturedTexts;
+  while ( it.hasNext() )
+  {
+    auto match = it.next();
+    capturedTexts.insert( match.captured( 1 ) );
+  }
+  qDebug() << capturedTexts;
+
+  // Extract all references
+  struct LayerRef
+  {
+    QString name;
+    int band;
+    QgsRasterLayer *layer;
+    QString varName;
+    size_t index;
+    size_t bufferSize;
+    size_t dataSize;
+    QString typeName;
+  };
+
+  std::vector<LayerRef> inputRefs;
+
+  std::function<QgsRasterLayer*( const QString )> findLayer = [ & ]( const QString name ) -> QgsRasterLayer*
+  {
+    for ( const auto &ref : mRasterEntries )
+    {
+      if ( ref.ref == name )
+        return ref.raster;
+    }
+    return nullptr;
+  };
+
+  size_t refCounter = 0;
+  for ( const auto &r : capturedTexts )
+  {
+    if ( r.startsWith( '"' ) )
+      continue;
+    QStringList parts( r.split( '@' ) );
+    if ( parts.count() != 2 )
+      continue;
+    bool ok = false;
+    LayerRef entry;
+    entry.name = r;
+    entry.band = parts[1].toInt( &ok );
+    entry.layer = findLayer( r );
+    if ( !( entry.layer && entry.layer->dataProvider() && ok ) )
+      continue;
+    entry.dataSize = entry.layer->dataProvider()->dataTypeSize( entry.band );
+    switch ( entry.layer->dataProvider()->dataType( entry.band ) )
+    {
+      case Qgis::DataType::Byte:
+        entry.typeName = QStringLiteral( "char" );
+        break;
+      case Qgis::DataType::UInt16:
+        entry.typeName = QStringLiteral( "unsigned int" );
+        break;
+      case Qgis::DataType::Int16:
+        entry.typeName = QStringLiteral( "int" );
+        break;
+      case Qgis::DataType::UInt32:
+        entry.typeName = QStringLiteral( "unsigned long" );
+        break;
+      case Qgis::DataType::Int32:
+        entry.typeName = QStringLiteral( "long" );
+        break;
+      case Qgis::DataType::Float32:
+        entry.typeName = QStringLiteral( "float" );
+        break;
+      case Qgis::DataType::Float64:
+        entry.typeName = QStringLiteral( "double" );
+        break;
+      default:
+        return BandError;
+    }
+    entry.bufferSize = entry.dataSize * mNumOutputColumns;
+    entry.index = refCounter;
+    entry.varName = QStringLiteral( "input_raster_%1_band_%2" )
+                    .arg( refCounter++ )
+                    .arg( entry.band );
+    inputRefs.push_back( entry );
+  }
+
+  // Create the C expression
+  QString cExpression( mFormulaString );
+
+  QStringList inputArgs;
+  for ( const auto &ref : inputRefs )
+  {
+    cExpression.replace( '"' + ref.name + '"', QStringLiteral( "%1[i]" ).arg( ref.varName ) );
+    inputArgs.append( QStringLiteral( "__global %1 *%2" )
+                      .arg( ref.typeName )
+                      .arg( ref.varName ) );
+  }
+  qDebug() << cExpression;
+
+  // TODO: projection check
+  // Create the program
+  QString programTemplate( R"pgm(
+  __kernel void rasterCalculator( ##INPUT##,
+                            __global float *resultLine
+                          )
+  {
+
+    // Get the index of the current element
+    const int i = get_global_id(0);
+    // Expression
+    resultLine[i] = ##EXPRESSION##;
+  }
+  )pgm" );
+
+  programTemplate = programTemplate.replace( QStringLiteral( "##INPUT##" ), inputArgs.join( ',' ) );
+  programTemplate = programTemplate.replace( QStringLiteral( "##EXPRESSION##" ), cExpression );
+
+  qDebug() << programTemplate;
+  // Prepare context and queue
+  cl::Context ctx = QgsOpenClUtils::context();
+  cl::CommandQueue queue( ctx );
+
+  // Create a program from the kernel source
+  cl::Program program( QgsOpenClUtils::buildProgram( ctx, programTemplate, QgsOpenClUtils::ExceptionBehavior::Throw ) );
+
+  // Create the buffers
+  std::size_t bufferSize( sizeof( float ) * static_cast<unsigned long>( mNumOutputColumns ) );
+  cl::Buffer resultLineBuffer( ctx, CL_MEM_WRITE_ONLY,
+                               bufferSize, nullptr, nullptr );
+
+  std::vector<cl::Buffer> inputBuffers;
+  for ( int i = 0; i < inputArgs.count(); i++ )
+  {
+    inputBuffers.push_back( cl::Buffer( ctx, CL_MEM_READ_ONLY, bufferSize, nullptr, nullptr ) );
+  }
+
+  auto kernel = cl::Kernel( program, "rasterCalculator" );
+
+  for ( int i = 0; i < inputArgs.count(); i++ )
+  {
+    kernel.setArg( i, inputBuffers.at( 0 ) );
+  }
+  kernel.setArg( inputArgs.count(), resultLineBuffer );
+
+  QgsOpenClUtils::CPLAllocator<float> resultLine( bufferSize );
+
+  //open output dataset for writing
+  GDALDriverH outputDriver = openOutputDriver();
+  if ( !outputDriver )
+  {
+    mLastError = QObject::tr( "Could not obtain driver for %1" ).arg( mOutputFormat );
+    return CreateOutputError;
+  }
+
+  gdal::dataset_unique_ptr outputDataset( openOutputFile( outputDriver ) );
+  if ( !outputDataset )
+  {
+    mLastError = QObject::tr( "Could not create output %1" ).arg( mOutputFile );
+    return CreateOutputError;
+  }
+
+  GDALRasterBandH outputRasterBand = GDALGetRasterBand( outputDataset.get(), 1 );
+  if ( !outputRasterBand )
+    return BandError;
+
+
+  // Run kernel on all scanlines
+  auto rowReight = mOutputRectangle.height() / mNumOutputRows;
+
+  for ( int line = 0; line < mNumOutputRows; line++ )
+  {
+    if ( feedback && feedback->isCanceled() )
+    {
+      break;
+    }
+
+    if ( feedback )
+    {
+      feedback->setProgress( 100.0 * static_cast< double >( line ) / mNumOutputRows );
+    }
+
+    // Read lines from rasters into the buffers
+    for ( const auto &ref : inputRefs )
+    {
+      // Read one row
+      QgsRectangle rect( mOutputRectangle );
+      rect.setYMinimum( rect.yMinimum() + rowReight * line );
+      rect.setYMaximum( rect.yMinimum() + rowReight );
+      QgsRasterBlock *block = ref.layer->dataProvider()->block( ref.band, rect, mNumOutputColumns, 1 );
+      for ( int i = 0; i < mNumOutputColumns; i++ )
+        qDebug() << i << block->value( 0, i );
+
+      queue.enqueueWriteBuffer( inputBuffers[ref.index], CL_TRUE, 0,
+                                ref.bufferSize, block->bits() );
+
+    }
+    // Run the kernel
+    queue.enqueueNDRangeKernel(
+      kernel,
+      0,
+      cl::NDRange( mNumOutputColumns )
+    );
+
+
+    // Write the result
+    queue.enqueueReadBuffer( resultLineBuffer, CL_TRUE, 0,
+                             bufferSize, resultLine.get() );
+
+    for ( int i = 0; i < mNumOutputColumns; i++ )
+      qDebug() << "out" << i << resultLine[i];
+    if ( GDALRasterIO( outputRasterBand, GF_Write, 0, line, mNumOutputColumns, 1, resultLine.get(), mNumOutputColumns, 1, GDT_Float32, 0, 0 ) != CE_None )
+    {
+      return CreateOutputError;
+    }
+  }
+
+  if ( feedback && feedback->isCanceled() )
+  {
+    //delete the dataset without closing (because it is faster)
+    gdal::fast_delete_and_close( outputDataset, outputDriver, mOutputFile );
+    return Canceled;
+  }
+
+  return Success;
+}
+#endif
 
 GDALDriverH QgsRasterCalculator::openOutputDriver()
 {
