@@ -69,9 +69,9 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculation( QgsFeedback
 
   mLastError.clear();
 
-
 #ifdef HAVE_OPENCL
-  return processCalculationGPU( feedback );
+  if ( QgsOpenClUtils::enabled() && QgsOpenClUtils::available() )
+    return processCalculationGPU( feedback );
 #endif
 
   //prepare search string / tree
@@ -244,33 +244,22 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     auto match = it.next();
     capturedTexts.insert( match.captured( 1 ) );
   }
-  qDebug() << capturedTexts;
 
   // Extract all references
   struct LayerRef
   {
     QString name;
     int band;
-    QgsRasterLayer *layer;
+    QgsRasterLayer *layer = nullptr;
     QString varName;
+    QString typeName;
     size_t index;
     size_t bufferSize;
     size_t dataSize;
-    QString typeName;
   };
 
+  // Collects all layers, band, name, varName and size information
   std::vector<LayerRef> inputRefs;
-
-  std::function<QgsRasterLayer*( const QString )> findLayer = [ & ]( const QString name ) -> QgsRasterLayer*
-  {
-    for ( const auto &ref : mRasterEntries )
-    {
-      if ( ref.ref == name )
-        return ref.raster;
-    }
-    return nullptr;
-  };
-
   size_t refCounter = 0;
   for ( const auto &r : capturedTexts )
   {
@@ -283,7 +272,11 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     LayerRef entry;
     entry.name = r;
     entry.band = parts[1].toInt( &ok );
-    entry.layer = findLayer( r );
+    for ( const auto &ref : mRasterEntries )
+    {
+      if ( ref.ref == entry.name )
+        entry.layer = ref.raster;
+    }
     if ( !( entry.layer && entry.layer->dataProvider() && ok ) )
       continue;
     entry.dataSize = entry.layer->dataProvider()->dataTypeSize( entry.band );
@@ -321,9 +314,13 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     inputRefs.push_back( entry );
   }
 
+  // Prepare context and queue
+  cl::Context ctx = QgsOpenClUtils::context();
+  cl::CommandQueue queue( ctx );
+
   // Create the C expression
   QString cExpression( mFormulaString );
-
+  std::vector<cl::Buffer> inputBuffers;
   QStringList inputArgs;
   for ( const auto &ref : inputRefs )
   {
@@ -331,6 +328,7 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     inputArgs.append( QStringLiteral( "__global %1 *%2" )
                       .arg( ref.typeName )
                       .arg( ref.varName ) );
+    inputBuffers.push_back( cl::Buffer( ctx, CL_MEM_READ_ONLY, ref.bufferSize, nullptr, nullptr ) );
   }
   qDebug() << cExpression;
 
@@ -353,9 +351,6 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
   programTemplate = programTemplate.replace( QStringLiteral( "##EXPRESSION##" ), cExpression );
 
   qDebug() << programTemplate;
-  // Prepare context and queue
-  cl::Context ctx = QgsOpenClUtils::context();
-  cl::CommandQueue queue( ctx );
 
   // Create a program from the kernel source
   cl::Program program( QgsOpenClUtils::buildProgram( ctx, programTemplate, QgsOpenClUtils::ExceptionBehavior::Throw ) );
@@ -365,19 +360,13 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
   cl::Buffer resultLineBuffer( ctx, CL_MEM_WRITE_ONLY,
                                bufferSize, nullptr, nullptr );
 
-  std::vector<cl::Buffer> inputBuffers;
-  for ( int i = 0; i < inputArgs.count(); i++ )
-  {
-    inputBuffers.push_back( cl::Buffer( ctx, CL_MEM_READ_ONLY, bufferSize, nullptr, nullptr ) );
-  }
-
   auto kernel = cl::Kernel( program, "rasterCalculator" );
 
-  for ( int i = 0; i < inputArgs.count(); i++ )
+  for ( int i = 0; i < inputBuffers.size() ; i++ )
   {
     kernel.setArg( i, inputBuffers.at( 0 ) );
   }
-  kernel.setArg( inputArgs.count(), resultLineBuffer );
+  kernel.setArg( inputBuffers.size(), resultLineBuffer );
 
   QgsOpenClUtils::CPLAllocator<float> resultLine( bufferSize );
 
@@ -396,13 +385,15 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     return CreateOutputError;
   }
 
+  GDALSetProjection( outputDataset.get(), mOutputCrs.toWkt().toLocal8Bit().data() );
+
   GDALRasterBandH outputRasterBand = GDALGetRasterBand( outputDataset.get(), 1 );
   if ( !outputRasterBand )
     return BandError;
 
 
   // Run kernel on all scanlines
-  auto rowReight = mOutputRectangle.height() / mNumOutputRows;
+  auto rowHeight = mOutputRectangle.height() / mNumOutputRows;
 
   for ( int line = 0; line < mNumOutputRows; line++ )
   {
@@ -421,11 +412,11 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     {
       // Read one row
       QgsRectangle rect( mOutputRectangle );
-      rect.setYMinimum( rect.yMinimum() + rowReight * line );
-      rect.setYMaximum( rect.yMinimum() + rowReight );
+      rect.setYMaximum( rect.yMaximum() - rowHeight * line );
+      rect.setYMinimum( rect.yMaximum() - rowHeight );
       QgsRasterBlock *block = ref.layer->dataProvider()->block( ref.band, rect, mNumOutputColumns, 1 );
-      for ( int i = 0; i < mNumOutputColumns; i++ )
-        qDebug() << i << block->value( 0, i );
+      //for ( int i = 0; i < mNumOutputColumns; i++ )
+      //  qDebug() << i << block->value( 0, i );
 
       queue.enqueueWriteBuffer( inputBuffers[ref.index], CL_TRUE, 0,
                                 ref.bufferSize, block->bits() );
@@ -443,8 +434,8 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     queue.enqueueReadBuffer( resultLineBuffer, CL_TRUE, 0,
                              bufferSize, resultLine.get() );
 
-    for ( int i = 0; i < mNumOutputColumns; i++ )
-      qDebug() << "out" << i << resultLine[i];
+    //for ( int i = 0; i < mNumOutputColumns; i++ )
+    //  qDebug() << "out" << i << resultLine[i];
     if ( GDALRasterIO( outputRasterBand, GF_Write, 0, line, mNumOutputColumns, 1, resultLine.get(), mNumOutputColumns, 1, GDT_Float32, 0, 0 ) != CE_None )
     {
       return CreateOutputError;

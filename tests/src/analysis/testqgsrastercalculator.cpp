@@ -22,6 +22,12 @@ Email                : nyall dot dawson at gmail dot com
 #include "qgsapplication.h"
 #include "qgsproject.h"
 
+
+#ifdef HAVE_OPENCL
+#include "qgsopenclutils.h"
+#endif
+
+
 Q_DECLARE_METATYPE( QgsRasterCalcNode::Operator )
 
 class TestQgsRasterCalculator : public QObject
@@ -51,13 +57,18 @@ class TestQgsRasterCalculator : public QObject
     void rasterRefOp();
     void dualOpRasterRaster(); //test dual op on raster ref and raster ref
 
-    void calcWithLayers();
+    void calcWithLayers( bool useOpenCl = false );
+    void calcWithReprojectedLayers( bool useOpenCl = false );
+
+#ifdef HAVE_OPENCL
+    void calcWithLayersCl();
+#endif
 
     void errors();
 
   private:
 
-    void calcWithReprojectedLayers();
+    void calcWithReprojectedLayersCl();
     QgsRasterLayer *mpLandsatRasterLayer = nullptr;
     QgsRasterLayer *mpLandsatRasterLayer4326 = nullptr;
 };
@@ -419,8 +430,15 @@ void TestQgsRasterCalculator::dualOpRasterRaster()
   QCOMPARE( result.data()[5], -9999.0 );
 }
 
-void TestQgsRasterCalculator::calcWithLayers()
+void TestQgsRasterCalculator::calcWithLayers( bool useOpenCl )
 {
+
+#ifdef HAVE_OPENCL
+  QgsOpenClUtils::setEnabled( useOpenCl );
+#else
+  Q_UNUSED( useOpenCl )
+#endif
+
   QgsRasterCalculatorEntry entry1;
   entry1.bandNumber = 1;
   entry1.raster = mpLandsatRasterLayer;
@@ -485,8 +503,15 @@ void TestQgsRasterCalculator::calcWithLayers()
   delete block;
 }
 
-void TestQgsRasterCalculator::calcWithReprojectedLayers()
+void TestQgsRasterCalculator::calcWithReprojectedLayers( bool useOpenCl )
 {
+
+#ifdef HAVE_OPENCL
+  QgsOpenClUtils::setEnabled( useOpenCl );
+#else
+  Q_UNUSED( useOpenCl )
+#endif
+
   QgsRasterCalculatorEntry entry1;
   entry1.bandNumber = 1;
   entry1.raster = mpLandsatRasterLayer;
@@ -528,6 +553,16 @@ void TestQgsRasterCalculator::calcWithReprojectedLayers()
   QCOMPARE( block->value( 2, 1 ), 261.0 );
   delete result;
   delete block;
+}
+
+void TestQgsRasterCalculator::calcWithLayersCl()
+{
+  calcWithLayers( true );
+}
+
+void TestQgsRasterCalculator::calcWithReprojectedLayersCl()
+{
+  calcWithReprojectedLayers( true );
 }
 
 void TestQgsRasterCalculator::errors()
