@@ -108,10 +108,16 @@ class ANALYSIS_EXPORT QgsRasterCalcNode
 
     /**
      * Returns a string representation of the expression
-     * \param cStyle if true, output operators following a C syntax
+     * \param cStyle if true operators will follow C syntax
      * \since QGIS 3.6
      */
-    QString toString( bool cStyle = false );
+    QString toString( bool cStyle = false ) const;
+
+    /**
+     * Populates a list of nodes of a specific type.
+     * \since QGIS 3.6
+     */
+    void findNodes( const QgsRasterCalcNode::Type type, QList<const QgsRasterCalcNode *> &nodeList ) const;
 
     static QgsRasterCalcNode *parseRasterCalcString( const QString &str, QString &parserErrorMsg ) SIP_FACTORY;
 

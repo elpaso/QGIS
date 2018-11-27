@@ -199,7 +199,7 @@ bool QgsRasterCalcNode::calculate( QMap<QString, QgsRasterBlock * > &rasterData,
   return false;
 }
 
-QString QgsRasterCalcNode::toString( bool cStyle )
+QString QgsRasterCalcNode::toString( bool cStyle ) const
 {
   QString result;
   QString left;
@@ -306,6 +306,16 @@ QString QgsRasterCalcNode::toString( bool cStyle )
       break;
   }
   return result;
+}
+
+void QgsRasterCalcNode::findNodes( const QgsRasterCalcNode::Type type, QList<const QgsRasterCalcNode *> &nodeList ) const
+{
+  if ( mType == type )
+    nodeList.push_back( this );
+  if ( mLeft )
+    mLeft->findNodes( type, nodeList );
+  if ( mRight )
+    mRight->findNodes( type, nodeList );
 }
 
 QgsRasterCalcNode *QgsRasterCalcNode::parseRasterCalcString( const QString &str, QString &parserErrorMsg )

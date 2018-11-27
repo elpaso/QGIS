@@ -61,6 +61,7 @@ class TestQgsRasterCalculator : public QObject
     void calcWithReprojectedLayers( bool useOpenCl = false );
 
     void toString();
+    void findNodes();
 
 #ifdef HAVE_OPENCL
     void calcWithLayersCl();
@@ -566,7 +567,7 @@ void TestQgsRasterCalculator::calcWithReprojectedLayers( bool useOpenCl )
 void TestQgsRasterCalculator::toString()
 {
 
-  std::function<QString( QString, bool )> _test = [ ]( QString exp, bool cStyle ) -> QString
+  auto _test = [ ]( QString exp, bool cStyle ) -> QString
   {
     QString error;
     std::unique_ptr< QgsRasterCalcNode > calcNode( QgsRasterCalcNode::parseRasterCalcString( exp, error ) );
@@ -580,6 +581,36 @@ void TestQgsRasterCalculator::toString()
   QCOMPARE( _test( QStringLiteral( "\"raster@1\" ^ 3  +  2" ), true ), QString( "pow( \"raster@1\", 3 ) + 2" ) );
   QCOMPARE( _test( QStringLiteral( "atan(\"raster@1\") * cos( 3  +  2 )" ), false ), QString( "atan( \"raster@1\" ) * cos( 3 + 2 )" ) );
   QCOMPARE( _test( QStringLiteral( "atan(\"raster@1\") * cos( 3  +  2 )" ), true ), QString( "atan( \"raster@1\" ) * cos( 3 + 2 )" ) );
+}
+
+void TestQgsRasterCalculator::findNodes()
+{
+
+  std::unique_ptr< QgsRasterCalcNode > calcNode;
+
+  auto _test =
+    [ & ]( QString exp, const QgsRasterCalcNode::Type type ) -> QStringList
+  {
+    QList<const QgsRasterCalcNode *> nodeList;
+    QString error;
+    calcNode.reset( QgsRasterCalcNode::parseRasterCalcString( exp, error ) );
+    if ( error.isEmpty() )
+      calcNode->findNodes( type, nodeList );
+    QStringList result;
+    for ( const auto &n : nodeList )
+    {
+      result.push_back( n->toString( true ) );
+    }
+    return result;
+  };
+
+  QCOMPARE( _test( QStringLiteral( "atan(\"raster@1\") * cos( 3  +  2 )" ), QgsRasterCalcNode::Type::tOperator ).length(), 4 );
+  QCOMPARE( _test( QStringLiteral( "\"raster@1\"" ), QgsRasterCalcNode::Type::tOperator ).length(), 0 );
+  QCOMPARE( _test( QStringLiteral( "\"raster@1\"" ), QgsRasterCalcNode::Type::tRasterRef ).length(), 1 );
+  QCOMPARE( _test( QStringLiteral( "\"raster@1\"" ), QgsRasterCalcNode::Type::tMatrix ).length(), 0 );
+  QCOMPARE( _test( QStringLiteral( "2 + 3" ), QgsRasterCalcNode::Type::tNumber ).length(), 2 );
+  QCOMPARE( _test( QStringLiteral( "2 + 3" ), QgsRasterCalcNode::Type::tOperator ).length(), 1 );
+
 }
 
 void TestQgsRasterCalculator::calcWithLayersCl()
