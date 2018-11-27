@@ -219,6 +219,8 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     return ParserError;
   }
 
+  QString cExpression( calcNode->toString( true ) );
+
   // Safety check
   for ( const auto &r : mRasterEntries )
   {
@@ -283,7 +285,7 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     switch ( entry.layer->dataProvider()->dataType( entry.band ) )
     {
       case Qgis::DataType::Byte:
-        entry.typeName = QStringLiteral( "char" );
+        entry.typeName = QStringLiteral( "unsigned char" );
         break;
       case Qgis::DataType::UInt16:
         entry.typeName = QStringLiteral( "unsigned int" );
@@ -300,6 +302,9 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
       case Qgis::DataType::Float32:
         entry.typeName = QStringLiteral( "float" );
         break;
+      // FIXME: not sure all OpenCL implementations support double
+      //        maybe safer to fall back to the CPU implementation
+      //        after a compatibility check
       case Qgis::DataType::Float64:
         entry.typeName = QStringLiteral( "double" );
         break;
@@ -319,7 +324,6 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
   cl::CommandQueue queue( ctx );
 
   // Create the C expression
-  QString cExpression( mFormulaString );
   std::vector<cl::Buffer> inputBuffers;
   QStringList inputArgs;
   for ( const auto &ref : inputRefs )
@@ -330,11 +334,15 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
                       .arg( ref.varName ) );
     inputBuffers.push_back( cl::Buffer( ctx, CL_MEM_READ_ONLY, ref.bufferSize, nullptr, nullptr ) );
   }
-  qDebug() << cExpression;
 
-  // TODO: projection check
+  //qDebug() << cExpression;
+
   // Create the program
   QString programTemplate( R"pgm(
+  // Inputs:
+  ##INPUT_DESC##
+  // Expression: ##EXPRESSION_ORIGINAL##
+
   __kernel void rasterCalculator( ##INPUT##,
                             __global float *resultLine
                           )
@@ -347,28 +355,35 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
   }
   )pgm" );
 
+  QStringList inputDesc;
+  for ( const auto &ref : inputRefs )
+  {
+    inputDesc.append( QStringLiteral( "  // %1 = %2" ).arg( ref.varName ).arg( ref.name ) );
+  }
+  programTemplate = programTemplate.replace( QStringLiteral( "##INPUT_DESC##" ), inputDesc.join( '\n' ) );
   programTemplate = programTemplate.replace( QStringLiteral( "##INPUT##" ), inputArgs.join( ',' ) );
   programTemplate = programTemplate.replace( QStringLiteral( "##EXPRESSION##" ), cExpression );
+  programTemplate = programTemplate.replace( QStringLiteral( "##EXPRESSION_ORIGINAL##" ), calcNode->toString( ) );
 
-  qDebug() << programTemplate;
+  //qDebug() << programTemplate;
 
   // Create a program from the kernel source
   cl::Program program( QgsOpenClUtils::buildProgram( ctx, programTemplate, QgsOpenClUtils::ExceptionBehavior::Throw ) );
 
-  // Create the buffers
-  std::size_t bufferSize( sizeof( float ) * static_cast<unsigned long>( mNumOutputColumns ) );
+  // Create the buffers, output is float32 (4 bytes)
+  std::size_t resultBufferSize( 4 * static_cast<unsigned long>( mNumOutputColumns ) );
   cl::Buffer resultLineBuffer( ctx, CL_MEM_WRITE_ONLY,
-                               bufferSize, nullptr, nullptr );
+                               resultBufferSize, nullptr, nullptr );
 
   auto kernel = cl::Kernel( program, "rasterCalculator" );
 
   for ( int i = 0; i < inputBuffers.size() ; i++ )
   {
-    kernel.setArg( i, inputBuffers.at( 0 ) );
+    kernel.setArg( i, inputBuffers.at( i ) );
   }
   kernel.setArg( inputBuffers.size(), resultLineBuffer );
 
-  QgsOpenClUtils::CPLAllocator<float> resultLine( bufferSize );
+  QgsOpenClUtils::CPLAllocator<float> resultLine( resultBufferSize );
 
   //open output dataset for writing
   GDALDriverH outputDriver = openOutputDriver();
@@ -414,9 +429,25 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
       QgsRectangle rect( mOutputRectangle );
       rect.setYMaximum( rect.yMaximum() - rowHeight * line );
       rect.setYMinimum( rect.yMaximum() - rowHeight );
-      QgsRasterBlock *block = ref.layer->dataProvider()->block( ref.band, rect, mNumOutputColumns, 1 );
+      QgsRasterBlock *block;
+      // TODO: check if this is too slow
+      // if crs transform needed
+      if ( ref.layer->crs() != mOutputCrs )
+      {
+        QgsRasterProjector proj;
+        proj.setCrs( ref.layer->crs(), mOutputCrs );
+        proj.setInput( ref.layer->dataProvider() );
+        proj.setPrecision( QgsRasterProjector::Exact );
+        block = proj.block( ref.band, rect, mNumOutputColumns, 1 );
+      }
+      else
+      {
+        block = ref.layer->dataProvider()->block( ref.band, rect, mNumOutputColumns, 1 );
+      }
+
       //for ( int i = 0; i < mNumOutputColumns; i++ )
-      //  qDebug() << i << block->value( 0, i );
+      //  qDebug() << "Input: " << line << i << ref.varName << " = " << block->value( 0, i );
+      //qDebug() << "Writing buffer " << ref.index;
 
       queue.enqueueWriteBuffer( inputBuffers[ref.index], CL_TRUE, 0,
                                 ref.bufferSize, block->bits() );
@@ -432,10 +463,11 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
 
     // Write the result
     queue.enqueueReadBuffer( resultLineBuffer, CL_TRUE, 0,
-                             bufferSize, resultLine.get() );
+                             resultBufferSize, resultLine.get() );
 
     //for ( int i = 0; i < mNumOutputColumns; i++ )
-    //  qDebug() << "out" << i << resultLine[i];
+    //  qDebug() << "Output: " << line << i << " = " << resultLine[i];
+
     if ( GDALRasterIO( outputRasterBand, GF_Write, 0, line, mNumOutputColumns, 1, resultLine.get(), mNumOutputColumns, 1, GDT_Float32, 0, 0 ) != CE_None )
     {
       return CreateOutputError;

@@ -60,15 +60,17 @@ class TestQgsRasterCalculator : public QObject
     void calcWithLayers( bool useOpenCl = false );
     void calcWithReprojectedLayers( bool useOpenCl = false );
 
+    void toString();
+
 #ifdef HAVE_OPENCL
     void calcWithLayersCl();
+    void calcWithReprojectedLayersCl();
 #endif
 
-    void errors();
+    void errors( bool useOpenCl = false );
 
   private:
 
-    void calcWithReprojectedLayersCl();
     QgsRasterLayer *mpLandsatRasterLayer = nullptr;
     QgsRasterLayer *mpLandsatRasterLayer4326 = nullptr;
 };
@@ -106,8 +108,12 @@ void  TestQgsRasterCalculator::cleanupTestCase()
 
 void  TestQgsRasterCalculator::init()
 {
-
+#ifdef HAVE_OPENCL
+  // Reset to default in case some tests mess it up
+  QgsOpenClUtils::setSourcePath( QDir( QgsApplication::pkgDataPath() ).absoluteFilePath( QStringLiteral( "resources/opencl_programs" ) ) );
+#endif
 }
+
 void  TestQgsRasterCalculator::cleanup()
 {
 
@@ -434,6 +440,8 @@ void TestQgsRasterCalculator::calcWithLayers( bool useOpenCl )
 {
 
 #ifdef HAVE_OPENCL
+  if ( useOpenCl && !QgsOpenClUtils::available() )
+    return;
   QgsOpenClUtils::setEnabled( useOpenCl );
 #else
   Q_UNUSED( useOpenCl )
@@ -555,6 +563,25 @@ void TestQgsRasterCalculator::calcWithReprojectedLayers( bool useOpenCl )
   delete block;
 }
 
+void TestQgsRasterCalculator::toString()
+{
+
+  std::function<QString( QString, bool )> _test = [ ]( QString exp, bool cStyle ) -> QString
+  {
+    QString error;
+    std::unique_ptr< QgsRasterCalcNode > calcNode( QgsRasterCalcNode::parseRasterCalcString( exp, error ) );
+    if ( ! error.isEmpty() )
+      return error;
+    return calcNode->toString( cStyle );
+  };
+  QCOMPARE( _test( QStringLiteral( "\"raster@1\"  +  2" ), false ), QString( "\"raster@1\" + 2" ) );
+  QCOMPARE( _test( QStringLiteral( "\"raster@1\"  +  2" ), true ), QString( "\"raster@1\" + 2" ) );
+  QCOMPARE( _test( QStringLiteral( "\"raster@1\" ^ 3  +  2" ), false ), QString( "\"raster@1\"^3 + 2" ) );
+  QCOMPARE( _test( QStringLiteral( "\"raster@1\" ^ 3  +  2" ), true ), QString( "pow( \"raster@1\", 3 ) + 2" ) );
+  QCOMPARE( _test( QStringLiteral( "atan(\"raster@1\") * cos( 3  +  2 )" ), false ), QString( "atan( \"raster@1\" ) * cos( 3 + 2 )" ) );
+  QCOMPARE( _test( QStringLiteral( "atan(\"raster@1\") * cos( 3  +  2 )" ), true ), QString( "atan( \"raster@1\" ) * cos( 3 + 2 )" ) );
+}
+
 void TestQgsRasterCalculator::calcWithLayersCl()
 {
   calcWithLayers( true );
@@ -565,8 +592,14 @@ void TestQgsRasterCalculator::calcWithReprojectedLayersCl()
   calcWithReprojectedLayers( true );
 }
 
-void TestQgsRasterCalculator::errors()
+void TestQgsRasterCalculator::errors( bool useOpenCl )
 {
+#ifdef HAVE_OPENCL
+  QgsOpenClUtils::setEnabled( useOpenCl );
+#else
+  Q_UNUSED( useOpenCl )
+#endif
+
   QgsRasterCalculatorEntry entry1;
   entry1.bandNumber = 0; // bad band
   entry1.raster = mpLandsatRasterLayer;
