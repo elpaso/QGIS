@@ -848,7 +848,7 @@ void QgsGdalProvider::readBlock( int bandNo, QgsRectangle  const &extent, int pi
 
   // Allocate temporary block
   size_t bufferSize = dataSize * static_cast<size_t>( tmpWidth ) * static_cast<size_t>( tmpHeight );
-#ifdef  Q_PROCESSOR_X86_64
+#ifdef  Q_PROCESSOR_X86_32
   // Safety check for 32 bit systems
   qint64 _buffer_size = dataSize * static_cast<qint64>( tmpWidth ) * static_cast<qint64>( tmpHeight );
   if ( _buffer_size != static_cast<qint64>( bufferSize ) )

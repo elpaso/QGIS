@@ -74,11 +74,18 @@ QgsRasterCalcNode cannot be copied
     void setRight( QgsRasterCalcNode *right );
 
 
-    QString toString( bool cStyle = false );
+    QString toString( bool cStyle = false ) const;
 %Docstring
 Returns a string representation of the expression
 
-:param cStyle: if true, output operators following a C syntax
+:param cStyle: if true operators will follow C syntax
+
+.. versionadded:: 3.6
+%End
+
+    void findNodes( const QgsRasterCalcNode::Type type, QList<const QgsRasterCalcNode *> &nodeList ) const;
+%Docstring
+Populates a list of nodes of a specific type.
 
 .. versionadded:: 3.6
 %End

@@ -34,7 +34,6 @@
 #ifdef HAVE_OPENCL
 #include "qgsopenclutils.h"
 #include "qgsgdalutils.h"
-#include <QRegularExpression>
 #endif
 
 QgsRasterCalculator::QgsRasterCalculator( const QString &formulaString, const QString &outputFile, const QString &outputFormat,
@@ -69,11 +68,6 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculation( QgsFeedback
 
   mLastError.clear();
 
-#ifdef HAVE_OPENCL
-  if ( QgsOpenClUtils::enabled() && QgsOpenClUtils::available() )
-    return processCalculationGPU( feedback );
-#endif
-
   //prepare search string / tree
   std::unique_ptr< QgsRasterCalcNode > calcNode( QgsRasterCalcNode::parseRasterCalcString( mFormulaString, mLastError ) );
   if ( !calcNode )
@@ -81,6 +75,15 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculation( QgsFeedback
     //error
     return ParserError;
   }
+
+#ifdef HAVE_OPENCL
+  // Check for matrix nodes, GPU implementation does not support them
+  QList<const QgsRasterCalcNode *> nodeList;
+  calcNode->findNodes( QgsRasterCalcNode::Type::tMatrix, nodeList );
+  if ( QgsOpenClUtils::enabled() && QgsOpenClUtils::available() && nodeList.isEmpty() )
+    return processCalculationGPU( feedback );
+#endif
+
 
   QMap< QString, QgsRasterBlock * > inputBlocks;
   QVector<QgsRasterCalculatorEntry>::const_iterator it = mRasterEntries.constBegin();
@@ -237,14 +240,14 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     }
   }
 
-  QRegularExpression re( R"re("([^"@]+@\d+)")re" );
-  re.setPatternOptions( QRegularExpression::MultilineOption );
-  QRegularExpressionMatchIterator it = re.globalMatch( mFormulaString );
+  QList<const QgsRasterCalcNode *> nodeList;
+  calcNode->findNodes( QgsRasterCalcNode::Type::tRasterRef, nodeList );
   QSet<QString> capturedTexts;
-  while ( it.hasNext() )
+  for ( const auto &r : qgis::as_const( nodeList ) )
   {
-    auto match = it.next();
-    capturedTexts.insert( match.captured( 1 ) );
+    QString s( r->toString().remove( 0, 1 ) );
+    s.chop( 1 );
+    capturedTexts.insert( s );
   }
 
   // Extract all references
@@ -325,10 +328,11 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
 
   // Create the C expression
   std::vector<cl::Buffer> inputBuffers;
+  inputBuffers.reserve( inputRefs.size() );
   QStringList inputArgs;
   for ( const auto &ref : inputRefs )
   {
-    cExpression.replace( '"' + ref.name + '"', QStringLiteral( "%1[i]" ).arg( ref.varName ) );
+    cExpression.replace( QStringLiteral( "\"%1\"" ).arg( ref.name ), QStringLiteral( "%1[i]" ).arg( ref.varName ) );
     inputArgs.append( QStringLiteral( "__global %1 *%2" )
                       .arg( ref.typeName )
                       .arg( ref.varName ) );
@@ -338,7 +342,7 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
   //qDebug() << cExpression;
 
   // Create the program
-  QString programTemplate( R"pgm(
+  QString programTemplate( R"CL(
   // Inputs:
   ##INPUT_DESC##
   // Expression: ##EXPRESSION_ORIGINAL##
@@ -353,7 +357,7 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     // Expression
     resultLine[i] = ##EXPRESSION##;
   }
-  )pgm" );
+  )CL" );
 
   QStringList inputDesc;
   for ( const auto &ref : inputRefs )
@@ -371,7 +375,7 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
   cl::Program program( QgsOpenClUtils::buildProgram( ctx, programTemplate, QgsOpenClUtils::ExceptionBehavior::Throw ) );
 
   // Create the buffers, output is float32 (4 bytes)
-  std::size_t resultBufferSize( 4 * static_cast<unsigned long>( mNumOutputColumns ) );
+  std::size_t resultBufferSize( 4 * static_cast<size_t>( mNumOutputColumns ) );
   cl::Buffer resultLineBuffer( ctx, CL_MEM_WRITE_ONLY,
                                resultBufferSize, nullptr, nullptr );
 
@@ -406,10 +410,11 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
   if ( !outputRasterBand )
     return BandError;
 
+  // Input block (buffer)
+  std::unique_ptr<QgsRasterBlock> block;
 
   // Run kernel on all scanlines
   auto rowHeight = mOutputRectangle.height() / mNumOutputRows;
-
   for ( int line = 0; line < mNumOutputRows; line++ )
   {
     if ( feedback && feedback->isCanceled() )
@@ -429,7 +434,7 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
       QgsRectangle rect( mOutputRectangle );
       rect.setYMaximum( rect.yMaximum() - rowHeight * line );
       rect.setYMinimum( rect.yMaximum() - rowHeight );
-      QgsRasterBlock *block;
+
       // TODO: check if this is too slow
       // if crs transform needed
       if ( ref.layer->crs() != mOutputCrs )
@@ -438,11 +443,11 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
         proj.setCrs( ref.layer->crs(), mOutputCrs );
         proj.setInput( ref.layer->dataProvider() );
         proj.setPrecision( QgsRasterProjector::Exact );
-        block = proj.block( ref.band, rect, mNumOutputColumns, 1 );
+        block.reset( proj.block( ref.band, rect, mNumOutputColumns, 1 ) );
       }
       else
       {
-        block = ref.layer->dataProvider()->block( ref.band, rect, mNumOutputColumns, 1 );
+        block.reset( ref.layer->dataProvider()->block( ref.band, rect, mNumOutputColumns, 1 ) );
       }
 
       //for ( int i = 0; i < mNumOutputColumns; i++ )
@@ -459,7 +464,6 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
       0,
       cl::NDRange( mNumOutputColumns )
     );
-
 
     // Write the result
     queue.enqueueReadBuffer( resultLineBuffer, CL_TRUE, 0,
@@ -480,6 +484,8 @@ QgsRasterCalculator::Result QgsRasterCalculator::processCalculationGPU( QgsFeedb
     gdal::fast_delete_and_close( outputDataset, outputDriver, mOutputFile );
     return Canceled;
   }
+
+  inputBuffers.clear();
 
   return Success;
 }
