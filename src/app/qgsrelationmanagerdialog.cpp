@@ -28,8 +28,10 @@ QgsRelationManagerDialog::QgsRelationManagerDialog( QgsRelationManager *relation
   connect( mBtnAddRelation, &QPushButton::clicked, this, &QgsRelationManagerDialog::mBtnAddRelation_clicked );
   connect( mBtnDiscoverRelations, &QPushButton::clicked, this, &QgsRelationManagerDialog::mBtnDiscoverRelations_clicked );
   connect( mBtnRemoveRelation, &QPushButton::clicked, this, &QgsRelationManagerDialog::mBtnRemoveRelation_clicked );
+  connect( mBtnEditRelation, &QPushButton::clicked, this, &QgsRelationManagerDialog::mBtnEditRelation_clicked );
 
   mBtnRemoveRelation->setEnabled( false );
+  mBtnEditRelation->setEnabled( false );
   connect( mRelationsTable->selectionModel(), &QItemSelectionModel::selectionChanged, this, &QgsRelationManagerDialog::onSelectionChanged );
 }
 
@@ -52,9 +54,18 @@ void QgsRelationManagerDialog::addRelation( const QgsRelation &rel )
   if ( ! rel.isValid() )
     return;
 
+  int row;
   mRelationsTable->setSortingEnabled( false );
-  int row = mRelationsTable->rowCount();
-  mRelationsTable->insertRow( row );
+  const auto rows { mRelationsTable->findItems( rel.id(), Qt::MatchExactly ) };
+  if ( rows.count( ) )
+  {
+    row = rows[0]->row();
+  }
+  else
+  {
+    row = mRelationsTable->rowCount();
+    mRelationsTable->insertRow( row );
+  }
 
   QTableWidgetItem *item = new QTableWidgetItem( rel.name() );
   // Save relation in first column's item
@@ -66,6 +77,13 @@ void QgsRelationManagerDialog::addRelation( const QgsRelation &rel )
   mRelationsTable->setItem( row, 1, item );
 
   item = new QTableWidgetItem( rel.fieldPairs().at( 0 ).referencedField() );
+  if ( rel.fieldPairs().count( ) > 1 )
+  {
+    for ( int i = 1; i < rel.fieldPairs().count( ); ++i )
+    {
+      item->setText( item->text() + ',' + rel.fieldPairs().at( i ).referencedField() );
+    }
+  }
   item->setFlags( Qt::ItemIsEnabled );
   mRelationsTable->setItem( row, 2, item );
 
@@ -74,6 +92,13 @@ void QgsRelationManagerDialog::addRelation( const QgsRelation &rel )
   mRelationsTable->setItem( row, 3, item );
 
   item = new QTableWidgetItem( rel.fieldPairs().at( 0 ).referencingField() );
+  if ( rel.fieldPairs().count( ) > 1 )
+  {
+    for ( int i = 1; i < rel.fieldPairs().count( ); ++i )
+    {
+      item->setText( item->text() + ',' + rel.fieldPairs().at( i ).referencingField() );
+    }
+  }
   item->setFlags( Qt::ItemIsEnabled );
   mRelationsTable->setItem( row, 4, item );
 
@@ -83,11 +108,11 @@ void QgsRelationManagerDialog::addRelation( const QgsRelation &rel )
 
   if ( rel.strength() == QgsRelation::RelationStrength::Composition )
   {
-    item = new QTableWidgetItem( QStringLiteral( "Composition" ) );
+    item = new QTableWidgetItem( tr( "Composition" ) );
   }
   else
   {
-    item = new QTableWidgetItem( QStringLiteral( "Association" ) );
+    item = new QTableWidgetItem( tr( "Association" ) );
   }
   item->setFlags( Qt::ItemIsEnabled );
   mRelationsTable->setItem( row, 6, item );
@@ -101,39 +126,27 @@ void QgsRelationManagerDialog::mBtnAddRelation_clicked()
 
   if ( addDlg.exec() )
   {
-    QgsRelation relation;
+    addRelation( handleRelation( addDlg ) );
+  }
+}
 
-    relation.setReferencingLayer( addDlg.referencingLayerId() );
-    relation.setReferencedLayer( addDlg.referencedLayerId() );
-    QString relationId = addDlg.relationId();
-    if ( addDlg.relationId().isEmpty() )
-      relationId = QStringLiteral( "%1_%2_%3_%4" )
-                   .arg( addDlg.referencingLayerId().left( 10 ),
-                         addDlg.references().at( 0 ).first,
-                         addDlg.referencedLayerId().left( 10 ),
-                         addDlg.references().at( 0 ).second );
-
-    QStringList existingNames;
-
-
-    Q_FOREACH ( const QgsRelation &rel, relations() )
+void QgsRelationManagerDialog::mBtnEditRelation_clicked()
+{
+  const QModelIndexList rows = mRelationsTable->selectionModel()->selectedRows();
+  if ( rows.size() > 0 )
+  {
+    auto relation { relations().at( rows[0].row() ) };
+    const auto originalId { relation.id( )};
+    QgsRelationAddDlg addDlg( relation );
+    if ( addDlg.exec() )
     {
-      existingNames << rel.id();
+      const auto rows { mRelationsTable->findItems( originalId, Qt::MatchExactly ) };
+      if ( rows.count( ) )
+      {
+        mRelationsTable->removeRow( rows[0]->row() );
+      }
+      addRelation( handleRelation( addDlg ) );
     }
-
-    QString tempId = relationId + "_%1";
-    int suffix = 1;
-    while ( existingNames.contains( relationId ) )
-    {
-      relationId = tempId.arg( suffix );
-      ++suffix;
-    }
-    relation.setId( relationId );
-    relation.addFieldPair( addDlg.references().at( 0 ).first, addDlg.references().at( 0 ).second );
-    relation.setName( addDlg.relationName() );
-    relation.setStrength( addDlg.relationStrength() );
-
-    addRelation( relation );
   }
 }
 
@@ -167,7 +180,7 @@ QList< QgsRelation > QgsRelationManagerDialog::relations()
   for ( int i = 0; i < rows; ++i )
   {
     QgsRelation relation = mRelationsTable->item( i, 0 )->data( Qt::UserRole ).value<QgsRelation>();
-    // The name can be editted in the table, so apply this one
+    // The name can be edited in the table, so apply this one
     relation.setName( mRelationsTable->item( i, 0 )->data( Qt::DisplayRole ).toString() );
     relations << relation;
   }
@@ -178,4 +191,46 @@ QList< QgsRelation > QgsRelationManagerDialog::relations()
 void QgsRelationManagerDialog::onSelectionChanged()
 {
   mBtnRemoveRelation->setEnabled( mRelationsTable->selectionModel()->hasSelection() );
+  mBtnEditRelation->setEnabled( mRelationsTable->selectionModel()->hasSelection() );
+}
+
+QgsRelation QgsRelationManagerDialog::handleRelation( const QgsRelationAddDlg &addDlg )
+{
+
+  QgsRelation relation;
+
+  relation.setReferencingLayer( addDlg.referencingLayerId() );
+  relation.setReferencedLayer( addDlg.referencedLayerId() );
+  QString relationId = addDlg.relationId();
+  if ( addDlg.relationId().isEmpty() )
+    relationId = QStringLiteral( "%1_%2_%3_%4" )
+                 .arg( addDlg.referencingLayerId().left( 10 ),
+                       addDlg.references().at( 0 ).first,
+                       addDlg.referencedLayerId().left( 10 ),
+                       addDlg.references().at( 0 ).second );
+
+  QStringList existingNames;
+  const auto constRelations { relations() };
+  for ( const auto &rel : constRelations )
+  {
+    existingNames << rel.id();
+  }
+
+  QString tempId = relationId + "_%1";
+  int suffix = 1;
+  while ( existingNames.contains( relationId ) )
+  {
+    relationId = tempId.arg( suffix );
+    ++suffix;
+  }
+
+  relation.setId( relationId );
+  const auto constReferences = addDlg.references();
+  for ( const auto &pair : constReferences )
+  {
+    relation.addFieldPair( pair.first, pair.second );
+  }
+  relation.setName( addDlg.relationName() );
+  relation.setStrength( addDlg.relationStrength() );
+  return relation;
 }

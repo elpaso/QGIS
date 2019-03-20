@@ -121,6 +121,17 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="mBtnEditRelation">
+       <property name="text">
+        <string>Edit relation</string>
+       </property>
+       <property name="icon">
+        <iconset resource="../../images/images.qrc">
+         <normaloff>:/images/themes/default/mActionToggleEditing.svg</normaloff>:/images/themes/default/mActionToggleEditing.svg</iconset>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="mBtnRemoveRelation">
        <property name="text">
         <string>Remove Relation</string>

@@ -28,13 +28,14 @@ class APP_EXPORT QgsRelationAddDlg : public QDialog, private Ui::QgsRelationAddD
 
   public:
     explicit QgsRelationAddDlg( QWidget *parent = nullptr );
+    explicit QgsRelationAddDlg( const QgsRelation &relation, QWidget *parent = nullptr );
 
-    QString referencingLayerId();
-    QString referencedLayerId();
-    QList< QPair< QString, QString > > references();
-    QString relationId();
-    QString relationName();
-    QgsRelation::RelationStrength relationStrength();
+    QString referencingLayerId() const;
+    QString referencedLayerId() const;
+    QList< QPair< QString, QString > > references() const;
+    QString relationId() const;
+    QString relationName() const ;
+    QgsRelation::RelationStrength relationStrength() const;
 
   private slots:
 

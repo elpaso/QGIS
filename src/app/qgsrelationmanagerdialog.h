@@ -24,6 +24,7 @@ class QgsRelation;
 class QgsRelationManager;
 class QgsRelationManagerTreeModel;
 class QgsVectorLayer;
+class QgsRelationAddDlg;
 
 class APP_EXPORT QgsRelationManagerDialog : public QWidget, private Ui::QgsRelationManagerDialogBase
 {
@@ -39,6 +40,7 @@ class APP_EXPORT QgsRelationManagerDialog : public QWidget, private Ui::QgsRelat
 
   private slots:
     void mBtnAddRelation_clicked();
+    void mBtnEditRelation_clicked();
     void mBtnDiscoverRelations_clicked();
     void mBtnRemoveRelation_clicked();
     void onSelectionChanged();
@@ -46,6 +48,7 @@ class APP_EXPORT QgsRelationManagerDialog : public QWidget, private Ui::QgsRelat
   private:
     QgsRelationManager *mRelationManager = nullptr;
     QList< QgsVectorLayer * > mLayers;
+    QgsRelation handleRelation( const QgsRelationAddDlg &addDlg );
 };
 
 #endif // QGSRELATIONMANAGERDIALOG_H
