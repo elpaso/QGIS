@@ -230,6 +230,15 @@ void QgsMapRendererParallelJob::renderingFinished()
 {
   QgsDebugMsg( QStringLiteral( "PARALLEL finished" ) );
 
+  // take rendered feature indices
+  if ( mSettings.testFlag( QgsMapSettings::CreateSpatialIndexes ) )
+  {
+    for ( const auto &job : qgis::as_const( mLayerJobs ) )
+    {
+      mRenderedFeatureIndexes[ job.layer->id() ] = job.context.renderedFeatureIndex();
+    }
+  }
+
   logRenderingTime( mLayerJobs, mLabelJob );
 
   cleanupJobs( mLayerJobs );

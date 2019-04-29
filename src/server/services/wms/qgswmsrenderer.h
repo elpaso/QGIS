@@ -137,7 +137,7 @@ namespace QgsWms
       QList<QgsMapLayer *> externalLayers( const QList<QgsWmsParametersExternalLayer> &params );
 
       // Rendering step for layers
-      QPainter *layersRendering( const QgsMapSettings &mapSettings, QImage &image ) const;
+      QPainter *layersRendering( const QgsMapSettings &mapSettings, QImage &image );
 
       // Rendering step for annotations
       void annotationsRendering( QPainter *painter ) const;
@@ -179,8 +179,8 @@ namespace QgsWms
        */
       void configureMapSettings( const QPaintDevice *paintDevice, QgsMapSettings &mapSettings, bool mandatoryCrsParam = true ) const;
 
-      QDomDocument featureInfoDocument( QList<QgsMapLayer *> &layers, const QgsMapSettings &mapSettings,
-                                        const QImage *outputImage, const QString &version ) const;
+      QDomDocument featureInfoDocument( QList<QgsMapLayer *> &layers, QgsMapSettings &mapSettings,
+                                        const QImage *outputImage, const QString &version );
 
       /**
        * Appends feature info xml for the layer to the layer element of the
@@ -202,11 +202,11 @@ namespace QgsWms
                                        int nFeatures,
                                        QDomDocument &infoDocument,
                                        QDomElement &layerElement,
-                                       const QgsMapSettings &mapSettings,
+                                       QgsMapSettings &mapSettings,
                                        QgsRenderContext &renderContext,
                                        const QString &version,
                                        QgsRectangle *featureBBox = nullptr,
-                                       QgsGeometry *filterGeom = nullptr ) const;
+                                       QgsGeometry *filterGeom = nullptr );
 
       //! Appends feature info xml for the layer to the layer element of the dom document
       bool featureInfoFromRasterLayer( QgsRasterLayer *layer,

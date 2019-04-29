@@ -1,0 +1,26 @@
+Content-Length: 503
+Content-Type: application/json; charset=utf-8
+
+{"type": "FeatureCollection",
+    "features":[
+{
+   "type":"Feature",
+   "id":"points offset.4",
+   "geometry":null,
+   "properties":{
+      "fid":4,
+      "gid":6,
+      "datum":"2015-08-05",
+      "bearbeiter":"scholle-b",
+      "veranstaltung":null,
+      "beschriftung":null,
+      "name":null,
+      "form":"Kreis",
+      "groesse":"100",
+      "groesse_red":"98.00",
+      "winkel":null,
+      "farbe":"0 255 0",
+      "bemerkung":null,
+      "last_change":"2016-09-14 08:37:22.345365+02"
+   }
+}]}

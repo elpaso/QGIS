@@ -61,6 +61,7 @@ QgsRenderContext::QgsRenderContext( const QgsRenderContext &rh )
 #ifdef QGISDEBUG
   , mHasTransformContext( rh.mHasTransformContext )
 #endif
+  , mRenderedFeatureIndex( rh.mRenderedFeatureIndex )
 {
 }
 
@@ -89,7 +90,7 @@ QgsRenderContext &QgsRenderContext::operator=( const QgsRenderContext &rh )
 #ifdef QGISDEBUG
   mHasTransformContext = rh.mHasTransformContext;
 #endif
-
+  mRenderedFeatureIndex = rh.mRenderedFeatureIndex;
   return *this;
 }
 
@@ -182,6 +183,7 @@ QgsRenderContext QgsRenderContext::fromMapSettings( const QgsMapSettings &mapSet
   //this flag is only for stopping during the current rendering progress,
   //so must be false at every new render operation
   ctx.setRenderingStopped( false );
+  ctx.setFlag( CreateSpatialIndexes, mapSettings.testFlag( QgsMapSettings::Flag::CreateSpatialIndexes ) );
 
   return ctx;
 }

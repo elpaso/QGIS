@@ -21,6 +21,7 @@
 #include "qgswmsparameters.h"
 #include "qgsproject.h"
 #include "qgsserverinterface.h"
+#include "qgsmaprendererjob.h"
 
 namespace QgsWms
 {
@@ -199,6 +200,9 @@ namespace QgsWms
        */
       QMap<QString, QList<QgsMapLayer *> > layerGroups() const;
 
+      QgsMapRendererJob::QgsRenderedFeatureIndexes renderedFeatureIndexes() const;
+      void setRenderedFeatureIndexes( const QgsMapRendererJob::QgsRenderedFeatureIndexes &renderedFeatureIndexes );
+
     private:
       void initNicknameLayers();
       void initRestrictedLayers();
@@ -232,6 +236,10 @@ namespace QgsWms
 
       QMap<QString, QDomElement> mSlds;
       QMap<QString, QString> mStyles;
+
+      //! Stores rendered feature bbox indexes
+      QgsMapRendererJob::QgsRenderedFeatureIndexes mRenderedFeatureIndexes;
+
   };
 };
 

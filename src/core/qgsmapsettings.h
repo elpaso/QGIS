@@ -264,6 +264,7 @@ class CORE_EXPORT QgsMapSettings
       RenderMapTile            = 0x100, //!< Draw map such that there are no problems between adjacent tiles
       RenderPartialOutput      = 0x200, //!< Whether to make extra effort to update map image with partially rendered layers (better for interactive map canvas). Added in QGIS 3.0
       RenderPreviewJob         = 0x400, //!< Render is a 'canvas preview' render, and shortcuts should be taken to ensure fast rendering
+      CreateSpatialIndexes     = 0x800, //!< Store bbox of each rendered feature, for precise identify
       // TODO: ignore scale-based visibility (overview)
     };
     Q_DECLARE_FLAGS( Flags, Flag )

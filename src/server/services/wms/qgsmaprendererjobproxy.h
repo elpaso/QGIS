@@ -68,6 +68,9 @@ namespace QgsWms
        */
       QgsMapRendererJob::Errors errors() const { return mErrors; }
 
+      QgsMapRendererJob::QgsRenderedFeatureIndexes renderedFeatureIndexes() const;
+      void setRenderedFeatureIndexes( const QgsMapRendererJob::QgsRenderedFeatureIndexes &renderedFeatureIndexes );
+
     private:
       bool mParallelRendering;
       QgsFeatureFilterProvider *mFeatureFilterProvider = nullptr;
@@ -77,6 +80,10 @@ namespace QgsWms
 
       //! Layer id / error message
       QgsMapRendererJob::Errors mErrors;
+
+      //! Stores rendered feature bbox indexes
+      QgsMapRendererJob::QgsRenderedFeatureIndexes mRenderedFeatureIndexes;
+
   };
 
 

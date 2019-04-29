@@ -934,6 +934,7 @@ namespace QgsWms
     // configure map settings (background, DPI, ...)
     QgsMapSettings mapSettings;
     configureMapSettings( outputImage.get(), mapSettings, mandatoryCrsParam );
+    mapSettings.setFlag( QgsMapSettings::Flag::CreateSpatialIndexes );
 
     // compute scale denominator
     QgsScaleCalculator scaleCalc( ( outputImage->logicalDpiX() + outputImage->logicalDpiY() ) / 2, mapSettings.destinationCrs().mapUnits() );
@@ -1149,8 +1150,8 @@ namespace QgsWms
     mapSettings.setSelectionColor( QColor( myRed, myGreen, myBlue, myAlpha ) );
   }
 
-  QDomDocument QgsRenderer::featureInfoDocument( QList<QgsMapLayer *> &layers, const QgsMapSettings &mapSettings,
-      const QImage *outputImage, const QString &version ) const
+  QDomDocument QgsRenderer::featureInfoDocument( QList<QgsMapLayer *> &layers, QgsMapSettings &mapSettings,
+      const QImage *outputImage, const QString &version )
   {
     const QStringList queryLayers = mContext.flattenedQueryLayers( );
 
@@ -1424,11 +1425,11 @@ namespace QgsWms
       int nFeatures,
       QDomDocument &infoDocument,
       QDomElement &layerElement,
-      const QgsMapSettings &mapSettings,
+      QgsMapSettings &mapSettings,
       QgsRenderContext &renderContext,
       const QString &version,
       QgsRectangle *featureBBox,
-      QgsGeometry *filterGeom ) const
+      QgsGeometry *filterGeom )
   {
     if ( !layer )
     {
@@ -1466,6 +1467,60 @@ namespace QgsWms
       searchRect = layerRect;
     }
 
+    ////////////////////////////
+    /// Precise GFI
+    ///
+    const bool useSpatialIndexes { !searchRect.isEmpty() &&mapSettings.testFlag( QgsMapSettings::Flag::CreateSpatialIndexes ) };
+    QList<QgsFeatureId> featureIdsFromIndex;
+    if ( useSpatialIndexes )
+    {
+
+      // Transform searchRect to image coordinates (quick and dirty POC)
+      // TODO: these transformations can be avoided by refactoring the code which builds the
+      //       search rectangle from the input.
+      const auto mapCrsRect { mapSettings.layerToMapCoordinates( layer, searchRect ) };
+      const auto sw { mapSettings.mapToPixel().transform( mapCrsRect.xMinimum(), mapCrsRect.yMinimum() ) };
+      const auto ne { mapSettings.mapToPixel().transform( mapCrsRect.xMaximum(), mapCrsRect.yMaximum() ) };
+      const QgsRectangle searchRectImageCoordinates { sw, ne };
+
+      // init layer restorer before doing anything
+      std::unique_ptr<QgsLayerRestorer> restorer;
+      restorer.reset( new QgsLayerRestorer( mContext.layers() ) );
+
+      // configure layers
+      QList<QgsMapLayer *> layers = mContext.layersToRender();
+
+      configureLayers( layers, &mapSettings );
+
+      // create the output image and the painter
+      std::unique_ptr<QPainter> painter;
+      std::unique_ptr<QImage> image( createImage() );
+
+      // configure map settings (background, DPI, ...)
+      configureMapSettings( image.get(), mapSettings );
+
+      // add layers to map settings
+      mapSettings.setLayers( layers );
+
+      // rendering step for layers
+      painter.reset( layersRendering( mapSettings, *image ) );
+
+      // rendering step for annotations
+      annotationsRendering( painter.get() );
+
+      // painting is terminated
+      painter->end();
+
+      auto indexes { mContext.renderedFeatureIndexes() };
+      const auto index { indexes[layer->id()] };
+
+      featureIdsFromIndex = { index->intersects( searchRectImageCoordinates ) };
+
+      /// End precise GFI
+      ///
+
+    }
+
     //do a select with searchRect and go through all the features
 
     QgsFeature feature;
@@ -1480,7 +1535,13 @@ namespace QgsWms
     bool hasGeometry = addWktGeometry || featureBBox || layerFilterGeom;
     fReq.setFlags( ( ( hasGeometry ) ? QgsFeatureRequest::NoFlags : QgsFeatureRequest::NoGeometry ) | QgsFeatureRequest::ExactIntersect );
 
-    if ( ! searchRect.isEmpty() )
+    if ( useSpatialIndexes )
+    {
+
+      fReq.setFlags( fReq.flags() & ~ QgsFeatureRequest::ExactIntersect );
+      fReq.setFilterFids( QgsFeatureIds::fromList( featureIdsFromIndex ) );
+    }
+    else if ( ! searchRect.isEmpty() )
     {
       fReq.setFilterRect( searchRect );
     }
@@ -1490,7 +1551,7 @@ namespace QgsWms
     }
 
 
-    if ( layerFilterGeom )
+    if ( layerFilterGeom && !useSpatialIndexes )
     {
       fReq.setFilterExpression( QString( "intersects( $geometry, geom_from_wkt('%1') )" ).arg( layerFilterGeom->asWkt() ) );
     }
@@ -2716,7 +2777,7 @@ namespace QgsWms
     mTemporaryLayers.clear();
   }
 
-  QPainter *QgsRenderer::layersRendering( const QgsMapSettings &mapSettings, QImage &image ) const
+  QPainter *QgsRenderer::layersRendering( const QgsMapSettings &mapSettings, QImage &image )
   {
     QPainter *painter = nullptr;
 
@@ -2741,6 +2802,11 @@ namespace QgsWms
       }
 
       throw QgsException( QStringLiteral( "Map rendering error in layer '%1'" ).arg( layerWMSName ) );
+    }
+
+    if ( mapSettings.testFlag( QgsMapSettings::Flag::CreateSpatialIndexes ) )
+    {
+      mContext.setRenderedFeatureIndexes( renderJob.renderedFeatureIndexes( ) );
     }
 
     return painter;

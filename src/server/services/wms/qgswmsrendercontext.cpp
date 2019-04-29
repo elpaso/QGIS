@@ -533,6 +533,16 @@ bool QgsWmsRenderContext::layerScaleVisibility( const QString &name ) const
   return visible;
 }
 
+QgsMapRendererJob::QgsRenderedFeatureIndexes QgsWmsRenderContext::renderedFeatureIndexes() const
+{
+  return mRenderedFeatureIndexes;
+}
+
+void QgsWmsRenderContext::setRenderedFeatureIndexes( const QgsMapRendererJob::QgsRenderedFeatureIndexes &renderedFeatureIndexes )
+{
+  mRenderedFeatureIndexes = renderedFeatureIndexes;
+}
+
 QMap<QString, QList<QgsMapLayer *> > QgsWmsRenderContext::layerGroups() const
 {
   return mLayerGroups;

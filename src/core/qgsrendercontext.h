@@ -33,12 +33,12 @@
 #include "qgsdistancearea.h"
 #include "qgscoordinatetransformcontext.h"
 #include "qgspathresolver.h"
+#include "qgsspatialindex.h"
 
 class QPainter;
 class QgsAbstractGeometry;
 class QgsLabelingEngine;
 class QgsMapSettings;
-
 
 /**
  * \ingroup core
@@ -71,6 +71,7 @@ class CORE_EXPORT QgsRenderContext
       Antialiasing             = 0x80,  //!< Use antialiasing while drawing
       RenderPartialOutput      = 0x100, //!< Whether to make extra effort to update map image with partially rendered layers (better for interactive map canvas). Added in QGIS 3.0
       RenderPreviewJob         = 0x200, //!< Render is a 'canvas preview' render, and shortcuts should be taken to ensure fast rendering
+      CreateSpatialIndexes     = 0x800, //!< Store bbox of each rendered feature, for precise identify
     };
     Q_DECLARE_FLAGS( Flags, Flag )
 
@@ -493,6 +494,21 @@ class CORE_EXPORT QgsRenderContext
       mTextRenderFormat = format;
     }
 
+    /**
+     * Set a spatial index in which to store the bounds of rendered features.
+      * \note added in QGIS 3.10
+      * \see renderedFeatureIndex()
+      */
+    void setRenderedFeatureIndex( std::shared_ptr<QgsSpatialIndex> index ) { mRenderedFeatureIndex = index; }
+
+    /**
+     * Returns the spatial index in which the bounds of rendered features have been stored.
+     * \note added in QGIS 3.10
+     * \see setRenderedFeatureIndex()
+     */
+    std::shared_ptr<QgsSpatialIndex> renderedFeatureIndex() const { return mRenderedFeatureIndex; }
+
+
   private:
 
     Flags mFlags;
@@ -554,6 +570,9 @@ class CORE_EXPORT QgsRenderContext
 #ifdef QGISDEBUG
     bool mHasTransformContext = false;
 #endif
+
+    //! Spatial index for bounding boxes of rendered features
+    std::shared_ptr<QgsSpatialIndex> mRenderedFeatureIndex;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS( QgsRenderContext::Flags )

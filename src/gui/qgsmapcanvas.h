@@ -25,6 +25,7 @@
 #include "qgsrectangle.h"
 #include "qgsfeatureid.h"
 #include "qgsgeometry.h"
+#include "qgsmaprendererjob.h"
 
 #include <QDomDocument>
 #include <QGraphicsView>
@@ -835,6 +836,7 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView
     //! emit a message (usually to be displayed in a message bar)
     void messageEmitted( const QString &title, const QString &message, Qgis::MessageLevel = Qgis::Info );
 
+
   protected:
 
     //! Overridden standard event to be gestures aware
@@ -1043,6 +1045,9 @@ class GUI_EXPORT QgsMapCanvas : public QGraphicsView
     void startPreviewJobs();
     void stopPreviewJobs();
     void schedulePreviewJob( int number );
+
+    //! Indexes of rendered features
+    QgsMapRendererJob::QgsRenderedFeatureIndexes mRenderedFeatureIndexes;
 
     friend class TestQgsMapCanvas;
 

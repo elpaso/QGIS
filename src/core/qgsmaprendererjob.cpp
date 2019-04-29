@@ -294,6 +294,11 @@ LayerRenderJobs QgsMapRendererJob::prepareJobs( QPainter *painter, QgsLabelingEn
     job.context.setLabelingEngine( labelingEngine2 );
     job.context.setCoordinateTransform( ct );
     job.context.setExtent( r1 );
+    if ( mSettings.testFlag( QgsMapSettings::CreateSpatialIndexes ) )
+    {
+      std::shared_ptr<QgsSpatialIndex> index { new QgsSpatialIndex() };
+      job.context.setRenderedFeatureIndex( index );
+    }
 
     if ( mFeatureFilterProvider )
       job.context.setFeatureFilterProvider( mFeatureFilterProvider );
@@ -447,6 +452,16 @@ void QgsMapRendererJob::cleanupLabelJob( LabelRenderJob &job )
     delete job.img;
     job.img = nullptr;
   }
+}
+
+QgsMapRendererJob::QgsRenderedFeatureIndexes QgsMapRendererJob::renderedFeatureIndexes() const
+{
+  return mRenderedFeatureIndexes;
+}
+
+void QgsMapRendererJob::setRenderedFeatureIndexes( const QgsRenderedFeatureIndexes &renderedFeatureIndexes )
+{
+  mRenderedFeatureIndexes = renderedFeatureIndexes;
 }
 
 

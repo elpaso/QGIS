@@ -13,6 +13,7 @@
 
 
 
+
 class QgsMapRendererJob : QObject
 {
 %Docstring
@@ -123,6 +124,9 @@ each LayerRenderJob.
 
     typedef QList<QgsMapRendererJob::Error> Errors;
 
+    typedef std::map< QString, std::shared_ptr<QgsSpatialIndex> > QgsRenderedFeatureIndexes;
+
+
     Errors errors() const;
 %Docstring
 List of errors that happened during the rendering job - available when the rendering has been finished
@@ -153,6 +157,9 @@ Returns map settings with which this job was started.
 %End
 
 
+    QgsRenderedFeatureIndexes renderedFeatureIndexes() const;
+    void setRenderedFeatureIndexes( const QgsRenderedFeatureIndexes &renderedFeatureIndexes );
+
   signals:
 
     void renderingLayersFinished();
@@ -170,6 +177,7 @@ emitted when asynchronous rendering is finished (or canceled).
 %End
 
   protected:
+
 
 
 

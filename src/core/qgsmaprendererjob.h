@@ -35,6 +35,7 @@ class QgsMapLayerRenderer;
 class QgsMapRendererCache;
 class QgsFeatureFilterProvider;
 
+
 #ifndef SIP_RUN
 /// @cond PRIVATE
 
@@ -196,6 +197,10 @@ class CORE_EXPORT QgsMapRendererJob : public QObject
 
     typedef QList<QgsMapRendererJob::Error> Errors;
 
+    //! Store rendered features spatial indexes for precise identify
+    typedef std::map< QString, std::shared_ptr<QgsSpatialIndex> > QgsRenderedFeatureIndexes;
+
+
     //! List of errors that happened during the rendering job - available when the rendering has been finished
     Errors errors() const;
 
@@ -231,6 +236,9 @@ class CORE_EXPORT QgsMapRendererJob : public QObject
      * \note not available in Python bindings
      */
     static const QString LABEL_CACHE_ID SIP_SKIP;
+
+    QgsRenderedFeatureIndexes renderedFeatureIndexes() const;
+    void setRenderedFeatureIndexes( const QgsRenderedFeatureIndexes &renderedFeatureIndexes );
 
   signals:
 
@@ -302,6 +310,9 @@ class CORE_EXPORT QgsMapRendererJob : public QObject
     //! \note not available in Python bindings
     static void drawLabeling( QgsRenderContext &renderContext, QgsLabelingEngine *labelingEngine2, QPainter *painter ) SIP_SKIP;
 
+    //! Stores rendered feature bbox indexes
+    QgsRenderedFeatureIndexes mRenderedFeatureIndexes;
+
   private:
 
     /**
@@ -316,6 +327,7 @@ class CORE_EXPORT QgsMapRendererJob : public QObject
     bool needTemporaryImage( QgsMapLayer *ml );
 
     const QgsFeatureFilterProvider *mFeatureFilterProvider = nullptr;
+
 };
 
 

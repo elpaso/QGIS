@@ -69,6 +69,10 @@ namespace QgsWms
       mPainter.reset( new QPainter( image ) );
 
       mErrors = renderJob.errors();
+      if ( mapSettings.flags().testFlag( QgsMapSettings::Flag::CreateSpatialIndexes ) )
+      {
+        mRenderedFeatureIndexes = renderJob.renderedFeatureIndexes();
+      }
     }
     else
     {
@@ -79,11 +83,25 @@ namespace QgsWms
 #endif
       renderJob.renderSynchronously();
       mErrors = renderJob.errors();
+      if ( mapSettings.flags().testFlag( QgsMapSettings::Flag::CreateSpatialIndexes ) )
+      {
+        mRenderedFeatureIndexes = renderJob.renderedFeatureIndexes();
+      }
     }
   }
 
   QPainter *QgsMapRendererJobProxy::takePainter()
   {
     return mPainter.release();
+  }
+
+  QgsMapRendererJob::QgsRenderedFeatureIndexes QgsMapRendererJobProxy::renderedFeatureIndexes() const
+  {
+    return mRenderedFeatureIndexes;
+  }
+
+  void QgsMapRendererJobProxy::setRenderedFeatureIndexes( const QgsMapRendererJob::QgsRenderedFeatureIndexes &renderedFeatureIndexes )
+  {
+    mRenderedFeatureIndexes = renderedFeatureIndexes;
   }
 } // namespace qgsws
