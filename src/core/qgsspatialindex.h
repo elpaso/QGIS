@@ -158,6 +158,14 @@ class CORE_EXPORT QgsSpatialIndex : public QgsFeatureSink
     bool addFeature( QgsFeatureId id, const QgsRectangle &bounds );
 
     /**
+     * Add a \a feature to the index with a specified bounding box.
+     * \returns TRUE if feature was successfully added to index.
+     * \since QGIS 3.4
+    */
+    bool addFeature( const QgsFeature &feature, const QgsRectangle &bounds );
+
+
+    /**
      * Removes a \a feature from the index.
      */
     bool deleteFeature( const QgsFeature &feature );

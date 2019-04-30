@@ -836,7 +836,8 @@ void QgsSymbol::renderFeature( const QgsFeature &feature, QgsRenderContext &cont
       {
         Q_ASSERT( context.renderedFeatureIndex() );
         QRectF bounds = static_cast<QgsMarkerSymbol *>( this )->bounds( pt, context, feature );
-        context.renderedFeatureIndex()->addFeature( feature.id(), QgsRectangle( bounds ) );
+        context.renderedFeatureIndex()->addFeature( feature, QgsRectangle( bounds ) );
+        qDebug() << "Adding feature bounds " << QgsRectangle( bounds ).toString() << feature.geometry().asWkt() ;
       }
 
       if ( drawVertexMarker && !usingSegmentizedGeometry )

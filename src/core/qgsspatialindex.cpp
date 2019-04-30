@@ -26,6 +26,7 @@
 #include <spatialindex/SpatialIndex.h>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QDebug>
 
 using namespace SpatialIndex;
 
@@ -453,6 +454,21 @@ bool QgsSpatialIndex::addFeature( QgsFeatureId id, const QgsRectangle &bounds )
   return false;
 }
 
+bool QgsSpatialIndex::addFeature( const QgsFeature &feature, const QgsRectangle &bounds )
+{
+  SpatialIndex::Region r( rectToRegion( bounds ) );
+  if ( addFeature( feature.id(), bounds ) )
+  {
+    if ( d->mFlags & QgsSpatialIndex::FlagStoreFeatureGeometries )
+    {
+      QMutexLocker locker( &d->mMutex );
+      d->mGeometries.insert( feature.id(), feature.geometry() );
+    }
+    return true;
+  }
+  return false;
+}
+
 bool QgsSpatialIndex::deleteFeature( const QgsFeature &f )
 {
   SpatialIndex::Region r;
@@ -479,6 +495,7 @@ QList<QgsFeatureId> QgsSpatialIndex::intersects( const QgsRectangle &rect ) cons
 
   return list;
 }
+
 
 QList<QgsFeatureId> QgsSpatialIndex::nearestNeighbor( const QgsPointXY &point, const int neighbors, const double maxDistance ) const
 {

@@ -157,8 +157,6 @@ Returns map settings with which this job was started.
 %End
 
 
-    QgsRenderedFeatureIndexes renderedFeatureIndexes() const;
-    void setRenderedFeatureIndexes( const QgsRenderedFeatureIndexes &renderedFeatureIndexes );
 
   signals:
 

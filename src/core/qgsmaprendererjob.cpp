@@ -296,7 +296,7 @@ LayerRenderJobs QgsMapRendererJob::prepareJobs( QPainter *painter, QgsLabelingEn
     job.context.setExtent( r1 );
     if ( mSettings.testFlag( QgsMapSettings::CreateSpatialIndexes ) )
     {
-      std::shared_ptr<QgsSpatialIndex> index { new QgsSpatialIndex() };
+      std::shared_ptr<QgsSpatialIndex> index { new QgsSpatialIndex( QgsSpatialIndex::FlagStoreFeatureGeometries ) };
       job.context.setRenderedFeatureIndex( index );
     }
 

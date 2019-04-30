@@ -499,14 +499,14 @@ class CORE_EXPORT QgsRenderContext
       * \note added in QGIS 3.10
       * \see renderedFeatureIndex()
       */
-    void setRenderedFeatureIndex( std::shared_ptr<QgsSpatialIndex> index ) { mRenderedFeatureIndex = index; }
+    void setRenderedFeatureIndex( std::shared_ptr<QgsSpatialIndex> index ) SIP_SKIP { mRenderedFeatureIndex = index; }
 
     /**
      * Returns the spatial index in which the bounds of rendered features have been stored.
      * \note added in QGIS 3.10
      * \see setRenderedFeatureIndex()
      */
-    std::shared_ptr<QgsSpatialIndex> renderedFeatureIndex() const { return mRenderedFeatureIndex; }
+    std::shared_ptr<QgsSpatialIndex> renderedFeatureIndex() const SIP_SKIP { return mRenderedFeatureIndex; }
 
 
   private:

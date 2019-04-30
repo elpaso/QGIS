@@ -1112,6 +1112,25 @@ namespace QgsWms
       mapExtent.invert();
     }
 
+    // In case of getfeatureinfo requests we might have a FILTER_GEOM and no BBOX
+    // So, we can get the extent from the FILTER_GEOM
+    if ( mapExtent.isEmpty() && !mWmsParameters.filterGeom().isEmpty() )
+    {
+      auto newBbox { QgsGeometry::fromWkt( mWmsParameters.filterGeom() ).boundingBox() };
+      // Adjust sizes
+      const auto height { mapSettings.outputSize().height() };
+      const auto width { mapSettings.outputSize().width() };
+      if ( width / height > newBbox.width() / newBbox.height() )
+      {
+        newBbox.setXMaximum( newBbox.xMaximum() + width / height * newBbox.height() );
+      }
+      else
+      {
+        newBbox.setYMaximum( newBbox.yMaximum() + height / width * newBbox.width() );
+      }
+      mapExtent = newBbox;
+    }
+
     mapSettings.setExtent( mapExtent );
 
     /* Define the background color
@@ -1475,14 +1494,6 @@ namespace QgsWms
     if ( useSpatialIndexes )
     {
 
-      // Transform searchRect to image coordinates (quick and dirty POC)
-      // TODO: these transformations can be avoided by refactoring the code which builds the
-      //       search rectangle from the input.
-      const auto mapCrsRect { mapSettings.layerToMapCoordinates( layer, searchRect ) };
-      const auto sw { mapSettings.mapToPixel().transform( mapCrsRect.xMinimum(), mapCrsRect.yMinimum() ) };
-      const auto ne { mapSettings.mapToPixel().transform( mapCrsRect.xMaximum(), mapCrsRect.yMaximum() ) };
-      const QgsRectangle searchRectImageCoordinates { sw, ne };
-
       // init layer restorer before doing anything
       std::unique_ptr<QgsLayerRestorer> restorer;
       restorer.reset( new QgsLayerRestorer( mContext.layers() ) );
@@ -1511,10 +1522,36 @@ namespace QgsWms
       // painting is terminated
       painter->end();
 
+      // Transform searchRect to image coordinates (quick and dirty POC)
+      // TODO: these transformations can be avoided by refactoring the code which builds the
+      //       search rectangle from the input.
+      const auto mapCrsRect { mapSettings.layerToMapCoordinates( layer, searchRect ) };
+      auto sw { mapSettings.mapToPixel().transform( mapCrsRect.xMinimum(), mapCrsRect.yMinimum() ) };
+      auto ne { mapSettings.mapToPixel().transform( mapCrsRect.xMaximum(), mapCrsRect.yMaximum() ) };
+      sw = QgsPointXY( std::min( image->width(), std::max( 0, static_cast<int>( sw.x() ) ) ),
+                       std::min( image->height(), std::max( 0, static_cast<int>( sw.y() ) ) ) );
+      ne = QgsPointXY( std::min( image->width(), std::max( 0, static_cast<int>( ne.x() ) ) ),
+                       std::min( image->height(), std::max( 0, static_cast<int>( ne.y() ) ) ) );
+      const QgsRectangle searchRectImageCoordinates { sw, ne };
+
       auto indexes { mContext.renderedFeatureIndexes() };
       const auto index { indexes[layer->id()] };
+      const QList<QgsFeatureId> tmpFeatureIdsFromIndex { index->intersects( searchRectImageCoordinates ) };
 
-      featureIdsFromIndex = { index->intersects( searchRectImageCoordinates ) };
+      if ( layerFilterGeom )
+      {
+        for ( const auto &fid : tmpFeatureIdsFromIndex )
+        {
+          if ( layerFilterGeom->intersects( index->geometry( fid ) ) )
+          {
+            featureIdsFromIndex.push_back( fid );
+          }
+        }
+      }
+      else
+      {
+        featureIdsFromIndex = tmpFeatureIdsFromIndex;
+      }
 
       /// End precise GFI
       ///

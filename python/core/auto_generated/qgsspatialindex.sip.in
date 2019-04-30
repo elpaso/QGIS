@@ -129,6 +129,16 @@ Add a feature ``id`` to the index with a specified bounding box.
 .. versionadded:: 3.4
 %End
 
+    bool addFeature( const QgsFeature &feature, const QgsRectangle &bounds );
+%Docstring
+Add a ``feature`` to the index with a specified bounding box.
+
+:return: ``True`` if feature was successfully added to index.
+
+.. versionadded:: 3.4
+%End
+
+
     bool deleteFeature( const QgsFeature &feature );
 %Docstring
 Removes a ``feature`` from the index.

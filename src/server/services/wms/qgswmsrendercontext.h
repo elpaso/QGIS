@@ -200,8 +200,8 @@ namespace QgsWms
        */
       QMap<QString, QList<QgsMapLayer *> > layerGroups() const;
 
-      QgsMapRendererJob::QgsRenderedFeatureIndexes renderedFeatureIndexes() const;
-      void setRenderedFeatureIndexes( const QgsMapRendererJob::QgsRenderedFeatureIndexes &renderedFeatureIndexes );
+      QgsMapRendererJob::QgsRenderedFeatureIndexes renderedFeatureIndexes() const SIP_SKIP;
+      void setRenderedFeatureIndexes( const QgsMapRendererJob::QgsRenderedFeatureIndexes &renderedFeatureIndexes ) SIP_SKIP;
 
     private:
       void initNicknameLayers();

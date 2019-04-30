@@ -237,8 +237,8 @@ class CORE_EXPORT QgsMapRendererJob : public QObject
      */
     static const QString LABEL_CACHE_ID SIP_SKIP;
 
-    QgsRenderedFeatureIndexes renderedFeatureIndexes() const;
-    void setRenderedFeatureIndexes( const QgsRenderedFeatureIndexes &renderedFeatureIndexes );
+    QgsRenderedFeatureIndexes renderedFeatureIndexes() SIP_SKIP const;
+    void setRenderedFeatureIndexes( const QgsRenderedFeatureIndexes &renderedFeatureIndexes ) SIP_SKIP;
 
   signals:
 
