@@ -503,8 +503,16 @@
 #if defined(__APPLE__) || defined(__MACOSX)
 #include <OpenCL/opencl.h>
 #else
-#include <CL/opencl.h>
+#include "clew.h"
 #endif // !__APPLE__
+
+
+namespace cl {
+  int init(){
+    return clewInit();
+  }
+}
+
 
 #if (__cplusplus >= 201103L)
 #define CL_HPP_NOEXCEPT_ noexcept
@@ -9675,5 +9683,6 @@ namespace compatibility {
 #undef CL_HPP_DEFINE_STATIC_MEMBER_
 
 } // namespace cl
+
 
 #endif // CL_HPP_

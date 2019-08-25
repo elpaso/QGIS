@@ -17,7 +17,6 @@
 #include "qgssettings.h"
 #include "qgsmessagelog.h"
 #include "qgslogger.h"
-
 #include <QLibrary>
 
 #include <QTextStream>
@@ -72,12 +71,10 @@ void QgsOpenClUtils::init()
   static std::once_flag initialized;
   std::call_once( initialized, [ = ]( )
   {
-    QLibrary openCLLib{ QStringLiteral( "OpenCL" ) };
-    openCLLib.setLoadHints( QLibrary::LoadHint::ResolveAllSymbolsHint );
-    if ( ! openCLLib.load() )
+    bool clpresent = 0 == cl::init();
+    if ( !clpresent )
     {
-      QgsMessageLog::logMessage( QObject::tr( "Error loading OpenCL library: %1" )
-                                 .arg( openCLLib.errorString() ),
+      QgsMessageLog::logMessage( QObject::tr( "Error loading OpenCL library!" ),
                                  LOGMESSAGE_TAG, Qgis::Critical );
       return;
     }

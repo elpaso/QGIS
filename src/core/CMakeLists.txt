@@ -1320,6 +1320,7 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/external/kdbush/include
   ${CMAKE_SOURCE_DIR}/external/nmea
   ${CMAKE_SOURCE_DIR}/external/poly2tri
+  ${CMAKE_SOURCE_DIR}/external/clew/include
 )
 
 INCLUDE_DIRECTORIES(SYSTEM
@@ -1340,11 +1341,13 @@ INCLUDE_DIRECTORIES(SYSTEM
 IF (HAVE_OPENCL)
     SET(QGIS_CORE_SRCS ${QGIS_CORE_SRCS}
         qgsopenclutils.cpp
+        ${CMAKE_SOURCE_DIR}/external/clew/src/clew.c
+        ${CMAKE_SOURCE_DIR}/external/opencl-clhpp/include/CL/cl2.hpp
     )
     SET(QGIS_CORE_HDRS ${QGIS_CORE_HDRS}
         qgsopenclutils.h
     )
-    INCLUDE_DIRECTORIES(SYSTEM ${OpenCL_INCLUDE_DIRS})
+    INCLUDE_DIRECTORIES(SYSTEM dl)
 ENDIF (HAVE_OPENCL)
 
 

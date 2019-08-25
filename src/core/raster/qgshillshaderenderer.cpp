@@ -268,7 +268,7 @@ QgsRasterBlock *QgsHillshadeRenderer::block( int bandNo, const QgsRectangle &ext
       // Whether use multidirectional
       rasterParams.push_back( static_cast<float>( mMultiDirectional ) ); // 17
 
-      cl::Buffer rasterParamsBuffer( queue, rasterParams.begin(), rasterParams.end(), true, false, nullptr );
+      cl::Buffer rasterParamsBuffer( ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, rasterParams.size() * sizeof( float ), rasterParams.data(), nullptr );
       cl::Buffer scanLine1Buffer( ctx, CL_MEM_READ_ONLY, bufferSize, nullptr, nullptr );
       cl::Buffer scanLine2Buffer( ctx, CL_MEM_READ_ONLY, bufferSize, nullptr, nullptr );
       cl::Buffer scanLine3Buffer( ctx, CL_MEM_READ_ONLY, bufferSize, nullptr, nullptr );
