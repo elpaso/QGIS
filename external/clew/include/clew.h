@@ -67,8 +67,8 @@ extern "C" {
 
 #if defined(_WIN32)
 #define CL_API_ENTRY
-#define CL_API_CALL     __stdcall
-#define CL_CALLBACK     __stdcall
+#define CL_API_CALL     /*__stdcall*/
+#define CL_CALLBACK     /*__stdcall*/
 #else
 #define CL_API_ENTRY
 #define CL_API_CALL
@@ -2720,7 +2720,7 @@ typedef CL_API_ENTRY cl_int( CL_API_CALL *clGetGLContextInfoKHR_fn )(
 #  endif
 #endif
 #else
-#  define CLEWAPI extern
+#define CLEWAPI extern
 #endif
 
 //#if defined(_WIN32)

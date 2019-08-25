@@ -1342,12 +1342,11 @@ IF (HAVE_OPENCL)
     SET(QGIS_CORE_SRCS ${QGIS_CORE_SRCS}
         qgsopenclutils.cpp
         ${CMAKE_SOURCE_DIR}/external/clew/src/clew.c
-        ${CMAKE_SOURCE_DIR}/external/opencl-clhpp/include/CL/cl2.hpp
+        #${CMAKE_SOURCE_DIR}/external/opencl-clhpp/include/CL/cl2.hpp
     )
     SET(QGIS_CORE_HDRS ${QGIS_CORE_HDRS}
         qgsopenclutils.h
     )
-    INCLUDE_DIRECTORIES(SYSTEM dl)
 ENDIF (HAVE_OPENCL)
 
 
@@ -1387,7 +1386,7 @@ ENDIF(ENABLE_MODELTEST)
 
 
 IF(HAVE_OPENCL)
-  TARGET_LINK_LIBRARIES(qgis_core ${OpenCL_LIBRARY})
+  TARGET_LINK_LIBRARIES(qgis_core dl)
 ENDIF(HAVE_OPENCL)
 
 

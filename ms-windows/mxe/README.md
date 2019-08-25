@@ -12,7 +12,6 @@ Unfortunately it has some...
 ## Limitations
 
 - No Python support
-- No OpenCL support
 - No support for the new native Windows overrides (notifications etc.)
 
 ## The easy way (requires docker)

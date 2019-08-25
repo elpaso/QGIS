@@ -71,7 +71,7 @@ void QgsOpenClUtils::init()
   static std::once_flag initialized;
   std::call_once( initialized, [ = ]( )
   {
-    bool clpresent = 0 == cl::init();
+    bool clpresent = 0 == clewInit();
     if ( !clpresent )
     {
       QgsMessageLog::logMessage( QObject::tr( "Error loading OpenCL library!" ),

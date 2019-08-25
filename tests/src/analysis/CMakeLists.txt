@@ -28,7 +28,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_SOURCE_DIR}/src/analysis/mesh
   ${CMAKE_SOURCE_DIR}/src/test
   ${CMAKE_SOURCE_DIR}/external
-
+  ${CMAKE_SOURCE_DIR}/external/clew/include
   ${CMAKE_BINARY_DIR}/src/core
   ${CMAKE_BINARY_DIR}/src/analysis
 )
@@ -40,7 +40,9 @@ INCLUDE_DIRECTORIES(SYSTEM
 )
 
 IF(HAVE_OPENCL)
-    INCLUDE_DIRECTORIES(SYSTEM ${OpenCL_INCLUDE_DIRS})
+    IF(APPLE)
+        INCLUDE_DIRECTORIES(SYSTEM ${OpenCL_INCLUDE_DIRS})
+    ENDIF(APPLE)
 ENDIF(HAVE_OPENCL)
 
 #note for tests we should not include the moc of our

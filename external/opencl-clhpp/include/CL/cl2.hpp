@@ -507,13 +507,6 @@
 #endif // !__APPLE__
 
 
-namespace cl {
-  int init(){
-    return clewInit();
-  }
-}
-
-
 #if (__cplusplus >= 201103L)
 #define CL_HPP_NOEXCEPT_ noexcept
 #else
@@ -2082,7 +2075,7 @@ public:
     cl_int getInfo(cl_device_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetDeviceInfo, object_, name, param),
+            detail::getInfo(::clGetDeviceInfo, object_, name, param),
             __GET_DEVICE_INFO_ERR);
     }
 
@@ -2321,7 +2314,7 @@ public:
     cl_int getInfo(cl_platform_info name, string* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetPlatformInfo, object_, name, param),
+            detail::getInfo(::clGetPlatformInfo, object_, name, param),
             __GET_PLATFORM_INFO_ERR);
     }
 
@@ -2876,7 +2869,7 @@ public:
     cl_int getInfo(cl_context_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetContextInfo, object_, name, param),
+            detail::getInfo(::clGetContextInfo, object_, name, param),
             __GET_CONTEXT_INFO_ERR);
     }
 
@@ -3018,7 +3011,7 @@ public:
     cl_int getInfo(cl_event_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetEventInfo, object_, name, param),
+            detail::getInfo(::clGetEventInfo, object_, name, param),
             __GET_EVENT_INFO_ERR);
     }
 
@@ -3041,7 +3034,7 @@ public:
     cl_int getProfilingInfo(cl_profiling_info name, T* param) const
     {
         return detail::errHandler(detail::getInfo(
-            &::clGetEventProfilingInfo, object_, name, param),
+            ::clGetEventProfilingInfo, object_, name, param),
             __GET_EVENT_PROFILE_INFO_ERR);
     }
 
@@ -3233,7 +3226,7 @@ public:
     cl_int getInfo(cl_mem_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetMemObjectInfo, object_, name, param),
+            detail::getInfo(::clGetMemObjectInfo, object_, name, param),
             __GET_MEM_OBJECT_INFO_ERR);
     }
 
@@ -4231,7 +4224,7 @@ public:
     cl_int getImageInfo(cl_image_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetImageInfo, object_, name, param),
+            detail::getInfo(::clGetImageInfo, object_, name, param),
             __GET_IMAGE_INFO_ERR);
     }
     
@@ -5380,7 +5373,7 @@ public:
     cl_int getInfo(cl_pipe_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetPipeInfo, object_, name, param),
+            detail::getInfo(::clGetPipeInfo, object_, name, param),
             __GET_PIPE_INFO_ERR);
     }
 
@@ -5513,7 +5506,7 @@ public:
     cl_int getInfo(cl_sampler_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetSamplerInfo, object_, name, param),
+            detail::getInfo(::clGetSamplerInfo, object_, name, param),
             __GET_SAMPLER_INFO_ERR);
     }
 
@@ -5737,7 +5730,7 @@ public:
     cl_int getInfo(cl_kernel_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetKernelInfo, object_, name, param),
+            detail::getInfo(::clGetKernelInfo, object_, name, param),
             __GET_KERNEL_INFO_ERR);
     }
 
@@ -5759,7 +5752,7 @@ public:
     cl_int getArgInfo(cl_uint argIndex, cl_kernel_arg_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetKernelArgInfo, object_, argIndex, name, param),
+            detail::getInfo(::clGetKernelArgInfo, object_, argIndex, name, param),
             __GET_KERNEL_ARG_INFO_ERR);
     }
 
@@ -5783,7 +5776,7 @@ public:
     {
         return detail::errHandler(
             detail::getInfo(
-                &::clGetKernelWorkGroupInfo, object_, device(), name, param),
+                ::clGetKernelWorkGroupInfo, object_, device(), name, param),
                 __GET_KERNEL_WORK_GROUP_INFO_ERR);
     }
 
@@ -6364,7 +6357,7 @@ public:
     cl_int getInfo(cl_program_info name, T* param) const
     {
         return detail::errHandler(
-            detail::getInfo(&::clGetProgramInfo, object_, name, param),
+            detail::getInfo(::clGetProgramInfo, object_, name, param),
             __GET_PROGRAM_INFO_ERR);
     }
 
@@ -6387,7 +6380,7 @@ public:
     {
         return detail::errHandler(
             detail::getInfo(
-                &::clGetProgramBuildInfo, object_, device(), name, param),
+                ::clGetProgramBuildInfo, object_, device(), name, param),
                 __GET_PROGRAM_BUILD_INFO_ERR);
     }
 
@@ -6579,7 +6572,7 @@ inline cl_int cl::Program::getInfo(cl_program_info name, vector<vector<unsigned 
         }
 
         return detail::errHandler(
-            detail::getInfo(&::clGetProgramInfo, object_, name, param),
+            detail::getInfo(::clGetProgramInfo, object_, name, param),
             __GET_PROGRAM_INFO_ERR);
     }
 
@@ -7127,7 +7120,7 @@ public:
     {
         return detail::errHandler(
             detail::getInfo(
-                &::clGetCommandQueueInfo, object_, name, param),
+                ::clGetCommandQueueInfo, object_, name, param),
                 __GET_COMMAND_QUEUE_INFO_ERR);
     }
 
@@ -8386,7 +8379,7 @@ public:
     {
         return detail::errHandler(
             detail::getInfo(
-            &::clGetCommandQueueInfo, object_, name, param),
+            ::clGetCommandQueueInfo, object_, name, param),
             __GET_COMMAND_QUEUE_INFO_ERR);
     }
 
