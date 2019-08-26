@@ -363,7 +363,6 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_SOURCE_DIR}/src/core/expression
   ${CMAKE_SOURCE_DIR}/src/analysis/vector/geometry_checker
   ${CMAKE_SOURCE_DIR}/external
-  ${CMAKE_SOURCE_DIR}/external/clew/include
 
   ${CMAKE_BINARY_DIR}/src/core
   ${CMAKE_BINARY_DIR}/src/analysis
@@ -379,7 +378,10 @@ INCLUDE_DIRECTORIES(SYSTEM
 )
 
 IF(HAVE_OPENCL)
-    INCLUDE_DIRECTORIES(SYSTEM ${OpenCL_INCLUDE_DIRS})
+    INCLUDE_DIRECTORIES(SYSTEM
+        ${OpenCL_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/external/clew/include
+    )
 ENDIF(HAVE_OPENCL)
 
 

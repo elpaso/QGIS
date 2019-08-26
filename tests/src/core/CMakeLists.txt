@@ -243,7 +243,7 @@ ENDIF(WITH_QTWEBKIT)
 IF(HAVE_OPENCL)
   SET(TESTS ${TESTS}
     testqgsopenclutils.cpp
-     )
+  )
 ENDIF(HAVE_OPENCL)
 
 

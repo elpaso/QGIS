@@ -2179,9 +2179,9 @@ public:
 #endif // defined(CL_HPP_USE_CL_DEVICE_FISSION)
 };
 
-CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Device::default_initialized_;
-CL_HPP_DEFINE_STATIC_MEMBER_ Device Device::default_;
-CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Device::default_error_ = CL_SUCCESS;
+//CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Device::default_initialized_;
+//CL_HPP_DEFINE_STATIC_MEMBER_ Device Device::default_;
+//CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Device::default_error_ = CL_SUCCESS;
 
 /*! \brief Class interface for cl_platform_id.
  *
@@ -2539,9 +2539,9 @@ public:
 #endif // CL_HPP_TARGET_OPENCL_VERSION >= 120
 }; // class Platform
 
-CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Platform::default_initialized_;
-CL_HPP_DEFINE_STATIC_MEMBER_ Platform Platform::default_;
-CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Platform::default_error_ = CL_SUCCESS;
+//CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Platform::default_initialized_;
+//CL_HPP_DEFINE_STATIC_MEMBER_ Platform Platform::default_;
+//CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Platform::default_error_ = CL_SUCCESS;
 
 
 /**
@@ -2966,9 +2966,9 @@ inline void Device::makeDefault()
 #endif
 }
 
-CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Context::default_initialized_;
-CL_HPP_DEFINE_STATIC_MEMBER_ Context Context::default_;
-CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Context::default_error_ = CL_SUCCESS;
+//CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Context::default_initialized_;
+//CL_HPP_DEFINE_STATIC_MEMBER_ Context Context::default_;
+//CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Context::default_error_ = CL_SUCCESS;
 
 /*! \brief Class interface for cl_event.
  *
@@ -8228,9 +8228,9 @@ typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clEnqueueReleaseD3D10ObjectsKHR)(
     }
 }; // CommandQueue
 
-CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag CommandQueue::default_initialized_;
-CL_HPP_DEFINE_STATIC_MEMBER_ CommandQueue CommandQueue::default_;
-CL_HPP_DEFINE_STATIC_MEMBER_ cl_int CommandQueue::default_error_ = CL_SUCCESS;
+//CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag CommandQueue::default_initialized_;
+//CL_HPP_DEFINE_STATIC_MEMBER_ CommandQueue CommandQueue::default_;
+//CL_HPP_DEFINE_STATIC_MEMBER_ cl_int CommandQueue::default_error_ = CL_SUCCESS;
 
 
 #if CL_HPP_TARGET_OPENCL_VERSION >= 200

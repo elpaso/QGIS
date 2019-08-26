@@ -39,10 +39,12 @@ INCLUDE_DIRECTORIES(SYSTEM
   ${SQLITE3_INCLUDE_DIR}
 )
 
+
 IF(HAVE_OPENCL)
-    IF(APPLE)
-        INCLUDE_DIRECTORIES(SYSTEM ${OpenCL_INCLUDE_DIRS})
-    ENDIF(APPLE)
+    INCLUDE_DIRECTORIES(SYSTEM
+        ${OpenCL_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/external/clew/include
+    )
 ENDIF(HAVE_OPENCL)
 
 #note for tests we should not include the moc of our

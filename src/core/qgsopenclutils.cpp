@@ -14,6 +14,7 @@
  *                                                                         *
  ***************************************************************************/
 #include "qgsopenclutils.h"
+#include "opencl-clhpp/include/CL/cl2.hpp"
 #include "qgssettings.h"
 #include "qgsmessagelog.h"
 #include "qgslogger.h"
@@ -29,6 +30,22 @@ QLatin1String QgsOpenClUtils::LOGMESSAGE_TAG = QLatin1Literal( "OpenCL" );
 bool QgsOpenClUtils::sAvailable = false;
 QString QgsOpenClUtils::sSourcePath = QString();
 
+#define CL_HPP_DEFINE_STATIC_MEMBER_
+namespace cl
+{
+  CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Device::default_initialized_;
+  CL_HPP_DEFINE_STATIC_MEMBER_ Device Device::default_;
+  CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Device::default_error_ = CL_SUCCESS;
+  CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Platform::default_initialized_;
+  CL_HPP_DEFINE_STATIC_MEMBER_ Platform Platform::default_;
+  CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Platform::default_error_ = CL_SUCCESS;
+  CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag Context::default_initialized_;
+  CL_HPP_DEFINE_STATIC_MEMBER_ Context Context::default_;
+  CL_HPP_DEFINE_STATIC_MEMBER_ cl_int Context::default_error_ = CL_SUCCESS;
+  CL_HPP_DEFINE_STATIC_MEMBER_ std::once_flag CommandQueue::default_initialized_;
+  CL_HPP_DEFINE_STATIC_MEMBER_ CommandQueue CommandQueue::default_;
+  CL_HPP_DEFINE_STATIC_MEMBER_ cl_int CommandQueue::default_error_ = CL_SUCCESS;
+}
 
 const std::vector<cl::Device> QgsOpenClUtils::devices()
 {

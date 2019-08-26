@@ -61,6 +61,8 @@
 #include <AvailabilityMacros.h>
 #endif
 
+#include "qgis_core.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -2710,14 +2712,10 @@ typedef CL_API_ENTRY cl_int( CL_API_CALL *clGetGLContextInfoKHR_fn )(
 #ifdef _WIN32
 #ifdef clew_STATIC
 #  define CLEWAPI extern
+#elif defined(CLEW_C)
+#define CLEWAPI CORE_EXPORT
 #else
-#  ifdef clew_EXPORTS
-#pragma message("exporting")
-#    define CLEWAPI extern __declspec(dllexport)
-#  else
-#pragma message("importing")
-#    define CLEWAPI extern __declspec(dllimport)
-#  endif
+#define CLEWAPI extern CORE_EXPORT
 #endif
 #else
 #define CLEWAPI extern
