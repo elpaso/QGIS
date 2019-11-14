@@ -24,6 +24,9 @@
 #include <QOpenGLShaderProgram>
 #include <QSurfaceFormat>
 #include <QOpenGLFramebufferObject>
+#include <QOpenGLExtraFunctions>
+#include <QtOpenGLExtensions/QOpenGLExtensions>
+#include <QOpenGLFunctions_4_3_Core>
 
 #include <Qt3DCore/QAspectEngine>
 #include <Qt3DLogic/QLogicAspect>
@@ -58,9 +61,10 @@ class TestQgs3DCalculations : public QObject
     void initTestCase();// will be called before the first testfunction is executed.
     void cleanupTestCase();// will be called after the last testfunction was executed.
 
-    void testShaders();
+    void testComputeShaders();
 
   private:
+    void testShaders();
     void testCalculations();
 };
 
@@ -72,6 +76,142 @@ void TestQgs3DCalculations::initTestCase()
 //runs after all tests
 void TestQgs3DCalculations::cleanupTestCase()
 {
+}
+
+void TestQgs3DCalculations::testComputeShaders()
+{
+
+  // Set up the default OpenGL surface format.
+  QSurfaceFormat format;
+
+  // by default we get just some older version of OpenGL from the system,
+  // but for 3D lines we use "primitive restart" functionality supported in OpenGL >= 3.1
+  // Qt3DWindow uses this - requesting OpenGL 4.3 - so let's request the same version.
+#ifdef QT_OPENGL_ES_2
+  format.setRenderableType( QSurfaceFormat::OpenGLES );
+#else
+  if ( QOpenGLContext::openGLModuleType() == QOpenGLContext::LibGL )
+  {
+    format.setVersion( 4, 4 );
+    format.setProfile( QSurfaceFormat::CoreProfile );
+  }
+#endif
+
+  QOpenGLContext context;
+
+  QVERIFY( context.create() );
+  QOffscreenSurface surface;
+  surface.setFormat( context.format() );
+  surface.create();
+  QVERIFY( context.makeCurrent( &surface ) );
+
+
+  // Info
+
+  int work_grp_cnt[3];
+
+  context.extraFunctions()->glGetIntegeri_v( GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &work_grp_cnt[0] );
+  context.extraFunctions()->glGetIntegeri_v( GL_MAX_COMPUTE_WORK_GROUP_COUNT, 1, &work_grp_cnt[1] );
+  context.extraFunctions()->glGetIntegeri_v( GL_MAX_COMPUTE_WORK_GROUP_COUNT, 2, &work_grp_cnt[2] );
+
+  printf( "max global (total) work group size x:%i y:%i z:%i\n",
+          work_grp_cnt[0], work_grp_cnt[1], work_grp_cnt[2] );
+
+
+  int work_grp_size[3];
+
+  context.extraFunctions()->glGetIntegeri_v( GL_MAX_COMPUTE_WORK_GROUP_SIZE, 0, &work_grp_size[0] );
+  context.extraFunctions()->glGetIntegeri_v( GL_MAX_COMPUTE_WORK_GROUP_SIZE, 1, &work_grp_size[1] );
+  context.extraFunctions()->glGetIntegeri_v( GL_MAX_COMPUTE_WORK_GROUP_SIZE, 2, &work_grp_size[2] );
+
+  printf( "max local (in one shader) work group sizes x:%i y:%i z:%i\n",
+          work_grp_size[0], work_grp_size[1], work_grp_size[2] );
+
+  //int work_grp_inv;
+  //glGetIntegerv(GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS, &work_grp_inv);
+  //printf("max local work group invocations %i\n", work_grp_inv);
+
+  /*
+   QOpenGLBuffer paramsBuffer( QOpenGLBuffer::VertexBuffer );
+   inputBuffer.setUsagePattern( QOpenGLBuffer::UsagePattern::DynamicCopy );
+   QVERIFY( paramsBuffer.create() );
+   QVERIFY( paramsBuffer.bind() );
+   //paramsBuffer.map( QOpenGLBuffer::Access::ReadOnly );
+   QVector<float> paramsData { 100 };
+   paramsBuffer.write( 1, &paramsData, sizeof ( paramsData ) );
+   */
+
+  QOpenGLShader shader( QOpenGLShader::Compute );
+
+  QString source { R"(
+                   #version 430
+
+                     layout (local_size_x = 4) in;
+
+                   layout(std430, binding = 0) buffer ColorSSBO {
+                     float data[];
+                   };
+
+                   void main() {
+                         for(uint i=0; i < 4; ++i )
+                         {
+                             if ( data[i] > 4 )
+                             {
+                                 data[i] = 0;
+                             }
+                             else
+                             {
+                                 data[i] += 0.001;
+                             }
+                         }
+                   }
+                 )" };
+
+  QVERIFY( shader.compileSourceCode( source ) );
+
+  QOpenGLShaderProgram program( &context );
+  QVERIFY( program.addShader( &shader ) );
+  QVERIFY( program.link() );
+  //program.bind();
+
+  // Buffer
+
+  //QOpenGLBuffer inputBuffer( QOpenGLBuffer::VertexBuffer );
+  GLuint inputBuffer;
+  context.functions()->glGenBuffers( 1, &inputBuffer );
+  //inputBuffer.setUsagePattern( QOpenGLBuffer::UsagePattern::DynamicCopy );
+  //QVERIFY( inputBuffer.create() );
+  //QVERIFY( inputBuffer.bind() );
+  context.extraFunctions()->glBindBuffer( GL_SHADER_STORAGE_BUFFER, inputBuffer );
+  float data[] { 0.0, 1.0, 2.0, 3.0 };
+  context.extraFunctions()->glBufferData( GL_SHADER_STORAGE_BUFFER, sizeof( data ), data, GL_DYNAMIC_COPY );
+  context.extraFunctions()->glBindBufferBase( GL_SHADER_STORAGE_BUFFER, 0, inputBuffer );
+  context.extraFunctions()->glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 );
+  assert( context.extraFunctions()->glGetError() == GL_NO_ERROR );
+
+  // Run
+  context.extraFunctions()->glUseProgram( program.programId() );
+  context.extraFunctions()->glDispatchCompute( 1, 1, 1 );
+  assert( context.extraFunctions()->glGetError() == GL_NO_ERROR );
+
+  // Get results
+  context.extraFunctions()->glBindBuffer( GL_SHADER_STORAGE_BUFFER, inputBuffer );
+  assert( context.extraFunctions()->glGetError() == GL_NO_ERROR );
+  auto functions = context.versionFunctions<QOpenGLFunctions_4_3_Core>();
+  float *bufferPtr = static_cast<float * >( functions->glMapBuffer( GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY ) );
+  context.extraFunctions()->glUnmapBuffer( GL_SHADER_STORAGE_BUFFER );
+  context.extraFunctions()->glBindBuffer( GL_SHADER_STORAGE_BUFFER, 0 );
+  memcpy( &data, bufferPtr, sizeof( float ) * 4 );
+
+
+  //paramsBuffer.bind();
+  //paramsBuffer.read(1, &paramsData, sizeof ( paramsData ) );
+
+  QCOMPARE( data[0], 2.0 );
+  QCOMPARE( data[1], 3.0 );
+  QCOMPARE( data[2], 4.0 );
+  QCOMPARE( data[3], 5.0 );
+
 }
 
 
@@ -307,8 +447,6 @@ void TestQgs3DCalculations::testCalculations()
   // Hook the texture up to our output, and the output up to this object.
   mTextureOutput.setTexture( &mTexture );
   mTextureTarget.addOutput( &mTextureOutput );
-
-
 
 
 }
