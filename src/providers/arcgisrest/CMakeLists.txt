@@ -42,6 +42,7 @@ set (AFS_SRCS
   qgsafsfeatureiterator.cpp
   qgsafsprovider.cpp
   qgsafsshareddata.cpp
+  qgsafsproviderconnection.cpp
 )
 if (WITH_GUI)
   set(AFS_SRCS ${AFS_SRCS}

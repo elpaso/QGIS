@@ -15,7 +15,7 @@ __revision__ = '$Format:%H$'
 
 import os
 import time
-from test_qgsproviderconnection_base import TestPyQgsProviderConnectionBase
+from test_qgsproviderconnection_base import TestPyQgsProviderDatabaseConnectionBase
 from qgis.core import (
     QgsWkbTypes,
     QgsAbstractDatabaseProviderConnection,
@@ -32,7 +32,7 @@ from osgeo import gdal
 from qgis.PyQt.QtCore import QTemporaryDir
 
 
-class TestPyQgsProviderConnectionPostgres(unittest.TestCase, TestPyQgsProviderConnectionBase):
+class TestPyQgsProviderConnectionPostgres(unittest.TestCase, TestPyQgsProviderDatabaseConnectionBase):
 
     # Provider test cases must define the string URI for the test
     uri = ''
@@ -46,7 +46,7 @@ class TestPyQgsProviderConnectionPostgres(unittest.TestCase, TestPyQgsProviderCo
     def setUpClass(cls):
         """Run before all tests"""
 
-        TestPyQgsProviderConnectionBase.setUpClass()
+        TestPyQgsProviderDatabaseConnectionBase.setUpClass()
         cls.postgres_conn = "service='qgis_test'"
         if 'QGIS_PGTEST_DB' in os.environ:
             cls.postgres_conn = os.environ['QGIS_PGTEST_DB']

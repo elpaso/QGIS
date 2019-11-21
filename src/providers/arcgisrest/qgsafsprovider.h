@@ -104,6 +104,13 @@ class QgsAfsProviderMetadata: public QgsProviderMetadata
     QString encodeUri( const QVariantMap &parts ) const override;
     QgsAfsProvider *createProvider( const QString &uri, const QgsDataProvider::ProviderOptions &options, QgsDataProvider::ReadFlags flags = QgsDataProvider::ReadFlags() ) override;
 
+    // Connections API
+    QMap<QString, QgsAbstractProviderConnection *> connections( bool cached = true ) override;
+    QgsAbstractProviderConnection *createConnection( const QString &name ) override;
+    QgsAbstractProviderConnection *createConnection( const QString &uri, const QVariantMap &configuration ) override;
+    void deleteConnection( const QString &name ) override;
+    void saveConnection( const QgsAbstractProviderConnection *createConnection, const QString &name ) override;
+
 };
 
 #endif // QGSAFSPROVIDER_H

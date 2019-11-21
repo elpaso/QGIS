@@ -31,6 +31,7 @@ QgsAbstractDatabaseProviderConnection::QgsAbstractDatabaseProviderConnection( co
 {
 
 }
+
 QgsAbstractDatabaseProviderConnection::Capabilities QgsAbstractDatabaseProviderConnection::capabilities() const
 {
   return mCapabilities;
@@ -215,7 +216,6 @@ QList<QgsAbstractDatabaseProviderConnection::TableProperty> QgsAbstractDatabaseP
   checkCapability( Capability::Tables );
   return QList<QgsAbstractDatabaseProviderConnection::TableProperty>();
 }
-
 
 QgsAbstractDatabaseProviderConnection::TableProperty QgsAbstractDatabaseProviderConnection::table( const QString &schema, const QString &name ) const
 {

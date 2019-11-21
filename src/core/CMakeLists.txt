@@ -227,6 +227,7 @@ set(QGIS_CORE_SRCS
   qgsabstractgeopdfexporter.cpp
   qgsabstractproviderconnection.cpp
   qgsabstractdatabaseproviderconnection.cpp
+  qgsabstractwebserviceproviderconnection.cpp
   qgsapplication.cpp
   qgsaction.cpp
   qgsactionscope.cpp
@@ -814,9 +815,10 @@ set(QGIS_CORE_HDRS
   qgis.h
   qgis_sip.h
   qgsabstractcontentcache.h
-  qgsabstractdatabaseproviderconnection.h
   qgsabstractgeopdfexporter.h
   qgsabstractproviderconnection.h
+  qgsabstractdatabaseproviderconnection.h
+  qgsabstractwebserviceproviderconnection.h
   qgsaction.h
   qgsactionmanager.h
   qgsactionscope.h

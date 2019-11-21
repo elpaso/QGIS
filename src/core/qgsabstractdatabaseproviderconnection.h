@@ -350,7 +350,7 @@ class CORE_EXPORT QgsAbstractDatabaseProviderConnection : public QgsAbstractProv
     // Operations interface
 
     /**
-     * Returns the URI string for the given \a table and \a schema.
+     * Returns the URI string for the given table \a name and \a schema.
      * Raises a QgsProviderConnectionException if any errors are encountered.
      * \throws QgsProviderConnectionException
      * \since QGIS 3.12

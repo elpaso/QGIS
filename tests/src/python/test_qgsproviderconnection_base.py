@@ -55,25 +55,33 @@ class TestPyQgsProviderConnectionBase():
         QCoreApplication.setApplicationName(cls.__name__)
         start_app()
 
-    @classmethod
-    def tearDownClass(cls):
-        """Run after all tests"""
-        pass
-
     def setUp(self):
         QgsSettings().clear()
 
     def _test_save_load(self, md, uri):
         """Common tests on connection save and load"""
 
-        conn = md.createConnection(uri, {})
-
+        conn = md.createConnection(self.uri, {})
         md.saveConnection(conn, 'qgis_test1')
         # Check that we retrieve the new connection
         self.assertTrue('qgis_test1' in md.connections().keys())
         self.assertTrue('qgis_test1' in md.dbConnections().keys())
-
         return md.connections()['qgis_test1']
+
+
+class TestPyQgsProviderWebServiceConnectionBase(TestPyQgsProviderConnectionBase):
+    """Test Web Service connections"""
+
+    def test_connections(self):
+        """Common tests"""
+
+        md = QgsProviderRegistry.instance().providerMetadata(self.providerKey)
+        conn = self._test_save_load(md, self.uri)
+        self.assertTrue('qgis_test1' in md.webServiceConnections().keys())
+
+
+class TestPyQgsProviderDatabaseConnectionBase(TestPyQgsProviderConnectionBase):
+    """Test DB connections"""
 
     def _table_names(self, table_properties):
         """Return table default names from table property list"""
@@ -403,7 +411,7 @@ class TestPyQgsProviderConnectionBase():
         md.saveConnection(conn, 'qgis_test1')
         self.assertEqual(len(created_spy), 1)
         self.assertEqual(len(changed_spy), 1)
-
+        self.assertTrue('qgis_test1' in md.dbConnections().keys())
         self._test_operations(md, conn)
 
     def test_native_types(self):
