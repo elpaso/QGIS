@@ -244,6 +244,11 @@ class GUI_EXPORT QgsRelationEditorWidget : public QgsCollapsibleGroupBox
      * \since QGIS 3.00
      */
     void unlinkFeatures( const QgsFeatureIds &featureids );
+
+    /**
+     * Returns TRUE if the child form parents are not new features.
+     */
+    bool canSaveChildEdits();
 };
 
 #endif // QGSRELATIONEDITOR_H

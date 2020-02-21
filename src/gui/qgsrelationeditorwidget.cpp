@@ -35,6 +35,7 @@
 #include "qgsexpressioncontextutils.h"
 #include "qgsmessagebar.h"
 #include "qgsmessagebaritem.h"
+#include "qgsvectorlayereditbuffer.h"
 
 #include <QHBoxLayout>
 #include <QLabel>
@@ -220,6 +221,8 @@ void QgsRelationEditorWidget::setRelationFeature( const QgsRelation &relation, c
   {
     disconnect( mRelation.referencingLayer(), &QgsVectorLayer::editingStarted, this, &QgsRelationEditorWidget::updateButtons );
     disconnect( mRelation.referencingLayer(), &QgsVectorLayer::editingStopped, this, &QgsRelationEditorWidget::updateButtons );
+    disconnect( mRelation.referencingLayer(), &QgsVectorLayer::featureAdded, this, &QgsRelationEditorWidget::updateButtons );
+    disconnect( mRelation.referencingLayer(), &QgsVectorLayer::featureDeleted, this, &QgsRelationEditorWidget::updateButtons );
   }
 
   mRelation = relation;
@@ -227,6 +230,8 @@ void QgsRelationEditorWidget::setRelationFeature( const QgsRelation &relation, c
 
   connect( mRelation.referencingLayer(), &QgsVectorLayer::editingStarted, this, &QgsRelationEditorWidget::updateButtons );
   connect( mRelation.referencingLayer(), &QgsVectorLayer::editingStopped, this, &QgsRelationEditorWidget::updateButtons );
+  connect( mRelation.referencingLayer(), &QgsVectorLayer::featureAdded, this, &QgsRelationEditorWidget::updateButtons );
+  connect( mRelation.referencingLayer(), &QgsVectorLayer::featureDeleted, this, &QgsRelationEditorWidget::updateButtons );
 
   if ( mShowLabel )
     setTitle( relation.name() );
@@ -429,6 +434,7 @@ void QgsRelationEditorWidget::updateButtons()
 
   mZoomToFeatureButton->setEnabled( selectionNotEmpty );
 
+  editable = editable && canSaveChildEdits();
   mToggleEditingButton->setChecked( editable );
   mSaveEditsButton->setEnabled( editable );
 }
@@ -806,6 +812,22 @@ void QgsRelationEditorWidget::unlinkFeatures( const QgsFeatureIds &featureids )
       }
     }
   }
+}
+
+bool QgsRelationEditorWidget::canSaveChildEdits()
+{
+  // Check for referenced layer that has pending changes
+  if ( mRelation.referencedLayer()->isModified() )
+  {
+    QgsVectorLayerEditBuffer *editBuffer { mRelation.referencedLayer()->editBuffer() };
+    QgsFeature feature { mRelation.getReferencedFeature( mFeature ) };
+    const auto it { editBuffer->addedFeatures() };
+    if ( it.find( feature.id() ) != it.constEnd() )
+    {
+      return false;
+    }
+  }
+  return true;
 }
 
 void QgsRelationEditorWidget::toggleEditing( bool state )
