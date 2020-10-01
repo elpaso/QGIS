@@ -15,10 +15,13 @@ __copyright__ = 'Copyright 2012, The QGIS Project'
 import qgis  # NOQA
 
 import os
+import math
 import filecmp
 from shutil import copyfile
+from osgeo import gdal, osr
+import numpy as np
 
-from qgis.PyQt.QtCore import QSize, QFileInfo, Qt, QTemporaryDir
+from qgis.PyQt.QtCore import QSize, QFileInfo, Qt, QTemporaryDir, QVariant
 
 from qgis.PyQt.QtGui import (
     QColor,
@@ -28,7 +31,11 @@ from qgis.PyQt.QtGui import (
 )
 from qgis.PyQt.QtXml import QDomDocument
 
-from qgis.core import (QgsRaster,
+from qgis.core import (Qgis,
+                       QgsExpression,
+                       QgsRectangle,
+                       QgsWkbTypes,
+                       QgsRaster,
                        QgsRasterLayer,
                        QgsReadWriteContext,
                        QgsColorRampShader,
@@ -52,9 +59,10 @@ from qgis.core import (QgsRaster,
                        QgsRasterHistogram,
                        QgsCubicRasterResampler,
                        QgsBilinearRasterResampler,
-                       QgsLayerDefinition
+                       QgsLayerDefinition,
+                       QgsFeatureRequest,
                        )
-from utilities import unitTestDataPath
+from utilities import unitTestDataPath, compareWkt
 from qgis.testing import start_app, unittest
 from qgis.testing.mocked import get_iface
 
@@ -1369,6 +1377,135 @@ class TestQgsRasterLayerTransformContext(unittest.TestCase):
             p.transformContext().hasTransform(QgsCoordinateReferenceSystem('EPSG:4326'), QgsCoordinateReferenceSystem('EPSG:3857')))
         self.assertTrue(
             rl.transformContext().hasTransform(QgsCoordinateReferenceSystem('EPSG:4326'), QgsCoordinateReferenceSystem('EPSG:3857')))
+
+    def testAsVector(self):
+        """Test raster as vector"""
+
+        rl = QgsRasterLayer(os.path.join(unitTestDataPath('raster'),
+                                         'band1_float32_noct_epsg4326.tif'))
+        self.assertTrue(rl.isValid())
+
+        vl = rl.asVector()
+        self.assertTrue(vl.isValid())
+        fields = vl.dataProvider().fields()
+        self.assertEqual(fields.count(), rl.bandCount())
+        self.assertEqual(vl.fields().count(), rl.bandCount())
+        self.assertEqual(vl.wkbType(), QgsWkbTypes.Point)
+        self.assertEqual(vl.dataProvider().fields()[0].name(), 'Band 1')
+        self.assertEqual(QVariant.typeToName(vl.dataProvider().fields()[0].type()), 'double')
+        self.assertEqual(vl.extent(), rl.extent())
+
+        # Get data!
+        f = next(vl.getFeatures())
+        self.assertTrue(f.isValid())
+        self.assertEqual(f.id(), 1)
+        self.assertTrue(compareWkt(f.geometry().asWkt(), 'point(-2.5 -3.5)'), f.geometry().asWkt())
+
+        # Get all IDS
+        ids = [f.id() for f in vl.getFeatures()]
+        self.assertEqual(len(ids), 100)
+        self.assertEqual(sorted(ids), list(range(1, 101)))
+
+        # Check values
+        dp = rl.dataProvider()
+        for f in vl.getFeatures():
+            bb = f.geometry().boundingBox()
+            bb.grow(0.1)
+            rval = dp.block(1, bb, 1, 1).value(0, 0)
+            vval = f.attribute(0)
+            if not (math.isnan(rval) and math.isnan(vval)):
+                self.assertEqual(dp.block(1, bb, 1, 1).value(0, 0), f.attribute(0))
+
+        # Get features by id
+        f = vl.getFeature(1)
+        self.assertTrue(compareWkt(f.geometry().asWkt(), 'Point (-2.5 -3.5)'), f.geometry().asWkt())
+        f = vl.getFeature(100)
+        self.assertTrue(compareWkt(f.geometry().asWkt(), 'Point (6.5 5.5)'), f.geometry().asWkt())
+
+        # Filter fids
+        request = QgsFeatureRequest()
+        request.setFilterFids([1, 50, 100])
+        features = [f for f in vl.getFeatures(request)]
+        self.assertEqual([f.id() for f in features], [1, 50, 100])
+        f = features[0]
+        self.assertTrue(compareWkt(f.geometry().asWkt(), 'Point (-2.5 -3.5)'), f.geometry().asWkt())
+        f = features[1]
+        self.assertTrue(compareWkt(f.geometry().asWkt(), 'Point (6.5 0.5)'), f.geometry().asWkt())
+        f = features[2]
+        self.assertTrue(compareWkt(f.geometry().asWkt(), 'Point (6.5 5.5)'), f.geometry().asWkt())
+
+        # Filter extent
+        # Full
+        request = QgsFeatureRequest(vl.extent())
+        features = [f for f in vl.getFeatures(request)]
+        self.assertEqual([f.id() for f in features], list(range(1, 101)))
+
+        # Empty
+        request = QgsFeatureRequest(QgsRectangle(-5, -5, -4, -3))
+        features = [f for f in vl.getFeatures(request)]
+        self.assertEqual([f.id() for f in features], [])
+
+        # Corners
+        request = QgsFeatureRequest(QgsRectangle(-3.5, -4.5, -2.9, -3.9))
+        features = [f for f in vl.getFeatures(request)]
+        self.assertEqual([f.id() for f in features], [1])
+
+        request = QgsFeatureRequest(QgsRectangle(-3.5, 5.5, -2.9, 6.5))
+        features = [f for f in vl.getFeatures(request)]
+        self.assertEqual([f.id() for f in features], [91])
+
+        # Column
+        request = QgsFeatureRequest(QgsRectangle(2.0001, -4, 2.99999, 6))
+        features = [f for f in vl.getFeatures(request)]
+        self.assertEqual([f.id() for f in features], [6, 16, 26, 36, 46, 56, 66, 76, 86, 96])
+
+        # Row
+        request = QgsFeatureRequest(QgsRectangle(-3, -1.9999, 7, -1.0001))
+        features = [f for f in vl.getFeatures(request)]
+        self.assertEqual([f.id() for f in features], [21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
+
+    def testAsVectorMultiBandExpressions(self):
+        """Test raster as vector with expressions filter"""
+
+        tempdir = QTemporaryDir()
+        temppath = os.path.join(tempdir.path(), 'as_vector_multiband.tif')
+
+        driver = gdal.GetDriverByName('GTiff')
+        # 32 columns and 16 rows 3 bands int32
+        outRaster = driver.Create(temppath, 32, 16, 3, gdal.GDT_Int32)
+        for band in range(1, 4):
+            outband = outRaster.GetRasterBand(band)
+            data = []
+            for r in range(16):
+                data.append([band + i for i in range(32)])
+            npdata = np.array(data, np.int32)
+            outband.WriteArray(npdata)
+            outband.FlushCache()
+
+        outRaster.FlushCache()
+        del outRaster
+
+        # Multi band checks
+        rl = QgsRasterLayer(temppath, 'as_vector_multiband')
+        self.assertTrue(rl.isValid())
+        vl = rl.asVector()
+        self.assertTrue(vl.isValid())
+
+        fields = vl.dataProvider().fields()
+        self.assertEqual(fields.count(), rl.bandCount())
+        for f in fields:
+            self.assertEqual(f.type(), QVariant.Int)
+
+        # Filter by attributes
+        request = QgsFeatureRequest(QgsExpression('"Band 1" = 18'))
+        for f in vl.getFeatures(request):
+            self.assertEqual(f.attributes(), [18.0, 19.0, 20.0])
+
+        # Filter by attributes and fids
+        request = QgsFeatureRequest(QgsExpression('"Band 1" = 18'))
+        request.setFilterFids([146, 306, 466])
+        fids = [f.id() for f in vl.getFeatures(request)]
+        self.assertEqual(fids, [146, 306, 466])
 
 
 if __name__ == '__main__':

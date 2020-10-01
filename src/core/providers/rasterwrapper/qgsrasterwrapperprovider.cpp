@@ -199,7 +199,7 @@ QgsRasterWrapperFeatureIterator::QgsRasterWrapperFeatureIterator( QgsRasterWrapp
     mSubsetExpression->prepare( &mSource->mExpressionContext );
   }
 
-  if ( !mFilterRect.isNull() )
+  if ( !mFilterRect.isNull() && ! mFilterRect.contains( mRasterDataProvider->extent() ) )
   {
 
     // Calculate extent
