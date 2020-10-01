@@ -80,6 +80,7 @@ class QgsAuxiliaryLayer;
 class QgsGeometryOptions;
 class QgsStyleEntityVisitorInterface;
 class QgsVectorLayerTemporalProperties;
+class QgsRasterDataProvider;
 
 typedef QList<int> QgsAttributeList;
 typedef QSet<int> QgsAttributeIds;
@@ -546,6 +547,17 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer, public QgsExpressionConte
     QgsVectorLayer( const QgsVectorLayer &rhs ) = delete;
     //! QgsVectorLayer cannot be copied.
     QgsVectorLayer &operator=( QgsVectorLayer const &rhs ) = delete;
+
+///@cond PRIVATE
+
+    /**
+     * Constructs a vector layer wrapper around a \a rasterDataProvider.
+     * The layer validity is linked to the lifetime of the \a rasterDataProvider.
+     * \param baseName The name used to represent the layer in the legend
+     * \since QGIS 3.16
+     */
+    explicit QgsVectorLayer( QgsRasterDataProvider *rasterDataProvider, const QString &baseName = QString() ) SIP_SKIP;
+///@endcond
 
     /**
      * Returns a new instance equivalent to this one. A new provider is

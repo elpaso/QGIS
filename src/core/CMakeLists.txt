@@ -183,6 +183,8 @@ SET(QGIS_CORE_SRCS
 
   providers/meshmemory/qgsmeshmemorydataprovider.cpp
 
+  providers/rasterwrapper/qgsrasterwrapperprovider.cpp
+
   providers/ogr/qgsogrprovider.cpp
   providers/ogr/qgsogrdataitems.cpp
   providers/ogr/qgsogrfeatureiterator.cpp
@@ -1344,6 +1346,7 @@ SET(QGIS_CORE_HDRS
   providers/ogr/qgsogrdbconnection.h
   providers/ogr/qgsogrprovider.h
   providers/ogr/qgsogrtransaction.h
+  providers/rasterwrapper/qgsrasterwrapperprovider.h
 
   raster/qgsbilinearrasterresampler.h
   raster/qgsbrightnesscontrastfilter.h
@@ -1566,6 +1569,7 @@ INCLUDE_DIRECTORIES(
   providers/gdal
   providers/ogr
   providers/meshmemory
+  providers/rasterwrapper
   raster
   renderer
   scalebar

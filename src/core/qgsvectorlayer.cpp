@@ -100,6 +100,7 @@
 #include "qgsgeometryoptions.h"
 #include "qgsexpressioncontextutils.h"
 #include "qgsruntimeprofiler.h"
+#include "providers/rasterwrapper/qgsrasterwrapperprovider.h"
 
 #include "diagram/qgsdiagram.h"
 
@@ -234,6 +235,23 @@ QgsVectorLayer::~QgsVectorLayer()
 
   if ( mFeatureCounter )
     mFeatureCounter->cancel();
+}
+
+QgsVectorLayer::QgsVectorLayer( QgsRasterDataProvider *rasterDataProvider, const QString &baseName )
+  :  QgsVectorLayer( QString(), baseName, QgsRasterWrapperProvider::providerKey() )
+{
+  mDataProvider = new QgsRasterWrapperProvider( rasterDataProvider );
+  if ( rasterDataProvider && mDataProvider->isValid() )
+  {
+    mValid = true;
+    mFields = mDataProvider->fields();
+    mExtent = mDataProvider->extent();
+    mWkbType = mDataProvider->wkbType();
+  }
+  else
+  {
+    mValid = false;
+  }
 }
 
 QgsVectorLayer *QgsVectorLayer::clone() const

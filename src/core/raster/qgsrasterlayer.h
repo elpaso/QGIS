@@ -462,6 +462,8 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
 
     QgsMapLayerTemporalProperties *temporalProperties() override;
 
+    QgsVectorLayer *asVector();
+
   public slots:
     void showStatusMessage( const QString &message );
 

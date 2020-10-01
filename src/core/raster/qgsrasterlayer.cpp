@@ -55,6 +55,7 @@ email                : tim at linfiniti.com
 #include "qgscubicrasterresampler.h"
 #include "qgsrasterlayertemporalproperties.h"
 #include "qgsruntimeprofiler.h"
+#include "providers/rasterwrapper/qgsrasterwrapperprovider.h"
 
 #include <cmath>
 #include <cstdio>
@@ -1006,6 +1007,11 @@ bool QgsRasterLayer::ignoreExtents() const
 QgsMapLayerTemporalProperties *QgsRasterLayer::temporalProperties()
 {
   return mTemporalProperties;
+}
+
+QgsVectorLayer *QgsRasterLayer::asVector()
+{
+  return new QgsVectorLayer( dataProvider(), name() + tr( " as vector" ) );
 }
 
 void QgsRasterLayer::setContrastEnhancement( QgsContrastEnhancement::ContrastEnhancementAlgorithm algorithm, QgsRasterMinMaxOrigin::Limits limits, const QgsRectangle &extent, int sampleSize, bool generateLookupTableFlag )

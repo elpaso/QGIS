@@ -417,6 +417,8 @@ data.
     ~QgsVectorLayer();
 
 
+
+
     virtual QgsVectorLayer *clone() const /Factory/;
 
 %Docstring

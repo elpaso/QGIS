@@ -36,6 +36,7 @@
 #include "providers/gdal/qgsgdalprovider.h"
 #include "providers/ogr/qgsogrprovider.h"
 #include "providers/meshmemory/qgsmeshmemorydataprovider.h"
+#include "providers/rasterwrapper/qgsrasterwrapperprovider.h"
 #include "qgsruntimeprofiler.h"
 
 #ifdef HAVE_STATIC_PROVIDERS
