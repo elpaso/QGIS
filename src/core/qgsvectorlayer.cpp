@@ -247,6 +247,7 @@ QgsVectorLayer::QgsVectorLayer( QgsRasterDataProvider *rasterDataProvider, const
     mFields = mDataProvider->fields();
     mExtent = mDataProvider->extent();
     mWkbType = mDataProvider->wkbType();
+    setRenderer( QgsFeatureRenderer::defaultRenderer( geometryType() ) );
   }
   else
   {

@@ -83,23 +83,17 @@ class QgsRasterWrapperFeatureIterator final: public QgsAbstractFeatureIteratorFr
     bool rewind() override;
     bool close() override;
 
-    /**
-     * Returns the feature id from \a position in layer's CRS.
-     * Returns -1 on error.
-     */
-    QgsFeatureId featureIdFromPoint( const QgsPointXY &position );
-
-    /**
-     * Returns 0-based south-east col and row coordinates from \d featureId
-     */
-    QPair<int, int> featureIdToMatrixCoordinates( const QgsFeatureId featureId );
-
-
   protected:
 
     bool fetchFeature( QgsFeature &feature ) override;
 
   private:
+
+    struct MatrixCoordinates
+    {
+      qlonglong column;
+      qlonglong row;
+    };
 
     QPointer<QgsRasterDataProvider> mRasterDataProvider = nullptr;
     QgsFeatureId mNextFeatureId = 1;
@@ -115,7 +109,25 @@ class QgsRasterWrapperFeatureIterator final: public QgsAbstractFeatureIteratorFr
     QgsFields mFields;
     double mXStep = 0;
     double mYStep = 0;
-    std::unique_ptr< QgsRasterIterator > mRasterIterator;
+
+    /**
+     * Returns the feature id from \a position in layer's CRS or -1 on error.
+     * Feature id 1 is south west
+     */
+    QgsFeatureId featureIdFromPoint( const QgsPointXY &position );
+
+    /**
+     * Returns the feature id from \a coordinates or -1 on error.
+     * Feature id 1 is south west
+     */
+    QgsFeatureId featureIdFromMatrixCoordinates( const MatrixCoordinates &coordinates );
+
+    /**
+     * Returns 0-based south west col and row coordinates from \d featureId
+     */
+    MatrixCoordinates featureIdToMatrixCoordinates( const QgsFeatureId featureId );
+
+
 };
 
 

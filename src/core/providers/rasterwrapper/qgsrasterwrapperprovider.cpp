@@ -170,7 +170,6 @@ QgsRasterWrapperFeatureIterator::QgsRasterWrapperFeatureIterator( QgsRasterWrapp
   , mFields( source->mFields )
   , mXStep( source->mRasterDataProvider ? source->mRasterDataProvider->extent().width() / source->mRasterDataProvider->xSize() : 0 )
   , mYStep( source->mRasterDataProvider ? source->mRasterDataProvider->extent().height() / source->mRasterDataProvider->ySize() : 0 )
-  , mRasterIterator( qgis::make_unique<QgsRasterIterator>( source->mRasterDataProvider ) )
 {
   if ( ! mRasterDataProvider )
   {
@@ -178,14 +177,6 @@ QgsRasterWrapperFeatureIterator::QgsRasterWrapperFeatureIterator( QgsRasterWrapp
   }
 
   mRasterCellsCount = mRasterColumns * mRasterRows;
-
-  mRasterIterator->setMaximumTileWidth( 1 );
-  mRasterIterator->setMaximumTileHeight( 1 );
-
-  for ( int bandNumber = 1; bandNumber <= mRasterDataProvider->bandCount(); ++bandNumber )
-  {
-    mRasterIterator->startRasterRead( bandNumber, mRasterColumns, mRasterRows, mRasterDataProvider->extent() );
-  }
 
   if ( mRequest.destinationCrs().isValid() && mRequest.destinationCrs() != mSource->mCrs )
   {
@@ -208,11 +199,40 @@ QgsRasterWrapperFeatureIterator::QgsRasterWrapperFeatureIterator( QgsRasterWrapp
     mSubsetExpression->prepare( &mSource->mExpressionContext );
   }
 
-  if ( !mFilterRect.isNull() && mRequest.flags() & QgsFeatureRequest::ExactIntersect )
+  if ( !mFilterRect.isNull() )
   {
-    mSelectRectGeom = QgsGeometry::fromRect( mFilterRect );
-    mSelectRectEngine.reset( QgsGeometry::createGeometryEngine( mSelectRectGeom.constGet() ) );
-    mSelectRectEngine->prepareGeometry();
+
+    // Calculate extent
+    QgsRectangle fullExtent { mRasterDataProvider->extent() };
+    // Shrink to avoid overflow on edges
+    fullExtent.grow( - 0.000001 );
+    mFilterRect = mFilterRect.intersect( fullExtent );
+    if ( mFilterRect.isNull() )
+    {
+      // out of bounds
+      close();
+      return;
+    }
+
+    // Get all fids in the extent
+    const QgsFeatureId minFid { featureIdFromPoint( { mFilterRect.xMinimum(), mFilterRect.yMinimum() } ) };
+    const QgsFeatureId maxFid { featureIdFromPoint( { mFilterRect.xMaximum(), mFilterRect.yMaximum() } ) };
+    Q_ASSERT( minFid > 0 );
+    Q_ASSERT( maxFid > 0 );
+    const auto minColRow { featureIdToMatrixCoordinates( minFid ) };
+    const auto maxColRow { featureIdToMatrixCoordinates( maxFid ) };
+    const qlonglong cols { maxColRow.column - minColRow.column };
+    const qlonglong rows { maxColRow.row - minColRow.row };
+    QgsFeatureIds fids;
+    fids.reserve( rows * cols );
+    for ( qlonglong row = minColRow.row; row <= maxColRow.row; ++row )
+    {
+      for ( qlonglong col = minColRow.column; col <= maxColRow.column; ++col )
+      {
+        fids.insert( featureIdFromMatrixCoordinates( { col, row } ) );
+      }
+    }
+    mRequest.setFilterFids( fids );
   }
 
   rewind();
@@ -225,17 +245,23 @@ QgsRasterWrapperFeatureIterator::~QgsRasterWrapperFeatureIterator()
 
 bool QgsRasterWrapperFeatureIterator::fetchFeature( QgsFeature &feature )
 {
+  QgsFeatureId fid { mNextFeatureId };
+  if ( mRequest.filterType() == QgsFeatureRequest::FilterType::FilterFid )
+  {
+    fid = mRequest.filterFid();
+  }
+
   feature.setValid( false );
 
-  if ( ! mRasterDataProvider || ! mRasterDataProvider->isValid() || mClosed || mNextFeatureId > mRasterCellsCount || mXStep == 0 || mYStep == 0 )
+  if ( ! mRasterDataProvider || ! mRasterDataProvider->isValid() || mClosed || fid > mRasterCellsCount || mXStep == 0 || mYStep == 0 )
   {
     return false;
   }
 
-  // 0-based, from south east
-  const auto colRow { featureIdToMatrixCoordinates( mNextFeatureId ) };
-  const qlonglong &col { colRow.first };
-  const qlonglong &row { colRow.second };
+  // 0-based, from south west
+  const auto colRow { featureIdToMatrixCoordinates( fid ) };
+  const qlonglong &col { colRow.column };
+  const qlonglong &row { colRow.row };
 
   const QgsRectangle fullExtent { mRasterDataProvider->extent() };
   const QgsRectangle extent
@@ -247,25 +273,16 @@ bool QgsRasterWrapperFeatureIterator::fetchFeature( QgsFeature &feature )
   };
 
   const QgsPointXY centroid { extent.center() };
+  //qDebug() << "RWP:" << "centroid for fid" << fid << centroid.asWkt() << "col and row" << col << row;
   feature.setGeometry( QgsGeometry::fromPointXY( centroid ) );
-  Q_ASSERT( featureIdFromPoint( centroid ) == mNextFeatureId );
-  feature.setId( mNextFeatureId );
+  Q_ASSERT( featureIdFromPoint( centroid ) == fid );
+  feature.setId( fid );
   feature.setFields( mFields, true );
 
   for ( int bandNumber = 1; bandNumber <= mRasterDataProvider->bandCount(); ++bandNumber )
   {
-    std::unique_ptr<QgsRasterBlock> block;
-    int iterLeft = 0;
-    int iterTop = 0;
-    int iterCols = 0;
-    int iterRows = 0;
-    QgsRectangle blockExtent;
-    const bool readOk { mRasterIterator->readNextRasterPart( bandNumber, iterCols, iterRows, block, iterLeft, iterTop, &blockExtent ) };
-    if ( ! block->isValid() || ! readOk )
-    {
-      return false;
-    }
-    // TODO: handle colors
+    std::unique_ptr<QgsRasterBlock> block { mRasterDataProvider->block( bandNumber, extent, 1, 1 ) };
+    // FIXME: handle colors
     feature.setAttribute( bandNumber - 1, block->value( 0, 0 ) );
   }
   mNextFeatureId++;
@@ -278,14 +295,9 @@ bool QgsRasterWrapperFeatureIterator::rewind()
   {
     return false;
   }
+
   mNextFeatureId = 1;
-  if ( mRasterDataProvider )
-  {
-    for ( int bandNumber = 1; bandNumber < mRasterDataProvider->bandCount(); ++bandNumber )
-    {
-      mRasterIterator->stopRasterRead( bandNumber );
-    }
-  }
+
   return true;
 }
 
@@ -300,13 +312,7 @@ bool QgsRasterWrapperFeatureIterator::close()
 
   mClosed = true;
   mNextFeatureId = 1;
-  if ( mRasterDataProvider )
-  {
-    for ( int bandNumber = 1; bandNumber < mRasterDataProvider->bandCount(); ++bandNumber )
-    {
-      mRasterIterator->stopRasterRead( bandNumber );
-    }
-  }
+
   return true;
 }
 
@@ -317,22 +323,27 @@ QgsFeatureId QgsRasterWrapperFeatureIterator::featureIdFromPoint( const QgsPoint
     return -1;
   }
 
-  // 0-based from south east
-  const qlonglong col { static_cast<qlonglong>( ( position.x() - mRasterDataProvider->extent().xMinimum() ) / mXStep ) };
-  const qlonglong row { static_cast<qlonglong>( ( position.y() - mRasterDataProvider->extent().yMinimum() ) / mYStep ) };
-  const QgsFeatureId fid { 1 + row *mRasterColumns + col };
-  qDebug() << "RWP:" << "returning fid" << fid << "for xy" << position.x() << position.y() << col << row;
+  // 0-based from south west
+  const qlonglong col { static_cast<qlonglong>( std::floor( ( position.x() - mRasterDataProvider->extent().xMinimum() ) / mXStep ) ) };
+  const qlonglong row { static_cast<qlonglong>( std::floor( ( position.y() - mRasterDataProvider->extent().yMinimum() ) / mYStep ) ) };
+  const QgsFeatureId fid { featureIdFromMatrixCoordinates( { col, row } ) };
+  //qDebug() << "RWP:" << "returning fid" << fid << "for xy" << position.x() << position.y() << col << row;
   return fid;
 }
 
-QPair<int, int> QgsRasterWrapperFeatureIterator::featureIdToMatrixCoordinates( const QgsFeatureId featureId )
+QgsFeatureId QgsRasterWrapperFeatureIterator::featureIdFromMatrixCoordinates( const MatrixCoordinates &coordinates )
+{
+  return 1 + coordinates.row * mRasterColumns + coordinates.column;
+}
+
+QgsRasterWrapperFeatureIterator::MatrixCoordinates QgsRasterWrapperFeatureIterator::featureIdToMatrixCoordinates( const QgsFeatureId featureId )
 {
   if ( ! mRasterDataProvider || ! mRasterDataProvider->isValid() || featureId > mRasterCellsCount || mRasterColumns == 0 || mRasterRows == 0 )
   {
     return { 0, 0 };
   }
-  const qlonglong row { static_cast<qlonglong>( ( featureId - 1 ) / mRasterRows ) };
   const qlonglong col { static_cast<qlonglong>( ( featureId - 1 ) % mRasterColumns ) };
+  const qlonglong row { static_cast<qlonglong>( ( featureId - 1 ) / mRasterColumns ) };
   return { col, row };
 }
 
