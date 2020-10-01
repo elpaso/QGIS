@@ -176,6 +176,24 @@ QgsRasterWrapperFeatureIterator::QgsRasterWrapperFeatureIterator( QgsRasterWrapp
     return;
   }
 
+  if ( mRequest.flags().testFlag( QgsFeatureRequest::Flag::SubsetOfAttributes ) )
+  {
+    QgsFields fields;
+    for ( const auto idx : mRequest.subsetOfAttributes() )
+    {
+      fields.append( mFields.at( idx ) );
+      mRequestedBands.push_back( idx + 1 );
+    }
+    mFields = fields;
+  }
+  else
+  {
+    for ( int idx = 0; idx < mFields.count(); ++idx )
+    {
+      mRequestedBands.push_back( idx + 1 );
+    }
+  }
+
   mRasterCellsCount = mRasterColumns * mRasterRows;
 
   if ( mRequest.destinationCrs().isValid() && mRequest.destinationCrs() != mSource->mCrs )
@@ -264,26 +282,56 @@ bool QgsRasterWrapperFeatureIterator::fetchFeature( QgsFeature &feature )
   const qlonglong &row { colRow.row };
 
   const QgsRectangle fullExtent { mRasterDataProvider->extent() };
-  const QgsRectangle extent
+
+
+  const QgsRectangle rowExtent
   {
-    fullExtent.xMinimum() + mXStep * col,
+    fullExtent.xMinimum(),
     fullExtent.yMinimum() + mYStep * row,
-    fullExtent.xMinimum() + mXStep *( col + 1 ),
+    fullExtent.xMaximum(),
     fullExtent.yMinimum() + mYStep *( row + 1 )
   };
 
-  const QgsPointXY centroid { extent.center() };
-  //qDebug() << "RWP:" << "centroid for fid" << fid << centroid.asWkt() << "col and row" << col << row;
-  feature.setGeometry( QgsGeometry::fromPointXY( centroid ) );
-  Q_ASSERT( featureIdFromPoint( centroid ) == fid );
+
+  if ( ! mRequest.flags().testFlag( QgsFeatureRequest::Flag::NoGeometry ) )
+  {
+    const QgsRectangle extent
+    {
+      fullExtent.xMinimum() + mXStep * col,
+      fullExtent.yMinimum() + mYStep * row,
+      fullExtent.xMinimum() + mXStep *( col + 1 ),
+      fullExtent.yMinimum() + mYStep *( row + 1 )
+    };
+    const QgsPointXY centroid { extent.center() };
+    //qDebug() << "RWP:" << "centroid for fid" << fid << centroid.asWkt() << "col and row" << col << row;
+    feature.setGeometry( QgsGeometry::fromPointXY( centroid ) );
+    Q_ASSERT( featureIdFromPoint( centroid ) == fid );
+  }
+
   feature.setId( fid );
   feature.setFields( mFields, true );
 
-  for ( int bandNumber = 1; bandNumber <= mRasterDataProvider->bandCount(); ++bandNumber )
+  int fieldIdx { 0 };
+  for ( const int bandNumber : qgis::as_const( mRequestedBands ) )
   {
-    std::unique_ptr<QgsRasterBlock> block { mRasterDataProvider->block( bandNumber, extent, 1, 1 ) };
+    QgsRasterBlock *cachedBlock { mRasterCache.object( {bandNumber, row } ) };
+    if ( ! cachedBlock )
+    {
+      cachedBlock = mRasterDataProvider->block( bandNumber, rowExtent, mRasterColumns, 1 );
+      if ( ! cachedBlock )
+      {
+        return false;
+      }
+      mRasterCache.insert( { bandNumber, row }, cachedBlock );
+    }
+
     // FIXME: handle colors
-    feature.setAttribute( bandNumber - 1, block->value( 0, 0 ) );
+    if ( ! cachedBlock )
+    {
+      return false;
+    }
+    feature.setAttribute( fieldIdx, cachedBlock->value( 0, col ) );
+    fieldIdx++;
   }
   mNextFeatureId++;
   return true;

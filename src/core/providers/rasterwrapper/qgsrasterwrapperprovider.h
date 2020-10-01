@@ -19,6 +19,7 @@
 #include "qgsvectordataprovider.h"
 #include "qgsrasterdataprovider.h"
 #include <QPointer>
+#include <QCache>
 
 
 class QgsRasterWrapperProvider : public QgsVectorDataProvider
@@ -109,6 +110,7 @@ class QgsRasterWrapperFeatureIterator final: public QgsAbstractFeatureIteratorFr
     QgsFields mFields;
     double mXStep = 0;
     double mYStep = 0;
+    QList<int> mRequestedBands;
 
     /**
      * Returns the feature id from \a position in layer's CRS or -1 on error.
@@ -127,6 +129,7 @@ class QgsRasterWrapperFeatureIterator final: public QgsAbstractFeatureIteratorFr
      */
     MatrixCoordinates featureIdToMatrixCoordinates( const QgsFeatureId featureId );
 
+    QCache<QPair<int, qlonglong>, QgsRasterBlock> mRasterCache;
 
 };
 

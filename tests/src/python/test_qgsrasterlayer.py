@@ -1464,8 +1464,8 @@ class TestQgsRasterLayerTransformContext(unittest.TestCase):
         features = [f for f in vl.getFeatures(request)]
         self.assertEqual([f.id() for f in features], [21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
 
-    def testAsVectorMultiBandExpressions(self):
-        """Test raster as vector with expressions filter"""
+    def testAsVectorMultiBandFilters(self):
+        """Test raster as vector with request filters"""
 
         tempdir = QTemporaryDir()
         temppath = os.path.join(tempdir.path(), 'as_vector_multiband.tif')
@@ -1506,6 +1506,24 @@ class TestQgsRasterLayerTransformContext(unittest.TestCase):
         request.setFilterFids([146, 306, 466])
         fids = [f.id() for f in vl.getFeatures(request)]
         self.assertEqual(fids, [146, 306, 466])
+
+        # Request band 2
+        request = QgsFeatureRequest()
+        request.setSubsetOfAttributes([1])
+        request.setFilterFids([146, 306, 466])
+        for f in vl.getFeatures(request):
+            self.assertEqual(f.attributes(), [19.0])
+
+        # Unique values
+        self.assertEqual([int(v) for v in vl.uniqueValues(0)], list(range(1, 32 + 1)))
+
+        # Geometry only
+        request = QgsFeatureRequest()
+        request.setNoAttributes()
+        f = next(vl.getFeatures(request))
+        self.assertEqual(f.attributes(), [])
+        self.assertEqual(f.id(), 1)
+        self.assertTrue(compareWkt(f.geometry().asWkt(), 'Point (0.5 -15.5)'), f.geometry().asWkt())
 
 
 if __name__ == '__main__':
