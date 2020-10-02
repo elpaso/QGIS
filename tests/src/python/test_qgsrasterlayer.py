@@ -1378,6 +1378,10 @@ class TestQgsRasterLayerTransformContext(unittest.TestCase):
         self.assertTrue(
             rl.transformContext().hasTransform(QgsCoordinateReferenceSystem('EPSG:4326'), QgsCoordinateReferenceSystem('EPSG:3857')))
 
+
+class TestQgsRasterLayerWrapper(unittest.TestCase):
+    """Test vector layer wrapper for raster layers"""
+
     def testAsVector(self):
         """Test raster as vector"""
 
@@ -1512,7 +1516,7 @@ class TestQgsRasterLayerTransformContext(unittest.TestCase):
         request.setSubsetOfAttributes([1])
         request.setFilterFids([146, 306, 466])
         for f in vl.getFeatures(request):
-            self.assertEqual(f.attributes(), [19.0])
+            self.assertEqual(f.attributes(), [None, 19.0, None])
 
         # Unique values
         self.assertEqual([int(v) for v in vl.uniqueValues(0)], list(range(1, 32 + 1)))
@@ -1521,7 +1525,7 @@ class TestQgsRasterLayerTransformContext(unittest.TestCase):
         request = QgsFeatureRequest()
         request.setNoAttributes()
         f = next(vl.getFeatures(request))
-        self.assertEqual(f.attributes(), [])
+        self.assertEqual(f.attributes(), [None, None, None])
         self.assertEqual(f.id(), 1)
         self.assertTrue(compareWkt(f.geometry().asWkt(), 'Point (0.5 -15.5)'), f.geometry().asWkt())
 

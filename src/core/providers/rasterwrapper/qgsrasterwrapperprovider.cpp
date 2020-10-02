@@ -178,13 +178,10 @@ QgsRasterWrapperFeatureIterator::QgsRasterWrapperFeatureIterator( QgsRasterWrapp
 
   if ( mRequest.flags().testFlag( QgsFeatureRequest::Flag::SubsetOfAttributes ) )
   {
-    QgsFields fields;
     for ( const auto idx : mRequest.subsetOfAttributes() )
     {
-      fields.append( mFields.at( idx ) );
       mRequestedBands.push_back( idx + 1 );
     }
-    mFields = fields;
   }
   else
   {
@@ -311,9 +308,14 @@ bool QgsRasterWrapperFeatureIterator::fetchFeature( QgsFeature &feature )
   feature.setId( fid );
   feature.setFields( mFields, true );
 
-  int fieldIdx { 0 };
-  for ( const int bandNumber : qgis::as_const( mRequestedBands ) )
+  for ( int bandNumber = 1; bandNumber <= mRasterDataProvider->bandCount(); ++bandNumber )
   {
+    if ( ! mRequestedBands.contains( bandNumber ) )
+    {
+      feature.setAttribute( bandNumber - 1, QVariant() );
+      continue;
+    }
+
     QgsRasterBlock *cachedBlock { mRasterCache.object( {bandNumber, row } ) };
     if ( ! cachedBlock )
     {
@@ -330,8 +332,7 @@ bool QgsRasterWrapperFeatureIterator::fetchFeature( QgsFeature &feature )
     {
       return false;
     }
-    feature.setAttribute( fieldIdx, cachedBlock->value( 0, col ) );
-    fieldIdx++;
+    feature.setAttribute( bandNumber - 1, cachedBlock->value( 0, col ) );
   }
   mNextFeatureId++;
   return true;

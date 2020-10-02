@@ -222,10 +222,10 @@ class CORE_EXPORT QgsClassificationMethod SIP_ABSTRACT
     /**
      * This will calculate the classes for a given layer to define the classes.
      * \param layer The vector layer
-     * \param expression The name of the field on which the classes are calculated
+     * \param fieldName The name of the field on which the classes are calculated
      * \param nclasses The number of classes to be returned
      */
-    QList<QgsClassificationRange> classes( const QgsVectorLayer *layer, const QString &expression, int nclasses );
+    QList<QgsClassificationRange> classes( const QgsVectorLayer *layer, const QString &fieldName, int nclasses );
 
     /**
      * This will calculate the classes for a list of values.

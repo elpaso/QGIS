@@ -206,9 +206,9 @@ void QgsClassificationMethod::setParameterValues( const QVariantMap &values )
   }
 }
 
-QList<QgsClassificationRange> QgsClassificationMethod::classes( const QgsVectorLayer *layer, const QString &expression, int nclasses )
+QList<QgsClassificationRange> QgsClassificationMethod::classes( const QgsVectorLayer *layer, const QString &fieldName, int nclasses )
 {
-  if ( expression.isEmpty() )
+  if ( fieldName.isEmpty() )
     return QList<QgsClassificationRange>();
 
   if ( nclasses < 1 )
@@ -219,12 +219,12 @@ QList<QgsClassificationRange> QgsClassificationMethod::classes( const QgsVectorL
   double maximum;
 
 
-  int fieldIndex = layer->fields().indexFromName( expression );
+  const int fieldIndex = layer->fields().indexFromName( fieldName );
 
   bool ok;
   if ( valuesRequired() || fieldIndex == -1 )
   {
-    values = QgsVectorLayerUtils::getDoubleValues( layer, expression, ok );
+    values = QgsVectorLayerUtils::getDoubleValues( layer, fieldName, ok );
     if ( !ok || values.isEmpty() )
       return QList<QgsClassificationRange>();
 

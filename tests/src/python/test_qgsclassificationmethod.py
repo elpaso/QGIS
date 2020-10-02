@@ -10,12 +10,24 @@ __author__ = 'Denis Rouzaud'
 __date__ = '3/09/2019'
 __copyright__ = 'Copyright 2019, The QGIS Project'
 
-import qgis  # NOQA
+import os
+import numpy as np
 
-from qgis.PyQt.QtCore import QLocale
+import qgis  # NOQA
+from osgeo import gdal, osr
+
+from qgis.PyQt.QtCore import QLocale, QTemporaryDir
 from qgis.testing import unittest, start_app
-from qgis.core import QgsClassificationMethod, QgsClassificationLogarithmic, QgsFeature, QgsVectorLayer, QgsPointXY, \
-    QgsGeometry
+from qgis.core import (
+    QgsClassificationMethod,
+    QgsClassificationLogarithmic,
+    QgsClassificationQuantile,
+    QgsFeature,
+    QgsVectorLayer,
+    QgsRasterLayer,
+    QgsPointXY,
+    QgsGeometry,
+)
 
 start_app()
 
@@ -84,6 +96,37 @@ class TestQgsClassificationMethods(unittest.TestCase):
         r = m.classes(vl, 'value', 4)
         self.assertEqual(r[0].label(), '-2 - 10^0')
         self.assertEqual(QgsClassificationMethod.rangesToBreaks(r), [1.0, 10.0, 100.0, 1000.0, 10000.0])
+
+    def testClassificationMethodOnRasterWrapper(self):
+        """Test QgsClassificationMethod on raster wrapper"""
+
+        tempdir = QTemporaryDir()
+        temppath = os.path.join(tempdir.path(), 'as_vector_multiband.tif')
+
+        driver = gdal.GetDriverByName('GTiff')
+        # 32 columns and 16 rows 3 bands int32
+        outRaster = driver.Create(temppath, 32, 16, 3, gdal.GDT_Int32)
+        for band in range(1, 4):
+            outband = outRaster.GetRasterBand(band)
+            data = []
+            for r in range(16):
+                data.append([band + i for i in range(32)])
+            npdata = np.array(data, np.int32)
+            outband.WriteArray(npdata)
+            outband.FlushCache()
+
+        outRaster.FlushCache()
+        del outRaster
+
+        rl = QgsRasterLayer(temppath, 'as_vector_multiband')
+        self.assertTrue(rl.isValid())
+        vl = rl.asVector()
+        self.assertEqual(vl.fields().count(), rl.bandCount())
+        self.assertTrue(vl.isValid())
+
+        m = QgsClassificationQuantile()
+        r = m.classes(vl, 'Band 2', 4)
+        self.assertEqual([_r.label() for _r in r], ['2 - 9.75', '9.75 - 17.5', '17.5 - 25.25', '25.25 - 33'])
 
 
 if __name__ == "__main__":
