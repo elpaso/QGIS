@@ -462,7 +462,7 @@ class CORE_EXPORT QgsRasterLayer : public QgsMapLayer
 
     QgsMapLayerTemporalProperties *temporalProperties() override;
 
-    QgsVectorLayer *asVector();
+    QgsVectorLayer *asVector() SIP_FACTORY;
 
   public slots:
     void showStatusMessage( const QString &message );

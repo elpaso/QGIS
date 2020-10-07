@@ -424,7 +424,7 @@ to be drawn outside the data extent.
     virtual QgsMapLayerTemporalProperties *temporalProperties();
 
 
-    QgsVectorLayer *asVector();
+    QgsVectorLayer *asVector() /Factory/;
 
   public slots:
     void showStatusMessage( const QString &message );
