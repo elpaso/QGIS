@@ -15,7 +15,7 @@ __revision__ = '$Format:%H$'
 
 import os
 import shutil
-from test_qgsproviderconnection_base import TestPyQgsProviderDatabaseConnectionBase
+from test_qgsproviderconnection_base import TestPyQgsProviderConnectionBase
 from qgis.core import (
     QgsWkbTypes,
     QgsAbstractDatabaseProviderConnection,
@@ -32,7 +32,7 @@ from utilities import unitTestDataPath
 TEST_DATA_DIR = unitTestDataPath()
 
 
-class TestPyQgsProviderConnectionGpkg(unittest.TestCase, TestPyQgsProviderDatabaseConnectionBase):
+class TestPyQgsProviderConnectionGpkg(unittest.TestCase, TestPyQgsProviderConnectionBase):
 
     # Provider test cases must define the string URI for the test
     uri = ''
@@ -54,7 +54,7 @@ class TestPyQgsProviderConnectionGpkg(unittest.TestCase, TestPyQgsProviderDataba
     @classmethod
     def setUpClass(cls):
         """Run before all tests"""
-        TestPyQgsProviderDatabaseConnectionBase.setUpClass()
+        TestPyQgsProviderConnectionBase.setUpClass()
         gpkg_original_path = '{}/qgis_server/test_project_wms_grouped_layers.gpkg'.format(TEST_DATA_DIR)
         cls.gpkg_path = '{}/qgis_server/test_project_wms_grouped_layers_test.gpkg'.format(TEST_DATA_DIR)
         shutil.copy(gpkg_original_path, cls.gpkg_path)
