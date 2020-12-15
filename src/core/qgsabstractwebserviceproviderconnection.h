@@ -207,7 +207,7 @@ class CORE_EXPORT QgsAbstractWebServiceProviderConnection : public QgsAbstractPr
      * \throws QgsProviderConnectionException
      * \note Not available in Python bindings
      */
-    virtual QList<QgsAbstractWebServiceProviderConnection::LayerProperty> layers( const QgsAbstractWebServiceProviderConnection::LayerFlags &flags = nullptr ) const SIP_SKIP;
+    virtual QList<QgsAbstractWebServiceProviderConnection::LayerProperty> layers( const QgsAbstractWebServiceProviderConnection::LayerFlags &flags = QgsAbstractWebServiceProviderConnection::LayerFlags() ) const SIP_SKIP;
 
     /**
      * Returns information on a layer with name \a layerName
@@ -246,7 +246,7 @@ class CORE_EXPORT QgsAbstractWebServiceProviderConnection : public QgsAbstractPr
     void checkCapability( Capability capability ) const;
 ///@endcond
 
-    Capabilities mCapabilities = nullptr SIP_SKIP;
+    Capabilities mCapabilities = Capabilities() SIP_SKIP;
     QString mServiceName;
 
 };
