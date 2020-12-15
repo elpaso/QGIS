@@ -75,6 +75,322 @@ class MessageLogger(QObject):
         return self.log
 
 
+def createTestLayer(basetestpath):
+    """
+    Just a little helper, to be recycled in other tests
+    Returns the created vector layer
+    """
+    endpoint = basetestpath + '/fake_qgis_http_endpoint'
+    with open(sanitize(endpoint, '?f=json'), 'wb') as f:
+        f.write("""
+{"currentVersion":10.22,"id":1,"name":"QGIS Test","type":"Feature Layer","description":
+"QGIS Provider Test Layer.\n","geometryType":"esriGeometryPoint","copyrightText":"","parentLayer":{"id":0,"name":"QGIS Tests"},"subLayers":[],
+"minScale":72225,"maxScale":0,
+"defaultVisibility":true,
+"extent":{"xmin":-71.123,"ymin":66.33,"xmax":-65.32,"ymax":78.3,
+"spatialReference":{"wkid":4326,"latestWkid":4326}},
+"hasAttachments":false,"htmlPopupType":"esriServerHTMLPopupTypeAsHTMLText",
+"displayField":"LABEL","typeIdField":null,
+"fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
+{"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
+{"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
+{"name":"name","type":"esriFieldTypeString","alias":"name","length":100,"domain":null},
+{"name":"name2","type":"esriFieldTypeString","alias":"name2","length":100,"domain":null},
+{"name":"num_char","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
+{"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
+"relationships":[],"canModifyLayer":false,"canScaleSymbols":false,"hasLabels":false,
+"capabilities":"Map,Query,Data","maxRecordCount":1000,"supportsStatistics":true,
+"supportsAdvancedQueries":true,"supportedQueryFormats":"JSON, AMF",
+"ownershipBasedAccessControlForFeatures":{"allowOthersToQuery":true},"useStandardizedQueries":true}""".encode('UTF-8'))
+
+    with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
+        f.write("""
+{
+"objectIdFieldName": "OBJECTID",
+"objectIds": [
+5,
+3,
+1,
+2,
+4
+]
+}
+""".encode('UTF-8'))
+
+    # Create test layer
+    vl = QgsVectorLayer("url='http://" + endpoint + "' crs='epsg:4326'", 'test', 'arcgisfeatureserver')
+    assert vl.isValid()
+
+    with open(sanitize(endpoint,
+                       '/query?f=json&objectIds=5,3,1,2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false'),
+              'wb') as f:
+        f.write("""
+    {
+        "displayFieldName": "name",
+        "fieldAliases": {
+        "name": "name"
+        },
+        "geometryType": "esriGeometryPoint",
+        "spatialReference": {
+        "wkid": 4326,
+        "latestWkid": 4326
+        },
+        "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
+    {"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
+    {"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
+    {"name":"name","type":"esriFieldTypeString","alias":"name","length":100,"domain":null},
+    {"name":"name2","type":"esriFieldTypeString","alias":"name2","length":100,"domain":null},
+    {"name":"num_char","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
+    {"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
+        "features": [
+        {
+        "attributes": {
+        "OBJECTID": 5,
+        "pk": 5,
+        "cnt": -200,
+        "name": null,
+        "name2":"NuLl",
+        "num_char":"5"
+        },
+        "geometry": {
+        "x": -71.123,
+        "y": 78.23
+        }
+        },
+        {
+        "attributes": {
+        "OBJECTID": 3,
+        "pk": 3,
+        "cnt": 300,
+        "name": "Pear",
+        "name2":"PEaR",
+        "num_char":"3"
+        },
+        "geometry": null
+        },
+        {
+        "attributes": {
+        "OBJECTID": 1,
+        "pk": 1,
+        "cnt": 100,
+        "name": "Orange",
+        "name2":"oranGe",
+        "num_char":"1"
+        },
+        "geometry": {
+        "x": -70.332,
+        "y": 66.33
+        }
+        },
+        {
+        "attributes": {
+        "OBJECTID": 2,
+        "pk": 2,
+        "cnt": 200,
+        "name": "Apple",
+        "name2":"Apple",
+        "num_char":"2"
+        },
+        "geometry": {
+        "x": -68.2,
+        "y": 70.8
+        }
+        },
+        {
+        "attributes": {
+        "OBJECTID": 4,
+        "pk": 4,
+        "cnt": 400,
+        "name": "Honey",
+        "name2":"Honey",
+        "num_char":"4"
+        },
+        "geometry": {
+        "x": -65.32,
+        "y": 78.3
+        }
+        }
+        ]
+    }""".encode('UTF-8'))
+
+    with open(sanitize(endpoint, '/query?f=json&objectIds=5,3,1,2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false&geometry=-71.123000,66.330000,-65.320000,78.300000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
+        f.write("""
+{
+"displayFieldName": "name",
+"fieldAliases": {
+"name": "name"
+},
+"geometryType": "esriGeometryPoint",
+"spatialReference": {
+"wkid": 4326,
+"latestWkid": 4326
+},
+"fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
+{"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
+{"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
+{"name":"name","type":"esriFieldTypeString","alias":"name","length":100,"domain":null},
+{"name":"name2","type":"esriFieldTypeString","alias":"name2","length":100,"domain":null},
+{"name":"num_char","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
+{"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
+"features": [
+{
+"attributes": {
+"OBJECTID": 5,
+"pk": 5,
+"cnt": -200,
+"name": null,
+"name2":"NuLl",
+"num_char":"5"
+},
+"geometry": {
+"x": -71.123,
+"y": 78.23
+}
+},
+{
+"attributes": {
+"OBJECTID": 3,
+"pk": 3,
+"cnt": 300,
+"name": "Pear",
+"name2":"PEaR",
+"num_char":"3"
+},
+"geometry": null
+},
+{
+"attributes": {
+"OBJECTID": 1,
+"pk": 1,
+"cnt": 100,
+"name": "Orange",
+"name2":"oranGe",
+"num_char":"1"
+},
+"geometry": {
+"x": -70.332,
+"y": 66.33
+}
+},
+{
+"attributes": {
+"OBJECTID": 2,
+"pk": 2,
+"cnt": 200,
+"name": "Apple",
+"name2":"Apple",
+"num_char":"2"
+},
+"geometry": {
+"x": -68.2,
+"y": 70.8
+}
+},
+{
+"attributes": {
+"OBJECTID": 4,
+"pk": 4,
+"cnt": 400,
+"name": "Honey",
+"name2":"Honey",
+"num_char":"4"
+},
+"geometry": {
+"x": -65.32,
+"y": 78.3
+}
+}
+]
+}""".encode('UTF-8'))
+
+    with open(sanitize(endpoint,
+                       '/query?f=json&objectIds=2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false'),
+              'wb') as f:
+        f.write("""
+    {
+        "displayFieldName": "name",
+        "fieldAliases": {
+        "name": "name"
+        },
+        "geometryType": "esriGeometryPoint",
+        "spatialReference": {
+        "wkid": 4326,
+        "latestWkid": 4326
+        },
+        "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
+    {"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
+    {"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
+    {"name":"name","type":"esriFieldTypeString","alias":"name","length":100,"domain":null},
+    {"name":"name2","type":"esriFieldTypeString","alias":"name2","length":100,"domain":null},
+    {"name":"num_char","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
+    {"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
+        "features": [
+        {
+        "attributes": {
+        "OBJECTID": 2,
+        "pk": 2,
+        "cnt": 200,
+        "name": "Apple",
+        "name2":"Apple",
+        "num_char":"2"
+        },
+        "geometry": {
+        "x": -68.2,
+        "y": 70.8
+        }
+        },
+        {
+        "attributes": {
+        "OBJECTID": 4,
+        "pk": 4,
+        "cnt": 400,
+        "name": "Honey",
+        "name2":"Honey",
+        "num_char":"4"
+        },
+        "geometry": {
+        "x": -65.32,
+        "y": 78.3
+        }
+        }
+        ]
+    }""".encode('UTF-8'))
+
+    with open(sanitize(endpoint, '/query?f=json&where=1=1&returnIdsOnly=true&geometry=-70.000000,67.000000,-60.000000,80.000000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
+        f.write("""
+    {
+        "objectIdFieldName": "OBJECTID",
+        "objectIds": [
+        2,
+        4
+        ]
+    }
+    """.encode('UTF-8'))
+
+    with open(sanitize(endpoint, '/query?f=json&where==1=&returnIdsOnly=true&geometry=-73.000000,70.000000,-63.000000,80.000000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
+        f.write("""
+    {
+        "objectIdFieldName": "OBJECTID",
+        "objectIds": [
+        2,
+        4
+        ]
+    }
+    """.encode('UTF-8'))
+
+    with open(sanitize(endpoint, '/query?f=json&where=1=1&returnIdsOnly=true&geometry=-68.721119,68.177676,-64.678700,79.123755&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'), 'wb') as f:
+        f.write("""
+    {
+        "objectIdFieldName": "OBJECTID",
+        "objectIds": [
+        2,
+        4
+        ]
+    }
+    """.encode('UTF-8'))
+    return vl
+
+
 class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
 
     def treat_date_as_datetime(self):
@@ -95,351 +411,9 @@ class TestPyQgsAFSProvider(unittest.TestCase, ProviderTestCase):
 
         # On Windows we must make sure that any backslash in the path is
         # replaced by a forward slash so that QUrl can process it
-        cls.basetestpath = tempfile.mkdtemp().replace('\\', '/')
-        endpoint = cls.basetestpath + '/fake_qgis_http_endpoint'
-        with open(sanitize(endpoint, '?f=json'), 'wb') as f:
-            f.write("""
-{"currentVersion":10.22,"id":1,"name":"QGIS Test","type":"Feature Layer","description":
-"QGIS Provider Test Layer.\n","geometryType":"esriGeometryPoint","copyrightText":"","parentLayer":{"id":0,"name":"QGIS Tests"},"subLayers":[],
-"minScale":72225,"maxScale":0,
-"defaultVisibility":true,
-"extent":{"xmin":-71.123,"ymin":66.33,"xmax":-65.32,"ymax":78.3,
-"spatialReference":{"wkid":4326,"latestWkid":4326}},
-"hasAttachments":false,"htmlPopupType":"esriServerHTMLPopupTypeAsHTMLText",
-"displayField":"LABEL","typeIdField":null,
-"fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
-{"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
-{"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
-{"name":"name","type":"esriFieldTypeString","alias":"name","length":100,"domain":null},
-{"name":"name2","type":"esriFieldTypeString","alias":"name2","length":100,"domain":null},
-{"name":"num_char","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
-{"name":"dt","type":"esriFieldTypeDate","alias":"num_char","length":100,"domain":null},
-{"name":"date","type":"esriFieldTypeDate","alias":"num_char","length":100,"domain":null},
-{"name":"time","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
-{"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
-"relationships":[],"canModifyLayer":false,"canScaleSymbols":false,"hasLabels":false,
-"capabilities":"Map,Query,Data","maxRecordCount":1000,"supportsStatistics":true,
-"supportsAdvancedQueries":true,"supportedQueryFormats":"JSON, AMF",
-"ownershipBasedAccessControlForFeatures":{"allowOthersToQuery":true},"useStandardizedQueries":true}""".encode('UTF-8'))
-
-        with open(sanitize(endpoint, '/query?f=json_where=1=1&returnIdsOnly=true'), 'wb') as f:
-            f.write("""
-{
- "objectIdFieldName": "OBJECTID",
- "objectIds": [
-  5,
-  3,
-  1,
-  2,
-  4
- ]
-}
-""".encode('UTF-8'))
-
-        # Create test layer
-        cls.vl = QgsVectorLayer("url='http://" + endpoint + "' crs='epsg:4326'", 'test', 'arcgisfeatureserver')
-        assert cls.vl.isValid()
+        cls.basetestpath = tempfile.mkdtemp().replace('\\', ' / ')
+        cls.vl = createTestLayer(cls.basetestpath)
         cls.source = cls.vl.dataProvider()
-
-        with open(sanitize(endpoint,
-                           '/query?f=json&objectIds=5,3,1,2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false'),
-                  'wb') as f:
-            f.write(("""
-        {
-         "displayFieldName": "name",
-         "fieldAliases": {
-          "name": "name"
-         },
-         "geometryType": "esriGeometryPoint",
-         "spatialReference": {
-          "wkid": 4326,
-          "latestWkid": 4326
-         },
-         "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
-        {"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
-        {"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
-        {"name":"name","type":"esriFieldTypeString","alias":"name","length":100,"domain":null},
-        {"name":"name2","type":"esriFieldTypeString","alias":"name2","length":100,"domain":null},
-        {"name":"num_char","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
-        {"name":"dt","type":"esriFieldTypeDate","alias":"num_char","length":100,"domain":null},
-        {"name":"date","type":"esriFieldTypeDate","alias":"num_char","length":100,"domain":null},
-        {"name":"time","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
-        {"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
-         "features": [
-          {
-           "attributes": {
-            "OBJECTID": 5,
-            "pk": 5,
-            "cnt": -200,
-            "name": null,
-            "name2":"NuLl",
-            "num_char":"5",
-            "dt": """ + str(QDateTime(QDate(2020, 5, 4), QTime(12, 13, 14)).toMSecsSinceEpoch()) + """,
-            "date": """ + str(QDateTime(QDate(2020, 5, 2), QTime(0, 0, 0)).toMSecsSinceEpoch()) + """,
-            "time": "12:13:01"
-           },
-           "geometry": {
-            "x": -71.123,
-            "y": 78.23
-           }
-          },
-          {
-           "attributes": {
-            "OBJECTID": 3,
-            "pk": 3,
-            "cnt": 300,
-            "name": "Pear",
-            "name2":"PEaR",
-            "num_char":"3",
-            "dt": null,
-            "date": null,
-            "time": null
-           },
-           "geometry": null
-          },
-          {
-           "attributes": {
-            "OBJECTID": 1,
-            "pk": 1,
-            "cnt": 100,
-            "name": "Orange",
-            "name2":"oranGe",
-            "num_char":"1",
-            "dt": """ + str(QDateTime(QDate(2020, 5, 3), QTime(12, 13, 14)).toMSecsSinceEpoch()) + """,
-            "date": """ + str(QDateTime(QDate(2020, 5, 3), QTime(0, 0, 0)).toMSecsSinceEpoch()) + """,
-            "time": "12:13:14"
-           },
-           "geometry": {
-            "x": -70.332,
-            "y": 66.33
-           }
-          },
-          {
-           "attributes": {
-            "OBJECTID": 2,
-            "pk": 2,
-            "cnt": 200,
-            "name": "Apple",
-            "name2":"Apple",
-            "num_char":"2",
-            "dt": """ + str(QDateTime(QDate(2020, 5, 4), QTime(12, 14, 14)).toMSecsSinceEpoch()) + """,
-            "date": """ + str(QDateTime(QDate(2020, 5, 4), QTime(0, 0, 0)).toMSecsSinceEpoch()) + """,
-            "time": "12:14:14"
-           },
-           "geometry": {
-            "x": -68.2,
-            "y": 70.8
-           }
-          },
-          {
-           "attributes": {
-            "OBJECTID": 4,
-            "pk": 4,
-            "cnt": 400,
-            "name": "Honey",
-            "name2":"Honey",
-            "num_char":"4",
-            "dt": """ + str(QDateTime(QDate(2021, 5, 4), QTime(13, 13, 14)).toMSecsSinceEpoch()) + """,
-            "date": """ + str(QDateTime(QDate(2021, 5, 4), QTime(0, 0, 0)).toMSecsSinceEpoch()) + """,
-            "time": "13:13:14"
-           },
-           "geometry": {
-            "x": -65.32,
-            "y": 78.3
-           }
-          }
-         ]
-        }""").encode('UTF-8'))
-
-        with open(sanitize(endpoint,
-                           '/query?f=json&objectIds=5,3,1,2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false&geometry=-71.123000,66.330000,-65.320000,78.300000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'),
-                  'wb') as f:
-            f.write("""
-{
- "displayFieldName": "name",
- "fieldAliases": {
-  "name": "name"
- },
- "geometryType": "esriGeometryPoint",
- "spatialReference": {
-  "wkid": 4326,
-  "latestWkid": 4326
- },
- "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
-{"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
-{"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
-{"name":"name","type":"esriFieldTypeString","alias":"name","length":100,"domain":null},
-{"name":"name2","type":"esriFieldTypeString","alias":"name2","length":100,"domain":null},
-{"name":"num_char","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
-{"name":"dt","type":"esriFieldTypeDate","alias":"num_char","length":100,"domain":null},
-{"name":"date","type":"esriFieldTypeDate","alias":"num_char","length":100,"domain":null},
-{"name":"time","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
-{"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
- "features": [
-  {
-   "attributes": {
-    "OBJECTID": 5,
-    "pk": 5,
-    "cnt": -200,
-    "name": null,
-    "name2":"NuLl",
-    "num_char":"5"
-   },
-   "geometry": {
-    "x": -71.123,
-    "y": 78.23
-   }
-  },
-  {
-   "attributes": {
-    "OBJECTID": 3,
-    "pk": 3,
-    "cnt": 300,
-    "name": "Pear",
-    "name2":"PEaR",
-    "num_char":"3"
-   },
-   "geometry": null
-  },
-  {
-   "attributes": {
-    "OBJECTID": 1,
-    "pk": 1,
-    "cnt": 100,
-    "name": "Orange",
-    "name2":"oranGe",
-    "num_char":"1"
-   },
-   "geometry": {
-    "x": -70.332,
-    "y": 66.33
-   }
-  },
-  {
-   "attributes": {
-    "OBJECTID": 2,
-    "pk": 2,
-    "cnt": 200,
-    "name": "Apple",
-    "name2":"Apple",
-    "num_char":"2"
-   },
-   "geometry": {
-    "x": -68.2,
-    "y": 70.8
-   }
-  },
-  {
-   "attributes": {
-    "OBJECTID": 4,
-    "pk": 4,
-    "cnt": 400,
-    "name": "Honey",
-    "name2":"Honey",
-    "num_char":"4"
-   },
-   "geometry": {
-    "x": -65.32,
-    "y": 78.3
-   }
-  }
- ]
-}""".encode('UTF-8'))
-
-        with open(sanitize(endpoint,
-                           '/query?f=json&objectIds=2,4&inSR=4326&outSR=4326&returnGeometry=true&outFields=*&returnM=false&returnZ=false'),
-                  'wb') as f:
-            f.write("""
-        {
-         "displayFieldName": "name",
-         "fieldAliases": {
-          "name": "name"
-         },
-         "geometryType": "esriGeometryPoint",
-         "spatialReference": {
-          "wkid": 4326,
-          "latestWkid": 4326
-         },
-         "fields":[{"name":"OBJECTID","type":"esriFieldTypeOID","alias":"OBJECTID","domain":null},
-        {"name":"pk","type":"esriFieldTypeInteger","alias":"pk","domain":null},
-        {"name":"cnt","type":"esriFieldTypeInteger","alias":"cnt","domain":null},
-        {"name":"name","type":"esriFieldTypeString","alias":"name","length":100,"domain":null},
-        {"name":"name2","type":"esriFieldTypeString","alias":"name2","length":100,"domain":null},
-        {"name":"num_char","type":"esriFieldTypeString","alias":"num_char","length":100,"domain":null},
-        {"name":"dt","type":"esriFieldTypeDate","alias":"num_char","length":100,"domain":null},
-        {"name":"date","type":"esriFieldTypeDate","alias":"num_char","length":100,"domain":null},
-        {"name":"time","type":"esriFieldTypeDate","alias":"num_char","length":100,"domain":null},
-        {"name":"Shape","type":"esriFieldTypeGeometry","alias":"Shape","domain":null}],
-         "features": [
-          {
-           "attributes": {
-            "OBJECTID": 2,
-            "pk": 2,
-            "cnt": 200,
-            "name": "Apple",
-            "name2":"Apple",
-            "num_char":"2"
-           },
-           "geometry": {
-            "x": -68.2,
-            "y": 70.8
-           }
-          },
-          {
-           "attributes": {
-            "OBJECTID": 4,
-            "pk": 4,
-            "cnt": 400,
-            "name": "Honey",
-            "name2":"Honey",
-            "num_char":"4"
-           },
-           "geometry": {
-            "x": -65.32,
-            "y": 78.3
-           }
-          }
-         ]
-        }""".encode('UTF-8'))
-
-        with open(sanitize(endpoint,
-                           '/query?f=json&where=1=1&returnIdsOnly=true&geometry=-70.000000,67.000000,-60.000000,80.000000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'),
-                  'wb') as f:
-            f.write("""
-        {
-         "objectIdFieldName": "OBJECTID",
-         "objectIds": [
-          2,
-          4
-         ]
-        }
-        """.encode('UTF-8'))
-
-        with open(sanitize(endpoint,
-                           '/query?f=json&where==1=&returnIdsOnly=true&geometry=-73.000000,70.000000,-63.000000,80.000000&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'),
-                  'wb') as f:
-            f.write("""
-        {
-         "objectIdFieldName": "OBJECTID",
-         "objectIds": [
-          2,
-          4
-         ]
-        }
-        """.encode('UTF-8'))
-
-        with open(sanitize(endpoint,
-                           '/query?f=json&where=1=1&returnIdsOnly=true&geometry=-68.721119,68.177676,-64.678700,79.123755&geometryType=esriGeometryEnvelope&spatialRel=esriSpatialRelEnvelopeIntersects'),
-                  'wb') as f:
-            f.write("""
-        {
-         "objectIdFieldName": "OBJECTID",
-         "objectIds": [
-          2,
-          4
-         ]
-        }
-        """.encode('UTF-8'))
 
     @classmethod
     def tearDownClass(cls):

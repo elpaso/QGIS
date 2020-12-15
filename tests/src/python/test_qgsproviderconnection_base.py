@@ -270,6 +270,8 @@ class TestPyQgsProviderDatabaseConnectionBase(TestPyQgsProviderConnectionBase):
 
             if capabilities & QgsAbstractDatabaseProviderConnection.RenameVectorTable:
                 # Rename
+                from IPython import embed
+                embed(using=False)
                 conn.renameVectorTable(schema, 'myNewTable', 'myVeryNewTable')
                 tables = self._table_names(conn.tables(schema))
                 self.assertFalse('myNewTable' in tables)
