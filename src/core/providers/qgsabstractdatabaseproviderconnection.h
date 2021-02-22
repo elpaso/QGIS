@@ -195,6 +195,20 @@ class CORE_EXPORT QgsAbstractDatabaseProviderConnection : public QgsAbstractProv
 
     };
 
+    /**
+     * \brief The SqlVectorLayerOptions stores all information required to create a SQL (query) layer.
+     * \see createSqlVectorLayer()
+     *
+     * \since QGIS 3.20
+     */
+    struct CORE_EXPORT SqlVectorLayerOptions
+    {
+      QString sql; //! The SQL expression that defines the SQL (query) layer
+      QString filter; //! Additional subset string (provider-side filter), not all data providers support this feature: check support with SqlLayerFilters capability
+      QString layerName; //! Optional name for the new layer
+      QStringList primaryKeyColumns; //! List of primary key column names
+      QString geometryColumn; //! Name of the geometry column
+    };
 
     /**
      * The TableProperty class represents a database table or view.
@@ -403,7 +417,18 @@ class CORE_EXPORT QgsAbstractDatabaseProviderConnection : public QgsAbstractProv
     };
 
     /**
-     * The Capability enum represents the operations supported by the connection
+     * \brief The SpatialIndexOptions contains extra options relating to spatial index creation.
+     *
+     * \since QGIS 3.14
+     */
+    struct CORE_EXPORT SpatialIndexOptions
+    {
+      //! Specifies the name of the geometry column to create the index for
+      QString geometryColumnName;
+    };
+
+    /**
+     * \brief The Capability enum represents the operations supported by the connection
      */
     enum Capability
     {
@@ -428,13 +453,14 @@ class CORE_EXPORT QgsAbstractDatabaseProviderConnection : public QgsAbstractProv
       DeleteField = 1 << 19,        //!< Can delete an existing field/column
       DeleteFieldCascade = 1 << 20, //!< Can delete an existing field/column with cascade
       AddField = 1 << 21,           //!< Can add a new field/column
+      SqlLayerFilters = 1 << 22,    //!< SQL Layers support filters (subset strings), implies SqlLayers capability
     };
     Q_ENUM( Capability )
     Q_DECLARE_FLAGS( Capabilities, Capability )
     Q_FLAG( Capabilities )
 
     /**
-     * The GeometryColumnCapability enum represents the geomery column features supported by the connection
+     * \brief The GeometryColumnCapability enum represents the geomery column features supported by the connection
      * \since QGIS 3.16
      */
     enum GeometryColumnCapability
@@ -573,7 +599,6 @@ class CORE_EXPORT QgsAbstractDatabaseProviderConnection : public QgsAbstractProv
      */
     virtual void addField( const QgsField &field, const QString &schema, const QString &tableName ) const SIP_THROW( QgsProviderConnectionException );
 
-
     /**
      * Renames a schema with the specified \a name.
      * Raises a QgsProviderConnectionException if any errors are encountered.
@@ -591,6 +616,14 @@ class CORE_EXPORT QgsAbstractDatabaseProviderConnection : public QgsAbstractProv
     virtual QList<QList<QVariant>> executeSql( const QString &sql, QgsFeedback *feedback = nullptr ) const SIP_THROW( QgsProviderConnectionException );
 
     /**
+     * Creates and returns a vector layer based on the \a sql statement and optional \a options.
+     * Raises a QgsProviderConnectionException if any errors are encountered or if SQL layer creation is not supported.
+     * \throws QgsProviderConnectionException
+     * \since QGIS 3.20
+     */
+    virtual QgsVectorLayer *createSqlVectorLayer( const SqlVectorLayerOptions &options ) const SIP_THROW( QgsProviderConnectionException ) SIP_FACTORY;
+
+    /**
      * Executes raw \a sql and returns the (possibly empty) query results, optionally \a feedback can be provided.
      * Raises a QgsProviderConnectionException if any errors are encountered.
      * \see executeSql()
@@ -605,17 +638,6 @@ class CORE_EXPORT QgsAbstractDatabaseProviderConnection : public QgsAbstractProv
      * \throws QgsProviderConnectionException
      */
     virtual void vacuum( const QString &schema, const QString &name ) const SIP_THROW( QgsProviderConnectionException );
-
-    /**
-     * Contains extra options relating to spatial index creation.
-     *
-     * \since QGIS 3.14
-     */
-    struct CORE_EXPORT SpatialIndexOptions
-    {
-      //! Specifies the name of the geometry column to create the index for
-      QString geometryColumnName;
-    };
 
     /**
      * Creates a spatial index for the database table with given \a schema and \a name (schema is ignored if not supported by the backend).
