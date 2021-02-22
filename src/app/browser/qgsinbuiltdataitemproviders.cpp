@@ -42,6 +42,7 @@
 #include "qgsprovidermetadata.h"
 #include "qgsnewvectortabledialog.h"
 #include "qgsdataitemproviderregistry.h"
+#include "qgsqueryresultwidget.h"
 
 #include <QFileInfo>
 #include <QMenu>
@@ -978,6 +979,35 @@ void QgsDatabaseItemGuiProvider::populateContextMenu( QgsDataItem *item, QMenu *
           }
         } );
         menu->addAction( newTableAction );
+      }
+
+      if ( conn && conn->capabilities().testFlag( QgsAbstractDatabaseProviderConnection::Capability::ExecuteSql ) )
+      {
+
+        QAction *sqlAction = new QAction( QObject::tr( "Run SQL command…" ), menu );
+
+        QObject::connect( sqlAction, &QAction::triggered, collectionItem, [ collectionItem ]
+        {
+          std::unique_ptr<QgsAbstractDatabaseProviderConnection> conn2( collectionItem->databaseConnection() );
+          // This should never happen but let's play safe
+          if ( ! conn2 )
+          {
+            QgsMessageLog::logMessage( tr( "Connection to the database (%1) was lost." ).arg( collectionItem->name() ) );
+            return;
+          }
+          QgsDialog dialog;
+          QgsQueryResultWidget *widget { new QgsQueryResultWidget( &dialog, conn2.release() ) };
+          widget->layout()->setMargin( 0 );
+          dialog.layout()->addWidget( widget );
+          connect( widget, &QgsQueryResultWidget::createSqlVectorLayer, widget, [collectionItem]( const QString &, const QString &, const QgsAbstractDatabaseProviderConnection::SqlVectorLayerOptions & options )
+          {
+            std::unique_ptr<QgsAbstractDatabaseProviderConnection> conn3( collectionItem->databaseConnection() );
+            conn3->createSqlVectorLayer( options );
+          } );
+          dialog.exec();
+        } );
+        menu->addAction( sqlAction );
+
       }
     }
   }

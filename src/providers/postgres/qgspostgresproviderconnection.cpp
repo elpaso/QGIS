@@ -127,7 +127,6 @@ void QgsPostgresProviderConnection::createVectorTable( const QString &schema,
 
 QString QgsPostgresProviderConnection::tableUri( const QString &schema, const QString &name ) const
 {
-  const auto tableInfo { table( schema, name ) };
   QgsDataSourceUri dsUri( uri() );
   dsUri.setTable( name );
   dsUri.setSchema( schema );
@@ -375,7 +374,7 @@ QVariantList QgsPostgresProviderResultIterator::nextRowPrivate()
   // Get results
   QVariantList row;
 
-  if ( mRowIndex >= result->PQntuples() )
+  if ( !result || mRowIndex >= result->PQntuples() )
   {
     // Release the resources
     mConn.reset();
@@ -414,7 +413,7 @@ QVariantList QgsPostgresProviderResultIterator::nextRowPrivate()
 
 bool QgsPostgresProviderResultIterator::hasNextRowPrivate() const
 {
-  return mRowIndex < result->PQntuples();
+  return result && mRowIndex < result->PQntuples();
 }
 
 
