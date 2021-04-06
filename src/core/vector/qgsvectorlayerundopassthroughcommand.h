@@ -237,7 +237,8 @@ class CORE_EXPORT QgsVectorLayerUndoPassthroughCommandChangeAttributes: public Q
   private:
     QgsFeatureId mFid;
     const QgsAttributeMap mNewValues;
-    const QgsAttributeMap mOldValues;
+    QgsAttributeMap mOldValues;
+    QMap<int, bool> mFirstChanges;
 };
 
 /**

@@ -230,6 +230,7 @@ void QgsVectorLayerUndoPassthroughCommandChangeGeometry::undo()
         mBuffer->mChangedGeometries[mFid] = mOldGeom;
       }
     }
+    emit mBuffer->geometryChanged( mFid,  mOldGeom );
   }
 }
 
@@ -322,20 +323,6 @@ void QgsVectorLayerUndoPassthroughCommandChangeAttribute::undo()
       mBuffer->mChangedAttributeValues[mFid].remove( mFieldIndex );
       if ( mBuffer->mChangedAttributeValues[mFid].isEmpty() )
         mBuffer->mChangedAttributeValues.remove( mFid );
-
-      if ( !mOldValue.isValid() )
-      {
-        // get old value from provider
-        QgsFeature tmp;
-        QgsFeatureRequest request;
-        request.setFilterFid( mFid );
-        request.setFlags( QgsFeatureRequest::NoGeometry );
-        request.setSubsetOfAttributes( QgsAttributeList() << mFieldIndex );
-        std::unique_ptr<QgsVectorLayer> layerClone( layer()->clone() );
-        QgsFeatureIterator fi = layerClone->getFeatures( request );
-        if ( fi.nextFeature( tmp ) )
-          original = tmp.attribute( mFieldIndex );
-      }
     }
     else
     {
@@ -556,16 +543,63 @@ QgsVectorLayerUndoPassthroughCommandChangeAttributes::QgsVectorLayerUndoPassthro
   , mNewValues( newValues )
   , mOldValues( oldValues )
 {
+  if ( mOldValues.isEmpty() )
+  {
+    const auto oldAttrs( mBuffer->L->getFeature( mFid ).attributes() );
+    for ( auto it = mNewValues.constBegin(); it != mNewValues.constEnd(); ++it )
+    {
+      mOldValues[ it.key() ] = oldAttrs[ it.key() ];
+    }
+  }
+  QgsFeatureMap::const_iterator addedIt { mBuffer->mAddedFeatures.constFind( mFid ) };
+  const bool isAdded { addedIt != mBuffer->mAddedFeatures.constEnd() };
+  for ( auto it = mNewValues.constBegin(); it != mNewValues.constEnd(); ++it )
+  {
+    if ( isAdded && addedIt.value().attribute( it.key() ).isValid() )
+    {
+      mFirstChanges[ it.key() ] = false;
+    }
+    else if ( mBuffer->mChangedAttributeValues.contains( mFid ) && mBuffer->mChangedAttributeValues[mFid].contains( it.key() ) )
+    {
+      mFirstChanges[ it.key() ] = false;
+    }
+    else
+    {
+      mFirstChanges[ it.key() ] = true;
+    }
+  }
 }
 
 void QgsVectorLayerUndoPassthroughCommandChangeAttributes::undo()
 {
   if ( rollBackToSavePoint() )
   {
+    QgsFeatureMap::iterator addedIt = mBuffer->mAddedFeatures.find( mFid );
     for ( auto it = mNewValues.constBegin(); it != mNewValues.constEnd(); ++it )
     {
-      emit mBuffer->attributeValueChanged( mFid, it.key(), it.value() );
+      const auto fieldIndex { it.key() };
+      if ( addedIt != mBuffer->mAddedFeatures.end() )
+      {
+        addedIt.value().setAttribute( fieldIndex, mOldValues[ it.key() ] );
+      }
+      else if ( mFirstChanges.contains( fieldIndex ) && mFirstChanges[ fieldIndex ] )
+      {
+        // existing feature
+        mBuffer->mChangedAttributeValues[mFid].remove( fieldIndex );
+      }
+      else
+      {
+        // changed attribute of existing feature
+        if ( !mBuffer->mChangedAttributeValues.contains( mFid ) )
+        {
+          mBuffer->mChangedAttributeValues.insert( mFid, QgsAttributeMap() );
+        }
+        mBuffer->mChangedAttributeValues[mFid].insert( fieldIndex, mOldValues[ it.key() ] );
+      }
+      emit mBuffer->attributeValueChanged( mFid, it.key(), mOldValues[ it.key() ] );
     }
+    if ( mBuffer->mChangedAttributeValues[mFid].isEmpty() )
+      mBuffer->mChangedAttributeValues.remove( mFid );
   }
 }
 
@@ -576,8 +610,24 @@ void QgsVectorLayerUndoPassthroughCommandChangeAttributes::redo()
   mBuffer->L->dataProvider()->clearErrors();
   if ( setSavePoint() && mBuffer->L->dataProvider()->changeAttributeValues( attribMap ) && ! mBuffer->L->dataProvider()->hasErrors() )
   {
+    QgsFeatureMap::iterator addedIt = mBuffer->mAddedFeatures.find( mFid );
     for ( auto it = mNewValues.constBegin(); it != mNewValues.constEnd(); ++it )
     {
+      const auto fieldIndex { it.key() };
+      // Update existing feature
+      if ( addedIt != mBuffer->mAddedFeatures.end() )
+      {
+        addedIt.value().setAttribute( fieldIndex, it.value() );
+      }
+      else
+      {
+        // changed attribute of existing feature
+        if ( !mBuffer->mChangedAttributeValues.contains( mFid ) )
+        {
+          mBuffer->mChangedAttributeValues.insert( mFid, QgsAttributeMap() );
+        }
+        mBuffer->mChangedAttributeValues[mFid].insert( fieldIndex, it.value() );
+      }
       emit mBuffer->attributeValueChanged( mFid, it.key(), it.value() );
     }
   }
