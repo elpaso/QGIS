@@ -473,28 +473,63 @@ QgsAbstractDatabaseProviderConnection::QueryResult QgsSpatiaLiteProviderConnecti
       if ( fet.reset( OGR_L_GetNextFeature( ogrLayer ) ), fet )
       {
 
-        QgsFields fields { QgsOgrUtils::readOgrFields( fet.get(), QTextCodec::codecForName( "UTF-8" ) ) };
-        iterator->setFields( fields );
+        const QgsFields fields { QgsOgrUtils::readOgrFields( fet.get(), QTextCodec::codecForName( "UTF-8" ) ) };
 
+        // geom column name
+        QString geomColumnName;
+
+        OGRFeatureDefnH featureDef = OGR_F_GetDefnRef( fet.get() );
+
+        if ( featureDef )
+        {
+          if ( OGR_F_GetGeomFieldCount( fet.get() ) > 0 )
+          {
+            OGRGeomFieldDefnH geomFldDef { OGR_F_GetGeomFieldDefnRef( fet.get(), 0 ) };
+            if ( geomFldDef )
+            {
+              geomColumnName = OGR_GFld_GetNameRef( geomFldDef );
+            }
+          }
+        }
+
+        // Add other fields
         for ( const auto &f : std::as_const( fields ) )
         {
           results.appendColumn( f.name() );
         }
+
+        // Append geom
+        if ( ! geomColumnName.isEmpty() )
+        {
+          results.appendColumn( geomColumnName );
+          iterator->setGeometryColumnName( geomColumnName );
+        }
+
+        iterator->setFields( fields );
       }
 
       // Check for errors
-      errCause = CPLGetLastErrorMsg( );
+      if ( CE_Failure == CPLGetLastErrorType() || CE_Fatal == CPLGetLastErrorType() )
+      {
+        errCause = CPLGetLastErrorMsg( );
+      }
 
       if ( ! errCause.isEmpty() )
       {
-        throw QgsProviderConnectionException( QObject::tr( "Error executing SQL %1: %2" ).arg( sql, errCause ) );
+        throw QgsProviderConnectionException( QObject::tr( "Error executing SQL statement %1: %2" ).arg( sql, errCause ) );
       }
 
       OGR_L_ResetReading( ogrLayer );
       iterator->nextRow();
       return results;
     }
-    errCause = CPLGetLastErrorMsg( );
+
+    // Check for errors
+    if ( CE_Failure == CPLGetLastErrorType() || CE_Fatal == CPLGetLastErrorType() )
+    {
+      errCause = CPLGetLastErrorMsg( );
+    }
+
   }
   else
   {
@@ -514,6 +549,7 @@ void QgsSpatialiteProviderResultIterator::setFields( const QgsFields &fields )
 {
   mFields = fields;
 }
+
 
 QgsSpatialiteProviderResultIterator::~QgsSpatialiteProviderResultIterator()
 {
@@ -546,6 +582,13 @@ QVariantList QgsSpatialiteProviderResultIterator::nextRowInternal()
         {
           row.push_back( attribute );
         }
+
+        // Geom goes last
+        if ( ! mGeometryColumnName.isEmpty( ) )
+        {
+          row.push_back( f.geometry().asWkb() );
+        }
+
       }
       else // Fallback to strings
       {
@@ -564,6 +607,13 @@ QVariantList QgsSpatialiteProviderResultIterator::nextRowInternal()
   }
   return row;
 }
+
+
+void QgsSpatialiteProviderResultIterator::setGeometryColumnName( const QString &geometryColumnName )
+{
+  mGeometryColumnName = geometryColumnName;
+}
+
 
 bool QgsSpatialiteProviderResultIterator::hasNextRowPrivate() const
 {
