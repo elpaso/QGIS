@@ -374,6 +374,12 @@ void QgsGeoPackageProviderConnection::setDefaultCapabilities()
     GeometryColumnCapability::SinglePart,
     GeometryColumnCapability::Curves
   };
+  mSqlLayerDefinitionCapabilities =
+  {
+    SqlLayerDefinitionCapability::Filters,
+    SqlLayerDefinitionCapability::PrimaryKeys,
+    SqlLayerDefinitionCapability::GeometryColumn,
+  };
 }
 
 QgsAbstractDatabaseProviderConnection::QueryResult QgsGeoPackageProviderConnection::executeGdalSqlPrivate( const QString &sql, QgsFeedback *feedback ) const
