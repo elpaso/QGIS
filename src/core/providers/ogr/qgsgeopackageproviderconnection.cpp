@@ -426,7 +426,7 @@ QgsAbstractDatabaseProviderConnection::QueryResult QgsGeoPackageProviderConnecti
           pkColumnName = primaryKeyColumnName( match.captured( match.lastCapturedIndex() ) );
         }
 
-        // default to "fid"
+        // fallback to "fid"
         if ( pkColumnName.isEmpty() )
         {
           pkColumnName = QStringLiteral( "fid" );
@@ -586,7 +586,7 @@ QVariantList QgsGeoPackageProviderResultIterator::nextRowInternal()
         // Geom goes last
         if ( ! mGeometryColumnName.isEmpty( ) )
         {
-          row.push_back( f.geometry().asWkb() );
+          row.push_back( f.geometry().asWkt() );
         }
 
       }
