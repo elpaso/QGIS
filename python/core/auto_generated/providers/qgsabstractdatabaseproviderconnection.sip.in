@@ -346,7 +346,7 @@ This information is calculated from the geometry columns types.
 
     enum SqlLayerDefinitionCapability
     {
-      Filters,
+      Filter,
       GeometryColumn,
       PrimaryKeys,
       SelectAtId
@@ -399,7 +399,7 @@ Returns connection geometry column capabilities (Z, M, SinglePart, Curves)
 
     virtual SqlLayerDefinitionCapabilities sqlLayerDefinitionCapabilities();
 %Docstring
-Returns SQL layer definition capabilities (Filters, GeometryColumn, PrimaryKeys)
+Returns SQL layer definition capabilities (Filter, GeometryColumn, PrimaryKeys)
 
 .. versionadded:: 3.22
 %End

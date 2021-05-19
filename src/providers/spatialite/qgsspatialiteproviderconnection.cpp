@@ -436,8 +436,8 @@ void QgsSpatiaLiteProviderConnection::setDefaultCapabilities()
   };
   mSqlLayerDefinitionCapabilities =
   {
-    Filters,
-    GeometryColumn
+    SqlLayerDefinitionCapability::Filter,
+    SqlLayerDefinitionCapability::GeometryColumn
   };
 
 }
