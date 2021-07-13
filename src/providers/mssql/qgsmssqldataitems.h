@@ -45,6 +45,8 @@ class QgsMssqlRootItem : public QgsConnectionsRootItem
 
     QVariant sortKey() const override { return 4; }
 
+    bool isDatabase( ) const override;
+
 #ifdef HAVE_GUI
     QWidget *paramWidget() override;
 #endif

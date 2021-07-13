@@ -62,6 +62,8 @@ class QgsSLRootItem : public QgsConnectionsRootItem
 
     QVariant sortKey() const override { return 2; }
 
+    bool isDatabase( ) const override;
+
 #ifdef HAVE_GUI
     QWidget *paramWidget() override;
 #endif

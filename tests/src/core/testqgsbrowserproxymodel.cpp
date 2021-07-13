@@ -27,7 +27,10 @@
 #include "qgsbrowsermodel.h"
 #include "qgsbrowserproxymodel.h"
 #include "qgsdatacollectionitem.h"
+#include "qgsproviderregistry.h"
+#include "qgsprovidermetadata.h"
 #include "qgslayeritem.h"
+#include "qgsconnectionsitem.h"
 
 
 class TestQgsBrowserProxyModel : public QObject
@@ -41,6 +44,7 @@ class TestQgsBrowserProxyModel : public QObject
     void cleanup() {} // will be called after every testfunction.
 
     void testModel();
+    void testConnectionsFilter();
     void testShowLayers();
 
 };
@@ -55,6 +59,40 @@ class TestCollectionItem: public QgsDataCollectionItem
     };
 
     bool layerCollection() const override { return true; };
+};
+
+
+class TestDbRootItem: public QgsConnectionsRootItem
+{
+  public:
+
+    TestDbRootItem( QgsDataItem *parent, const QString &name, const QString &path = QString(), const QString &providerKey = QString() )
+      : QgsConnectionsRootItem( parent, name, path, providerKey )
+    {
+    };
+
+    bool isDatabase() const override { return true; };
+};
+
+class TestDbConnectionItem: public QgsDataCollectionItem
+{
+  public:
+
+    TestDbConnectionItem( QgsDataItem *parent, const QString &name, const QString &path = QString(), const QString &providerKey = QString() )
+      : QgsDataCollectionItem( parent, name, path, providerKey )
+    {
+      mConnection.reset( static_cast<QgsAbstractDatabaseProviderConnection *>( QgsProviderRegistry::instance()->providerMetadata( "ogr" )->createConnection( "/fake", {} ) ) );
+    };
+
+    bool layerCollection() const override { return true; };
+    QgsAbstractDatabaseProviderConnection *databaseConnection() const override
+    {
+      return mConnection.get();
+    }
+
+  private:
+    std::unique_ptr<QgsAbstractDatabaseProviderConnection> mConnection;
+
 };
 
 
@@ -116,7 +154,7 @@ void TestQgsBrowserProxyModel::testModel()
   QCOMPARE( proxy.dataItem( root1Index ), rootItem1 );
 
   // second root item
-  QgsDataCollectionItem *rootItem2 = new QgsDataCollectionItem( nullptr, QStringLiteral( "Test2" ), QStringLiteral( "root2" ),  QStringLiteral( "provider2" ) );
+  QgsDataCollectionItem *rootItem2 = new TestDbRootItem( nullptr, QStringLiteral( "Test2" ), QStringLiteral( "root2" ),  QStringLiteral( "provider2" ) );
   model.setupItemConnections( rootItem2 );
   model.beginInsertRows( QModelIndex(), 1, 1 );
   model.mRootItems.append( rootItem2 );
@@ -294,6 +332,80 @@ void TestQgsBrowserProxyModel::testModel()
   QCOMPARE( proxy.rowCount( root1Index ), 2 );
   proxy.setShownDataItemProviderKeyFilter( QStringList() );
   QCOMPARE( proxy.rowCount(), 2 );
+
+
+}
+
+void TestQgsBrowserProxyModel::testConnectionsFilter()
+{
+
+  QgsBrowserModel model;
+  QgsBrowserProxyModel proxy;
+  proxy.setBrowserModel( &model );
+  // add a root child to model
+  QgsDataCollectionItem *rootItem1 = new QgsDataCollectionItem( nullptr, QStringLiteral( "Test" ), QStringLiteral( "root1" ) );
+  model.setupItemConnections( rootItem1 );
+  model.beginInsertRows( QModelIndex(), 0, 0 );
+  model.mRootItems.append( rootItem1 );
+  model.endInsertRows();
+
+  // second root item
+  QgsDataCollectionItem *rootItem2 = new TestDbRootItem( nullptr, QStringLiteral( "Test2" ), QStringLiteral( "root2" ),  QStringLiteral( "provider2" ) );
+  model.setupItemConnections( rootItem2 );
+  model.beginInsertRows( QModelIndex(), 1, 1 );
+  model.mRootItems.append( rootItem2 );
+  model.endInsertRows();
+  // child item
+  QgsDataCollectionItem *childItem1 = new QgsDataCollectionItem( nullptr, QStringLiteral( "Child1" ), QStringLiteral( "child1" ), QStringLiteral( "provider1" ) );
+  rootItem1->addChildItem( childItem1, true );
+
+  // more children
+  QgsDataCollectionItem *childItem2 = new QgsDataCollectionItem( nullptr, QStringLiteral( "Child2" ), QStringLiteral( "child2" ) );
+  rootItem1->addChildItem( childItem2, true );
+
+  QgsLayerItem *childItem3 = new QgsLayerItem( nullptr, QStringLiteral( "Child3" ), QStringLiteral( "child3" ), QString(), Qgis::BrowserLayerType::Vector, QString() );
+  childItem2->addChildItem( childItem3, true );
+  QCOMPARE( childItem2->rowCount(), 1 );
+
+  QgsLayerItem *childItem4 = new QgsLayerItem( nullptr, QStringLiteral( "Child4" ), QStringLiteral( "child4" ), QString(), Qgis::BrowserLayerType::Raster, QString() );
+  rootItem2->addChildItem( childItem4, true );
+  QCOMPARE( rootItem2->rowCount(), 1 );
+
+  QModelIndex root1Index = proxy.index( 0, 0 );
+  QModelIndex root2Index = proxy.index( 1, 0 );
+  QCOMPARE( proxy.rowCount(), 2 );
+  QCOMPARE( proxy.data( root1Index ).toString(), QStringLiteral( "Test" ) );
+  QCOMPARE( proxy.data( root2Index ).toString(), QStringLiteral( "Test2" ) );
+
+
+  // connections filtering
+  proxy.setFilterDatabaseConnections( true );
+  QCOMPARE( proxy.rowCount(), 1 );
+  root1Index = proxy.index( 0, 0 );
+  root2Index = proxy.index( 1, 0 );
+  QCOMPARE( proxy.data( root1Index ).toString(), QStringLiteral( "Test2" ) );
+  QCOMPARE( proxy.rowCount(), 1 );
+  QCOMPARE( proxy.rowCount( root1Index ), 0 );
+
+  QgsDataCollectionItem *connectionChild = new TestDbConnectionItem( nullptr, QStringLiteral( "connectionChild" ),
+      QStringLiteral( "connectionChild" ), QString() );
+
+  // First add the child to a not-DB root item: invisible
+  rootItem1->addChildItem( connectionChild, true );
+  // To trigger invalidate:
+  proxy.setFilterDatabaseConnections( true );
+  QCOMPARE( proxy.rowCount(), 1 );
+
+  root1Index = proxy.index( 0, 0 );
+  QCOMPARE( proxy.data( root1Index ).toString(), QStringLiteral( "Test2" ) );
+  QCOMPARE( proxy.rowCount( root1Index ), 0 );
+
+  // Now add the child to the DB root
+  rootItem2->addChildItem( connectionChild, true );
+  // To trigger invalidate:
+  proxy.setFilterDatabaseConnections( true );
+  QCOMPARE( proxy.rowCount(), 1 );
+  QCOMPARE( proxy.rowCount( root1Index ), 1 );
 
 }
 

@@ -566,6 +566,11 @@ QList<QAction *> QgsOracleRootItem::actions( QWidget *parent )
   return lst;
 }
 
+bool QgsOracleRootItem::isDatabase() const
+{
+  return true;
+}
+
 QWidget *QgsOracleRootItem::paramWidget()
 {
   QgsOracleSourceSelect *select = new QgsOracleSourceSelect();

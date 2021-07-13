@@ -46,6 +46,13 @@ class CORE_EXPORT QgsConnectionsRootItem : public QgsDataCollectionItem
 
     ~QgsConnectionsRootItem() override = default;
 
+    /**
+     * Returns TRUE if the item is a container of database connections (e.g. Postgres, MSSQL, Oracle etc.).
+     * \note the default implementation returns FALSE.
+     * \since QGIS 3.24
+     */
+    virtual bool isDatabase( ) const;
+
 #ifdef SIP_RUN
     SIP_PYOBJECT __repr__();
     % MethodCode

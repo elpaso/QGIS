@@ -42,6 +42,8 @@ class QgsPGRootItem : public QgsConnectionsRootItem
 
     QVariant sortKey() const override { return 3; }
 
+    bool isDatabase( ) const override;
+
   public slots:
     void onConnectionsChanged();
 };

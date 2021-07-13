@@ -169,6 +169,14 @@ This filter is always evaluated.
 .. versionadded:: 3.14
 %End
 
+    void setFilterDatabaseConnections( bool filter );
+%Docstring
+Sets the database connections filter flag to ``filter``. When ``True`` only data items that have a
+database connection associated with the item will be shown.
+
+.. versionadded:: 3.24
+%End
+
     bool showLayers() const;
 %Docstring
 Returns ``True`` if layers must be shown, this flag is ``True`` by default.

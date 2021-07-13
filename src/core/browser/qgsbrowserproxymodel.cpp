@@ -17,6 +17,9 @@
 #include "qgsbrowsermodel.h"
 #include "qgslayeritem.h"
 #include "qgsdatacollectionitem.h"
+#include "qgsconnectionsitem.h"
+#include "qgsdirectoryitem.h"
+#include "qgsfieldsitem.h"
 
 QgsBrowserProxyModel::QgsBrowserProxyModel( QObject *parent )
   : QSortFilterProxyModel( parent )
@@ -148,11 +151,16 @@ bool QgsBrowserProxyModel::filterAcceptsString( const QString &value ) const
 
 bool QgsBrowserProxyModel::filterAcceptsRow( int sourceRow, const QModelIndex &sourceParent ) const
 {
-  if ( ( mFilter.isEmpty() && !mFilterByLayerType && mHiddenDataItemsKeys.empty() && mShownDataItemsKeys.empty() ) || !mModel )
+  if ( ( mFilter.isEmpty() && !mFilterByLayerType && mHiddenDataItemsKeys.empty()
+         && mShownDataItemsKeys.empty() && ! mFilterConnections )
+       || !mModel )
     return true;
 
   QModelIndex sourceIndex = mModel->index( sourceRow, 0, sourceParent );
   if ( !filterAcceptsProviderKey( sourceIndex ) || !filterRootAcceptsProviderKey( sourceIndex ) )
+    return false;
+
+  if ( mFilterConnections && !filterAcceptsConnection( sourceIndex ) )
     return false;
 
   if ( ! mShowLayers )
@@ -164,7 +172,9 @@ bool QgsBrowserProxyModel::filterAcceptsRow( int sourceRow, const QModelIndex &s
     }
   }
 
-  return filterAcceptsItem( sourceIndex ) || filterAcceptsAncestor( sourceIndex ) || filterAcceptsDescendant( sourceIndex );
+  return filterAcceptsItem( sourceIndex ) ||
+         filterAcceptsAncestor( sourceIndex ) ||
+         filterAcceptsDescendant( sourceIndex );
 }
 
 bool QgsBrowserProxyModel::showLayers() const
@@ -281,6 +291,37 @@ bool QgsBrowserProxyModel::filterRootAcceptsProviderKey( const QModelIndex &sour
   return filterRootAcceptsProviderKey( sourceParentIndex );
 }
 
+bool QgsBrowserProxyModel::filterAcceptsConnection( const QModelIndex &sourceIndex ) const
+{
+  if ( ! mModel || ! mFilterConnections )
+    return true;
+
+  // For directory items always returns true because they might contain filesystem based databases
+  // same for field items
+  QgsDataItem *item = mModel->dataItem( sourceIndex );
+  if ( ! item
+       || qobject_cast<QgsDirectoryItem *>( item )
+       || qobject_cast<QgsFieldItem *>( item )
+       || qobject_cast<QgsFieldsItem *>( item ) )
+  {
+    return true;
+  }
+
+  // For root items we can ask them directly
+  if ( QgsConnectionsRootItem *rootItem  = qobject_cast<QgsConnectionsRootItem *>( item ); rootItem && rootItem->isDatabase() )
+  {
+    return true;
+  }
+
+  std::unique_ptr<QgsAbstractDatabaseProviderConnection> conn { item->databaseConnection() };
+  if ( ! conn )
+  {
+    return false;
+  }
+
+  return true;
+}
+
 void QgsBrowserProxyModel::setHiddenDataItemProviderKeyFilter( const QStringList &filter )
 {
   mHiddenDataItemsKeys = filter;
@@ -290,6 +331,12 @@ void QgsBrowserProxyModel::setHiddenDataItemProviderKeyFilter( const QStringList
 void QgsBrowserProxyModel::setShownDataItemProviderKeyFilter( const QStringList &filter )
 {
   mShownDataItemsKeys = filter;
+  invalidateFilter();
+}
+
+void QgsBrowserProxyModel::setFilterDatabaseConnections( bool filter )
+{
+  mFilterConnections = filter;
   invalidateFilter();
 }
 

@@ -425,6 +425,11 @@ QWidget *QgsHanaRootItem::paramWidget()
   return select;
 }
 
+bool QgsHanaRootItem::isDatabase() const
+{
+  return true;
+}
+
 void QgsHanaRootItem::onConnectionsChanged()
 {
   refresh();

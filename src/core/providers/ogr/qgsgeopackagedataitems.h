@@ -159,6 +159,8 @@ class CORE_EXPORT QgsGeoPackageRootItem final: public QgsConnectionsRootItem
 
     QVariant sortKey() const override { return 1; }
     QWidget *paramWidget() override;
+    bool isDatabase( ) const override;
+
   public slots:
     void newConnection();
     void onConnectionsChanged();

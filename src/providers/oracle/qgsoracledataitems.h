@@ -49,6 +49,8 @@ class QgsOracleRootItem : public QgsConnectionsRootItem
 
     QList<QAction *> actions( QWidget *parent ) override;
 
+    bool isDatabase( ) const override;
+
     static QMainWindow *sMainWindow;
 
   public slots:

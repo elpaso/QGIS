@@ -18,6 +18,7 @@
 #include "qgis_core.h"
 #include "qgis_sip.h"
 #include "qgis.h"
+#include "qgsabstractdatabaseproviderconnection.h"
 #include <QSortFilterProxyModel>
 
 class QgsBrowserModel;
@@ -180,6 +181,13 @@ class CORE_EXPORT QgsBrowserProxyModel : public QSortFilterProxyModel
     void setShownDataItemProviderKeyFilter( const QStringList &shownItemsFilter );
 
     /**
+     * Sets the database connections filter flag to \a filter. When TRUE only data items that have a
+     * database connection associated with the item will be shown.
+     * \since QGIS 3.24
+     */
+    void setFilterDatabaseConnections( bool filter );
+
+    /**
      * Returns TRUE if layers must be shown, this flag is TRUE by default.
      *
      * \see setShowLayers()
@@ -216,6 +224,7 @@ class CORE_EXPORT QgsBrowserProxyModel : public QSortFilterProxyModel
     bool mFilterByLayerType = false;
     bool mShowLayers = true;
     QgsMapLayerType mLayerType = QgsMapLayerType::VectorLayer;
+    bool mFilterConnections = false;
 
     //! Update filter
     void updateFilter();
@@ -238,7 +247,8 @@ class CORE_EXPORT QgsBrowserProxyModel : public QSortFilterProxyModel
     //! Root item accepts provider key.
     bool filterRootAcceptsProviderKey( const QModelIndex &sourceIndex ) const;
 
-
+    //! Filter accepts connection
+    bool filterAcceptsConnection( const QModelIndex &sourceIndex ) const;
 
     // QAbstractItemModel interface
   public:

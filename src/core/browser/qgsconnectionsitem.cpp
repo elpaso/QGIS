@@ -22,3 +22,8 @@ QgsConnectionsRootItem::QgsConnectionsRootItem( QgsDataItem *parent, const QStri
 {
 }
 
+bool QgsConnectionsRootItem::isDatabase() const
+{
+  return false;
+}
+

@@ -42,6 +42,8 @@ class QgsHanaRootItem : public QgsConnectionsRootItem
 
     QWidget *paramWidget() override;
 
+    bool isDatabase( ) const override;
+
   public slots:
     void onConnectionsChanged();
 };

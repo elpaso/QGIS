@@ -561,6 +561,11 @@ QVector<QgsDataItem *> QgsPGRootItem::createChildren()
   return connections;
 }
 
+bool QgsPGRootItem::isDatabase() const
+{
+  return true;
+}
+
 void QgsPGRootItem::onConnectionsChanged()
 {
   refresh();

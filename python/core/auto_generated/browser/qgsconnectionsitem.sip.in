@@ -36,6 +36,17 @@ The optional ``providerKey`` string can be used to specify the key for the :py:c
 
     ~QgsConnectionsRootItem();
 
+    virtual bool isDatabase( ) const;
+%Docstring
+Returns ``True`` if the item is a container of database connections (e.g. Postgres, MSSQL, Oracle etc.).
+
+.. note::
+
+   the default implementation returns ``False``.
+
+.. versionadded:: 3.24
+%End
+
     SIP_PYOBJECT __repr__();
 %MethodCode
     QString str = QStringLiteral( "<QgsConnectionsRootItem: \"%1\" %2>" ).arg( sipCpp->name(), sipCpp->path() );

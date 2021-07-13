@@ -101,6 +101,7 @@
 #include "qgsprovidersublayerdetails.h"
 #include "qgsproviderutils.h"
 #include "qgsprovidersublayersdialog.h"
+#include "qgsdbmanagerdialog.h"
 
 #include "qgsanalysis.h"
 #include "qgsgeometrycheckregistry.h"
@@ -3127,9 +3128,19 @@ void QgisApp::createMenus()
 #endif
 
   // Database Menu
-  // don't add it yet, wait for a plugin
   mDatabaseMenu = new QMenu( tr( "&Database" ), menuBar() );
   mDatabaseMenu->setObjectName( QStringLiteral( "mDatabaseMenu" ) );
+
+  QAction *dbManagerV2Action = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "dbmanager.svg" ) ), tr( "DB Manager V2…" ), this );
+
+  connect( dbManagerV2Action, &QAction::triggered, this, [ = ]
+  {
+    QgsDbManagerDialog dlg;
+    dlg.exec();
+  } );
+
+  addPluginToDatabaseMenu( tr( "DB Manager V2…" ), dbManagerV2Action );
+
   // Web Menu
   // don't add it yet, wait for a plugin
   mWebMenu = new QMenu( tr( "&Web" ), menuBar() );

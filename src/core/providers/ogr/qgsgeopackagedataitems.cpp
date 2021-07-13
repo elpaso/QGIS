@@ -207,6 +207,11 @@ QWidget *QgsGeoPackageRootItem::paramWidget()
   return nullptr;
 }
 
+bool QgsGeoPackageRootItem::isDatabase() const
+{
+  return true;
+}
+
 void QgsGeoPackageCollectionItem::addConnection()
 {
   QgsOgrDbConnection connection( mName, QStringLiteral( "GPKG" ) );

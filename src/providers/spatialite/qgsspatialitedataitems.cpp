@@ -185,6 +185,11 @@ QVector<QgsDataItem *> QgsSLRootItem::createChildren()
   return connections;
 }
 
+bool QgsSLRootItem::isDatabase() const
+{
+  return true;
+}
+
 #ifdef HAVE_GUI
 
 QWidget *QgsSLRootItem::paramWidget()

@@ -643,6 +643,11 @@ QVector<QgsDataItem *> QgsMssqlRootItem::createChildren()
   return connections;
 }
 
+bool QgsMssqlRootItem::isDatabase() const
+{
+  return true;
+}
+
 #ifdef HAVE_GUI
 QWidget *QgsMssqlRootItem::paramWidget()
 {
