@@ -3133,13 +3133,17 @@ void QgisApp::createMenus()
 
   QAction *dbManagerV2Action = new QAction( QgsApplication::getThemeIcon( QStringLiteral( "dbmanager.svg" ) ), tr( "DB Manager V2…" ), this );
 
+  if ( ! mDbManagerDialog )
+  {
+    mDbManagerDialog = new QgsDbManagerDialog( mBrowserModel, this );
+  }
+
   connect( dbManagerV2Action, &QAction::triggered, this, [ = ]
   {
-    QgsDbManagerDialog dlg;
-    dlg.exec();
+    mDbManagerDialog->show();
   } );
 
-  addPluginToDatabaseMenu( tr( "DB Manager V2…" ), dbManagerV2Action );
+  addPluginToDatabaseMenu( QString(), dbManagerV2Action );
 
   // Web Menu
   // don't add it yet, wait for a plugin

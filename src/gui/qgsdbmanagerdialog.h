@@ -43,10 +43,15 @@ class GUI_EXPORT QgsDbManagerDialog : public QDialog, private Ui::QgsDbManagerDi
 
     QgsDbManagerDialog( QgsBrowserGuiModel *browserModel = nullptr, QWidget *parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags() );
 
+  public slots:
+
+    //! Show context menu
+    void showContextMenu( const QPoint &pt );
+
   private:
 
-    QgsBrowserProxyModel mBrowserProxyModel;
-    QgsBrowserGuiModel *mBrowserModel = nullptr;
+    QgsBrowserProxyModel mProxyModel;
+    QgsBrowserGuiModel *mModel = nullptr;
 
 
 };

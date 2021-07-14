@@ -20,29 +20,93 @@
 #include "qgsbrowserguimodel.h"
 #include "qgsproviderregistry.h"
 #include "qgsprovidermetadata.h"
+#include "qgsdataitemguiprovider.h"
+#include "qgsdataitemguiproviderregistry.h"
+#include "qgsdataitem.h"
 #include "qgsgui.h"
+
+#include <QMenu>
 
 QgsDbManagerDialog::QgsDbManagerDialog( QgsBrowserGuiModel *browserModel, QWidget *parent, Qt::WindowFlags f )
   :  QDialog( parent, f )
 {
   if ( ! browserModel )
   {
-    mBrowserModel = new QgsBrowserGuiModel( this );
-    mBrowserModel->initialize();
+    mModel = new QgsBrowserGuiModel( this );
+    mModel->initialize();
   }
   else
   {
-    mBrowserModel = browserModel;
-    mBrowserModel->initialize();
+    mModel = browserModel;
+    mModel->initialize();
   }
 
   setupUi( this );
   setObjectName( QStringLiteral( "QgsDbManagerDialog" ) );
   QgsGui::instance()->enableAutoGeometryRestore( this );
 
-  mBrowserProxyModel.setBrowserModel( mBrowserModel );
-  mBrowserProxyModel.setFilterDatabaseConnections( true );
+  mProxyModel.setBrowserModel( mModel );
+  mProxyModel.setFilterDatabaseConnections( true );
   mBrowserTreeView->setHeaderHidden( true );
-  mBrowserTreeView->setModel( &mBrowserProxyModel );
+  mBrowserTreeView->setModel( &mProxyModel );
+  mBrowserTreeView->setContextMenuPolicy( Qt::ContextMenuPolicy::CustomContextMenu );
 
+  connect( mBrowserTreeView, &QgsBrowserTreeView::customContextMenuRequested, this, &QgsDbManagerDialog::showContextMenu );
+
+}
+
+void QgsDbManagerDialog::showContextMenu( const QPoint &pt )
+{
+  QModelIndex index = mProxyModel.mapToSource( mBrowserTreeView->indexAt( pt ) );
+  QgsDataItem *item = mModel->dataItem( index );
+  if ( !item )
+    return;
+
+  const QModelIndexList selection = mBrowserTreeView->selectionModel()->selectedIndexes();
+  QList< QgsDataItem * > selectedItems;
+  selectedItems.reserve( selection.size() );
+  for ( const QModelIndex &selectedIndex : selection )
+  {
+    QgsDataItem *selectedItem = mProxyModel.dataItem( selectedIndex );
+    if ( selectedItem )
+      selectedItems << selectedItem;
+  }
+
+  QMenu *menu = new QMenu( this );
+
+  const QList<QMenu *> menus = item->menus( menu );
+  QList<QAction *> actions = item->actions( menu );
+
+  if ( !menus.isEmpty() )
+  {
+    for ( QMenu *mn : menus )
+    {
+      menu->addMenu( mn );
+    }
+  }
+
+  if ( !actions.isEmpty() )
+  {
+    if ( !menu->actions().isEmpty() )
+      menu->addSeparator();
+    // add action to the menu
+    menu->addActions( actions );
+  }
+
+  QgsDataItemGuiContext context;
+  context.setMessageBar( mMessageBar );
+
+  const QList< QgsDataItemGuiProvider * > providers = QgsGui::instance()->dataItemGuiProviderRegistry()->providers();
+  for ( QgsDataItemGuiProvider *provider : providers )
+  {
+    provider->populateContextMenu( item, menu, selectedItems, context );
+  }
+
+  if ( menu->actions().isEmpty() )
+  {
+    delete menu;
+    return;
+  }
+
+  menu->popup( mBrowserTreeView->mapToGlobal( pt ) );
 }

@@ -53,6 +53,7 @@ class QgsCustomDropHandler;
 class QgsCustomProjectOpenHandler;
 class QgsCustomLayerOrderWidget;
 class QgsDockWidget;
+class QgsDbManagerDialog;
 class QgsDoubleSpinBox;
 class QgsFeature;
 class QgsFeatureStore;
@@ -2522,6 +2523,8 @@ class APP_EXPORT QgisApp : public QMainWindow, private Ui::MainWindow
 
     QgsBrowserDockWidget *mBrowserWidget = nullptr;
     QgsBrowserDockWidget *mBrowserWidget2 = nullptr;
+
+    QgsDbManagerDialog *mDbManagerDialog = nullptr;
 
     QgsTemporalControllerDockWidget *mTemporalControllerWidget = nullptr;
 
