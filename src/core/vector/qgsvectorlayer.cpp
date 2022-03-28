@@ -1021,6 +1021,43 @@ bool QgsVectorLayer::setSubsetString( const QString &subset )
   return res;
 }
 
+bool QgsVectorLayer::setSubsetExpression( const QString &expression, const QgsExpressionContext &context )
+{
+  if ( ! mDataProvider )
+  {
+    return false;
+  }
+
+  QString error;
+  if ( ! QgsExpression::checkExpression( expression, &context, error ) )
+  {
+    return false;
+  }
+
+  QgsExpression exp{ expression };
+
+  if ( ! exp.prepare( &context ) )
+  {
+    return false;
+  }
+
+  if ( mDataProvider->compileExpression( exp ) != QgsSqlExpressionCompiler::Result::Complete )
+  {
+    return false;
+  }
+
+  const QString filter { exp.evaluate( &context ).toString() };
+
+  if ( ! exp.isValid() || exp.hasEvalError() )
+  {
+    return false;
+  }
+
+  mExpressionFilter = expression;
+  setSubsetString( filter );
+  return true;
+}
+
 bool QgsVectorLayer::simplifyDrawingCanbeApplied( const QgsRenderContext &renderContext, QgsVectorSimplifyMethod::SimplifyHint simplifyHint ) const
 {
   if ( isValid() && mDataProvider && !mEditBuffer && ( isSpatial() && geometryType() != QgsWkbTypes::PointGeometry ) && ( mSimplifyMethod.simplifyHints() & simplifyHint ) && renderContext.useRenderingOptimization() )

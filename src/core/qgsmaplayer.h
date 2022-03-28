@@ -2113,6 +2113,8 @@ class CORE_EXPORT QgsMapLayer : public QObject
     //! Path to placeholder image for layer legend. If the string is empty, a generated legend is shown
     QString mLegendPlaceholderImage;
 
+    QString mExpressionFilter;
+
     friend class QgsVectorLayer;
     friend class TestQgsMapLayer;
 };

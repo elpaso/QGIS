@@ -31,6 +31,7 @@
 #include "qgspostgresconn.h"
 #include "qgspostgresconnpool.h"
 #include "qgspostgresdataitems.h"
+#include "qgspostgresexpressioncompiler.h"
 #include "qgspostgresfeatureiterator.h"
 #include "qgspostgrestransaction.h"
 #include "qgspostgreslistener.h"
@@ -3793,6 +3794,13 @@ long long QgsPostgresProvider::featureCount() const
   QgsDebugMsgLevel( "number of features: " + QString::number( num ), 2 );
 
   return num;
+}
+
+QgsSqlExpressionCompiler::Result QgsPostgresProvider::compileExpression( const QgsExpression &expression ) const
+{
+  std::unique_ptr<QgsPostgresFeatureSource> featureSrc = std::make_unique<QgsPostgresFeatureSource>( static_cast<QgsPostgresFeatureSource *>( featureSource() ) );
+  QgsPostgresExpressionCompiler compiler = QgsPostgresExpressionCompiler( featureSrc.get(), QgsFeatureRequest::Flags() & QgsFeatureRequest::IgnoreStaticNodesDuringExpressionCompilation );
+  return compiler.compile( &expression );
 }
 
 bool QgsPostgresProvider::empty() const

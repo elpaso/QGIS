@@ -42,6 +42,12 @@ const QgsDataProviderTemporalCapabilities *QgsDataProvider::temporalCapabilities
   return nullptr;
 }
 
+QgsSqlExpressionCompiler::Result QgsDataProvider::compileExpression( const QgsExpression &expression ) const
+{
+  Q_UNUSED( expression );
+  return QgsSqlExpressionCompiler::Result::Fail;
+}
+
 void QgsDataProvider::reloadData()
 {
   reloadProviderData();

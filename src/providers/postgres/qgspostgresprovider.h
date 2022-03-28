@@ -117,6 +117,8 @@ class QgsPostgresProvider final: public QgsVectorDataProvider
 
     long long featureCount() const override;
 
+    virtual QgsSqlExpressionCompiler::Result compileExpression( const QgsExpression &expression ) const override;
+
     /**
      * Determines if there is at least one feature available on this table.
      *

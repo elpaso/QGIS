@@ -27,6 +27,7 @@
 #include "qgscoordinatetransformcontext.h"
 #include "qgslayermetadata.h"
 #include "qgserror.h"
+#include "qgssqlexpressioncompiler.h"
 
 class QgsRectangle;
 class QgsCoordinateReferenceSystem;
@@ -267,6 +268,7 @@ class CORE_EXPORT QgsDataProvider : public QObject
       return false;
     }
 
+    virtual QgsSqlExpressionCompiler::Result compileExpression( const QgsExpression &expression ) const;
 
     /**
      * Returns TRUE if the provider supports setting of subset strings.

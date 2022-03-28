@@ -192,6 +192,7 @@ that can be used by the data provider to create a subset.
 Must be implemented in the dataprovider.
 %End
 
+    virtual QgsSqlExpressionCompiler::Result compileExpression( const QgsExpression &expression ) const;
 
     virtual bool supportsSubsetString() const;
 %Docstring

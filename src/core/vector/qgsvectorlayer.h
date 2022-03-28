@@ -1160,6 +1160,15 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer, public QgsExpressionConte
     virtual bool setSubsetString( const QString &subset );
 
     /**
+     * Sets the expression used to define a subset of the layer
+     * \param expression The subset string. This may be the where clause of a sql statement
+     *               or other definition string specific to the underlying dataprovider
+     *               and data store.
+     * \returns TRUE, when setting the subset string was successful, FALSE otherwise
+     */
+    virtual bool setSubsetExpression( const QString &expression, const QgsExpressionContext &context );
+
+    /**
      * Returns the string (typically sql) used to define a subset of the layer.
      * \returns The subset string or null QString if not implemented by the provider
      */
@@ -3017,6 +3026,7 @@ class CORE_EXPORT QgsVectorLayer : public QgsMapLayer, public QgsExpressionConte
     bool mSetLegendFromStyle = false;
 
     QList< QgsFeatureRendererGenerator * > mRendererGenerators;
+
 };
 
 
