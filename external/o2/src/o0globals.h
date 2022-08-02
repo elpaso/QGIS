@@ -41,6 +41,7 @@ const char O2_OAUTH2_SCOPE[] = "scope";
 const char O2_OAUTH2_GRANT_TYPE_CODE[] = "code";
 const char O2_OAUTH2_GRANT_TYPE_TOKEN[] = "token";
 const char O2_OAUTH2_GRANT_TYPE_PASSWORD[] = "password";
+const char O2_OAUTH2_GRANT_TYPE_CLIENT_CREDENTIALS[] = "client_credentials";
 const char O2_OAUTH2_GRANT_TYPE[] = "grant_type";
 const char O2_OAUTH2_API_KEY[] = "api_key";
 

@@ -72,6 +72,7 @@ class QgsAuthOAuth2Config : public QObject
       AuthCode,      //!< See http://tools.ietf.org/html/rfc6749#section-4.1
       Implicit,      //!< See http://tools.ietf.org/html/rfc6749#section-4.2
       ResourceOwner, //!< See http://tools.ietf.org/html/rfc6749#section-4.3
+      ClientCredentials,
     };
 
     //! Configuration format for serialize/unserialize operations

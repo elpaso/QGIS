@@ -189,11 +189,11 @@ void QgsOgrProvider::repack()
       QString errCause;
       if ( mLayerName.isNull() )
       {
-        mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, true, mOpenOptions, mLayerIndex, errCause, true );
+        mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, true, mOpenOptions, mLayerIndex, errCause, true, mAuthCfg );
       }
       else
       {
-        mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, true, mOpenOptions, mLayerName, errCause, true );
+        mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, true, mOpenOptions, mLayerName, errCause, true, mAuthCfg );
       }
 
       if ( !mOgrOrigLayer )
@@ -487,7 +487,7 @@ uint QgsOgrProvider::subLayerCount() const
   uint count = layerCount();
 
   QString errCause;
-  QgsOgrLayerUniquePtr layerStyles = QgsOgrProviderUtils::getLayer( mFilePath, QStringLiteral( "layer_styles" ), errCause );
+  QgsOgrLayerUniquePtr layerStyles = QgsOgrProviderUtils::getLayer( mFilePath, QStringLiteral( "layer_styles" ), errCause, mAuthCfg );
   if ( layerStyles )
   {
     count--;
@@ -3386,11 +3386,11 @@ void QgsOgrProvider::open( OpenMode mode )
     // has precedence over the layerid if both are given.
     if ( !mLayerName.isNull() )
     {
-      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, true, options, mLayerName, errCause, true );
+      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, true, options, mLayerName, errCause, true, mAuthCfg );
     }
     else
     {
-      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, true, options, mLayerIndex, errCause, true );
+      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, true, options, mLayerIndex, errCause, true, mAuthCfg );
     }
   }
 
@@ -3421,11 +3421,11 @@ void QgsOgrProvider::open( OpenMode mode )
     // try to open read-only
     if ( !mLayerName.isNull() )
     {
-      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, false, options, mLayerName, errCause, true );
+      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, false, options, mLayerName, errCause, true, mAuthCfg );
     }
     else
     {
-      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, false, options, mLayerIndex, errCause, true );
+      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, false, options, mLayerIndex, errCause, true, mAuthCfg );
     }
   }
 
@@ -3522,11 +3522,11 @@ void QgsOgrProvider::open( OpenMode mode )
     // try to open read-only
     if ( !mLayerName.isNull() )
     {
-      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, false, mOpenOptions,  mLayerName, errCause, true );
+      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, false, mOpenOptions,  mLayerName, errCause, true, mAuthCfg );
     }
     else
     {
-      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, false, mOpenOptions, mLayerIndex, errCause, true );
+      mOgrOrigLayer = QgsOgrProviderUtils::getLayer( mFilePath, false, mOpenOptions, mLayerIndex, errCause, true, mAuthCfg );
     }
 
     mWriteAccess = false;

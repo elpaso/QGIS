@@ -500,6 +500,8 @@ void QgsAuthOAuth2Edit::populateGrantFlows()
                            static_cast<int>( QgsAuthOAuth2Config::Implicit ) );
   cmbbxGrantFlow->addItem( QgsAuthOAuth2Config::grantFlowString( QgsAuthOAuth2Config::ResourceOwner ),
                            static_cast<int>( QgsAuthOAuth2Config::ResourceOwner ) );
+  cmbbxGrantFlow->addItem( QgsAuthOAuth2Config::grantFlowString( QgsAuthOAuth2Config::ClientCredentials ),
+                           static_cast<int>( QgsAuthOAuth2Config::ClientCredentials ) );
 }
 
 
@@ -738,14 +740,15 @@ void QgsAuthOAuth2Edit::updateGrantFlow( int indx )
   // bool authcode = ( flow == QgsAuthOAuth2Config::AuthCode );
   const bool implicit = ( flow == QgsAuthOAuth2Config::Implicit );
   const bool resowner = ( flow == QgsAuthOAuth2Config::ResourceOwner );
+  const bool clientCredentals = ( flow == QgsAuthOAuth2Config::ClientCredentials );
 
-  lblRequestUrl->setVisible( !resowner );
-  leRequestUrl->setVisible( !resowner );
+  lblRequestUrl->setVisible( !resowner && ! clientCredentals );
+  leRequestUrl->setVisible( !resowner && ! clientCredentals );
   if ( resowner )
     leRequestUrl->setText( QString() );
 
-  lblRedirectUrl->setVisible( !resowner );
-  frameRedirectUrl->setVisible( !resowner );
+  lblRedirectUrl->setVisible( !resowner && ! clientCredentals );
+  frameRedirectUrl->setVisible( !resowner && ! clientCredentals );
 
   lblClientSecret->setVisible( !implicit );
   leClientSecret->setVisible( !implicit );

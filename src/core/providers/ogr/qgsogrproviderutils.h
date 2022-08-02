@@ -123,7 +123,9 @@ class CORE_EXPORT QgsOgrProviderUtils
       const QString &layerName,
       const DatasetIdentification &ident,
       QgsOgrLayerUniquePtr &layer,
-      QString &errCause );
+      QString &errCause,
+      const QString &authCfg = QString( ) );
+
   public:
 
     static QString fileVectorFilters();
@@ -188,7 +190,8 @@ class CORE_EXPORT QgsOgrProviderUtils
     //! Open a layer given by name, potentially reusing an existing GDALDatasetH if it doesn't already use that layer.
     static QgsOgrLayerUniquePtr getLayer( const QString &dsName,
                                           const QString &layerName,
-                                          QString &errCause );
+                                          QString &errCause,
+                                          const QString &authCfg = QString( ) );
 
 
     //! Open a layer given by name, potentially reusing an existing GDALDatasetH if it has been opened with the same (updateMode, options) tuple and doesn't already use that layer.
@@ -197,12 +200,14 @@ class CORE_EXPORT QgsOgrProviderUtils
                                           const QStringList &options,
                                           const QString &layerName,
                                           QString &errCause,
-                                          bool checkModificationDateAgainstCache );
+                                          bool checkModificationDateAgainstCache,
+                                          const QString &authCfg = QString( ) );
 
     //! Open a layer given by index, potentially reusing an existing GDALDatasetH if it doesn't already use that layer.
     static QgsOgrLayerUniquePtr getLayer( const QString &dsName,
                                           int layerIndex,
-                                          QString &errCause );
+                                          QString &errCause,
+                                          const QString &authCfg = QString( ) );
 
     //! Open a layer given by index, potentially reusing an existing GDALDatasetH if it has been opened with the same (updateMode, options) tuple and doesn't already use that layer.
     static QgsOgrLayerUniquePtr getLayer( const QString &dsName,
@@ -210,7 +215,8 @@ class CORE_EXPORT QgsOgrProviderUtils
                                           const QStringList &options,
                                           int layerIndex,
                                           QString &errCause,
-                                          bool checkModificationDateAgainstCache );
+                                          bool checkModificationDateAgainstCache,
+                                          const QString &authCfg = QString( ) );
 
     //! Returns a QgsOgrLayer* with a SQL result layer
     static QgsOgrLayerUniquePtr getSqlLayer( QgsOgrLayer *baseLayer, OGRLayerH hSqlLayer, const QString &sql );

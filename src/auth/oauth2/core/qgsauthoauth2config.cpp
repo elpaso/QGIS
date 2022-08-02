@@ -790,6 +790,8 @@ QString QgsAuthOAuth2Config::grantFlowString( QgsAuthOAuth2Config::GrantFlow flo
       return tr( "Authorization Code" );
     case QgsAuthOAuth2Config::Implicit:
       return tr( "Implicit" );
+    case QgsAuthOAuth2Config::ClientCredentials:
+      return tr( "Client credentials" );
     case QgsAuthOAuth2Config::ResourceOwner:
     default:
       return tr( "Resource Owner" );

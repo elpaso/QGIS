@@ -56,6 +56,7 @@ QgsAuthOAuth2Method::QgsAuthOAuth2Method()
   setVersion( 1 );
   setExpansions( QgsAuthMethod::NetworkRequest | QgsAuthMethod::NetworkReply );
   setDataProviders( QStringList()
+                    << QStringLiteral( "ogr" )
                     << QStringLiteral( "ows" )
                     << QStringLiteral( "wfs" )  // convert to lowercase
                     << QStringLiteral( "wcs" )

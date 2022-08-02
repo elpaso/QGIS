@@ -94,13 +94,11 @@ void QgsO2::initOAuthConfig()
       setRequestUrl( mOAuth2Config->requestUrl() );
       setClientId( mOAuth2Config->clientId() );
       setClientSecret( mOAuth2Config->clientSecret() );
-
       break;
     case QgsAuthOAuth2Config::Implicit:
       setGrantFlow( O2::GrantFlowImplicit );
       setRequestUrl( mOAuth2Config->requestUrl() );
       setClientId( mOAuth2Config->clientId() );
-
       break;
     case QgsAuthOAuth2Config::ResourceOwner:
       setGrantFlow( O2::GrantFlowResourceOwnerPasswordCredentials );
@@ -108,7 +106,11 @@ void QgsO2::initOAuthConfig()
       setClientSecret( mOAuth2Config->clientSecret() );
       setUsername( mOAuth2Config->username() );
       setPassword( mOAuth2Config->password() );
-
+      break;
+    case QgsAuthOAuth2Config::ClientCredentials:
+      setGrantFlow( O2::GrantFlowClientCredentials );
+      setClientId( mOAuth2Config->clientId() );
+      setClientSecret( mOAuth2Config->clientSecret() );
       break;
   }
 
@@ -224,6 +226,35 @@ void QgsO2::link()
     parameters.append( O0RequestParameter( O2_OAUTH2_CLIENT_SECRET, clientSecret_.toUtf8() ) );
     parameters.append( O0RequestParameter( O2_OAUTH2_USERNAME, username_.toUtf8() ) );
     parameters.append( O0RequestParameter( O2_OAUTH2_PASSWORD, password_.toUtf8() ) );
+    parameters.append( O0RequestParameter( O2_OAUTH2_GRANT_TYPE, O2_OAUTH2_GRANT_TYPE_PASSWORD ) );
+    if ( !scope_.isEmpty() )
+      parameters.append( O0RequestParameter( O2_OAUTH2_SCOPE, scope_.toUtf8() ) );
+    if ( !apiKey_.isEmpty() )
+      parameters.append( O0RequestParameter( O2_OAUTH2_API_KEY, apiKey_.toUtf8() ) );
+
+
+    for ( auto iter = extraReqParams_.constBegin(); iter != extraReqParams_.constEnd(); ++iter )
+    {
+      parameters.append( O0RequestParameter( iter.key().toUtf8(), iter.value().toString().toUtf8() ) );
+    }
+
+
+    const QByteArray payload = O0BaseAuth::createQueryParameters( parameters );
+
+    const QUrl url( tokenUrl_ );
+    QNetworkRequest tokenRequest( url );
+    QgsSetRequestInitiatorClass( tokenRequest, QStringLiteral( "QgsO2" ) );
+    tokenRequest.setHeader( QNetworkRequest::ContentTypeHeader, QLatin1String( "application/x-www-form-urlencoded" ) );
+    QNetworkReply *tokenReply = getManager()->post( tokenRequest, payload );
+
+    connect( tokenReply, SIGNAL( finished() ), this, SLOT( onTokenReplyFinished() ), Qt::QueuedConnection );
+    connect( tokenReply, SIGNAL( error( QNetworkReply::NetworkError ) ), this, SLOT( onTokenReplyError( QNetworkReply::NetworkError ) ), Qt::QueuedConnection );
+  }
+  else if ( grantFlow_ == GrantFlowClientCredentials )
+  {
+    QList<O0RequestParameter> parameters;
+    parameters.append( O0RequestParameter( O2_OAUTH2_CLIENT_ID, clientId_.toUtf8() ) );
+    parameters.append( O0RequestParameter( O2_OAUTH2_CLIENT_SECRET, clientSecret_.toUtf8() ) );
     parameters.append( O0RequestParameter( O2_OAUTH2_GRANT_TYPE, O2_OAUTH2_GRANT_TYPE_PASSWORD ) );
     if ( !scope_.isEmpty() )
       parameters.append( O0RequestParameter( O2_OAUTH2_SCOPE, scope_.toUtf8() ) );

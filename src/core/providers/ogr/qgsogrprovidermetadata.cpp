@@ -1326,7 +1326,10 @@ QList<QgsProviderSublayerDetails> QgsOgrProviderMetadata::querySublayers( const 
 
   CPLPushErrorHandler( CPLQuietErrorHandler );
   CPLErrorReset();
-  QgsOgrLayerUniquePtr firstLayer = QgsOgrProviderUtils::getLayer( encodeUri( firstLayerUriParts ), false, options, layerId, errCause, true );
+  QRegularExpression authcfgRe( " authcfg='([^']+)'" );
+  QRegularExpressionMatch match;
+  const QString authCfg { ( u.contains( authcfgRe, &match ) ? match.captured( 1 ) : QString() ) };
+  QgsOgrLayerUniquePtr firstLayer = QgsOgrProviderUtils::getLayer( encodeUri( firstLayerUriParts ), false, options, layerId, errCause, true, authCfg );
   CPLPopErrorHandler();
 
   if ( !firstLayer )

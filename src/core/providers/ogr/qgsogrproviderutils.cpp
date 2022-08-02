@@ -26,6 +26,7 @@ email                : nyall dot dawson at gmail dot com
 #include "qgsgeopackageproviderconnection.h"
 #include "qgsogrdbconnection.h"
 #include "qgsfileutils.h"
+#include "qgscplhttpfetchoverrider.h"
 
 #include <ogr_srs_api.h>
 #include <cpl_port.h>
@@ -1491,7 +1492,8 @@ QgsOgrDatasetSharedPtr QgsOgrProviderUtils::getAlreadyOpenedDataset( const QStri
 
 QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
     int layerIndex,
-    QString &errCause )
+    QString &errCause,
+    const QString &authCfg )
 {
   QMutexLocker locker( sGlobalMutex() );
   for ( auto iter = sMapSharedDS.begin(); iter != sMapSharedDS.end(); ++iter )
@@ -1524,11 +1526,11 @@ QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
           errCause = QObject::tr( "Cannot find layer %1." ).arg( layerIndex );
           return nullptr;
         }
-        return getLayer( dsName, iter.key().updateMode, iter.key().options, layerName, errCause, true );
+        return getLayer( dsName, iter.key().updateMode, iter.key().options, layerName, errCause, true, authCfg );
       }
     }
   }
-  return getLayer( dsName, false, QStringList(), layerIndex, errCause, true );
+  return getLayer( dsName, false, QStringList(), layerIndex, errCause, true, authCfg );
 }
 
 QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
@@ -1536,9 +1538,13 @@ QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
     const QStringList &options,
     int layerIndex,
     QString &errCause,
-    bool checkModificationDateAgainstCache )
+    bool checkModificationDateAgainstCache,
+    const QString &authCfg )
 {
   QMutexLocker locker( sGlobalMutex() );
+
+  QgsCPLHTTPFetchOverrider oCPLHTTPFetcher( authCfg );
+  QgsSetCPLHTTPFetchOverriderInitiatorClass( oCPLHTTPFetcher, QStringLiteral( "QgsOgrProviderUtils" ) );
 
   // The idea is that we want to minimize the number of GDALDatasetH
   // handles openeded. But we have constraints. We do not want that 2
@@ -1581,7 +1587,7 @@ QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
         return nullptr;
       }
       return getLayer( dsName, updateMode, options, layerName, errCause,
-                       checkModificationDateAgainstCache );
+                       checkModificationDateAgainstCache, authCfg );
     }
   }
 
@@ -1623,7 +1629,7 @@ QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
 
 QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
     const QString &layerName,
-    QString &errCause )
+    QString &errCause, const QString &authCfg )
 {
   QMutexLocker locker( sGlobalMutex() );
 
@@ -1666,7 +1672,7 @@ QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
       }
     }
   }
-  return getLayer( dsName, false, QStringList(), layerName, errCause, true );
+  return getLayer( dsName, false, QStringList(), layerName, errCause, true, authCfg );
 }
 
 static QDateTime getLastModified( const QString &dsName )
@@ -2228,8 +2234,13 @@ QgsOgrProviderUtils::DatasetWithLayers *QgsOgrProviderUtils::createDatasetWithLa
   const QString &layerName,
   const DatasetIdentification &ident,
   QgsOgrLayerUniquePtr &layer,
-  QString &errCause )
+  QString &errCause,
+  const QString &authCfg )
 {
+
+  QgsCPLHTTPFetchOverrider oCPLHTTPFetcher( authCfg );
+  QgsSetCPLHTTPFetchOverriderInitiatorClass( oCPLHTTPFetcher, QStringLiteral( "QgsOgrProviderUtils" ) );
+
   GDALDatasetH hDS = OpenHelper( dsName, updateMode, options );
   if ( !hDS )
   {
@@ -2266,7 +2277,8 @@ QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
     const QStringList &options,
     const QString &layerName,
     QString &errCause,
-    bool checkModificationDateAgainstCache )
+    bool checkModificationDateAgainstCache,
+    const QString &authCfg )
 {
   QMutexLocker locker( sGlobalMutex() );
 
@@ -2328,7 +2340,7 @@ QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
     // interest, so instantiate a new DatasetWithLayers*
     QgsOgrLayerUniquePtr layer;
     QgsOgrProviderUtils::DatasetWithLayers *ds =
-      createDatasetWithLayers( dsName, updateMode, options, layerName, ident, layer, errCause );
+      createDatasetWithLayers( dsName, updateMode, options, layerName, ident, layer, errCause, authCfg );
     if ( !ds )
       return nullptr;
 
@@ -2339,7 +2351,7 @@ QgsOgrLayerUniquePtr QgsOgrProviderUtils::getLayer( const QString &dsName,
 
   QgsOgrLayerUniquePtr layer;
   QgsOgrProviderUtils::DatasetWithLayers *ds =
-    createDatasetWithLayers( dsName, updateMode, options, layerName, ident, layer, errCause );
+    createDatasetWithLayers( dsName, updateMode, options, layerName, ident, layer, errCause, authCfg );
   if ( !ds )
     return nullptr;
 
