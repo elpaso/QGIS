@@ -31,7 +31,7 @@ void QgsLayerMetadataProviderRegistry::unregisterLayerMetadataProvider( QgsAbstr
   delete mMetadataProviders.take( metadataProvider->type() );
 }
 
-QList<QgsAbstractLayerMetadataProvider *> QgsLayerMetadataProviderRegistry::metadataProviders() const
+QList<QgsAbstractLayerMetadataProvider *> QgsLayerMetadataProviderRegistry::layerMetadataProviders() const
 {
   return mMetadataProviders.values();
 }
