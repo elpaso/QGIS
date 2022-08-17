@@ -32,6 +32,7 @@
 #include "qgis_core.h"
 #include <functional>
 #include "qgsabstractproviderconnection.h"
+#include "qgsabstractlayermetadataprovider.h"
 #include "qgsfields.h"
 #include "qgsexception.h"
 
@@ -604,6 +605,14 @@ class CORE_EXPORT QgsProviderMetadata : public QObject
      */
     virtual int listStyles( const QString &uri, QStringList &ids, QStringList &names,
                             QStringList &descriptions, QString &errCause );
+
+    /**
+     * Search for the \a searchString in the stored layer metadata in the provider defined by \a uri
+     * The default implementation returns an empty list, data providers may implement
+     * the search functionality.
+     * \since QGIS 3.28
+     */
+    virtual QList<QgsLayerMetadataProviderResult> searchLayerMetadata( const QString &uri, const QString &searchString );
 
     /**
      * Returns TRUE if a layer style with the specified \a styleId exists in the provider defined by \a uri.

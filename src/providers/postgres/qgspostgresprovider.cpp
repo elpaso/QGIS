@@ -6067,3 +6067,14 @@ QList<QgsMapLayerType> QgsPostgresProviderMetadata::supportedLayerTypes() const
 {
   return { QgsMapLayerType::VectorLayer };
 }
+
+bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const QgsLayerMetadata &metadata, QString &errorMessage )
+{
+
+}
+
+QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString )
+{
+  QList<QgsLayerMetadataProviderResult> results;
+  return results;
+}

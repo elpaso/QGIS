@@ -556,6 +556,15 @@ Lists stored layer styles in the provider defined by ``uri``
 .. versionadded:: 3.10
 %End
 
+    virtual QList<QgsLayerMetadataProviderResult> searchLayerMetadata( const QString &uri, const QString &searchString );
+%Docstring
+Search for the ``searchString`` in the stored layer metadata in the provider defined by ``uri``
+The default implementation returns an empty list, data providers may implement
+the search functionality.
+
+.. versionadded:: 3.28
+%End
+
     virtual bool styleExists( const QString &uri, const QString &styleId, QString &errorCause /Out/ );
 %Docstring
 Returns ``True`` if a layer style with the specified ``styleId`` exists in the provider defined by ``uri``.

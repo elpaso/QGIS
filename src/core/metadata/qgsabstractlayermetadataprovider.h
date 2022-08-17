@@ -48,9 +48,13 @@ class CORE_EXPORT QgsAbstractLayerMetadataProvider : public QObject
   public:
     explicit QgsAbstractLayerMetadataProvider( QObject *parent = nullptr );
 
-    virtual QString &type() const = 0;
+    virtual QString type() const = 0;
 
     virtual QList<QgsLayerMetadataProviderResult> search( const QString &searchString ) const = 0;
+
+    virtual bool hasMetadataTable( const QString &connectionName ) const  = 0;
+
+    virtual bool createMetadataTable( const QString &connectionName ) const  = 0;
 
 
 };

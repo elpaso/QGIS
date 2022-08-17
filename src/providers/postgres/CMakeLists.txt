@@ -14,6 +14,7 @@ set(PG_SRCS
   qgspostgresexpressioncompiler.cpp
   qgspostgreslistener.cpp
   qgspostgresproviderconnection.cpp
+  qgspostgreslayermetadataprovider.cpp
 )
 
 if (WITH_GUI)
