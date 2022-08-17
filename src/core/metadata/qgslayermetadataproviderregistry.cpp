@@ -35,3 +35,22 @@ QList<QgsAbstractLayerMetadataProvider *> QgsLayerMetadataProviderRegistry::laye
 {
   return mMetadataProviders.values();
 }
+
+QgsAbstractLayerMetadataProvider *QgsLayerMetadataProviderRegistry::layerMetadataProviderFromType( const QString &type )
+{
+  return mMetadataProviders.value( type, nullptr );
+}
+
+QList<QgsLayerMetadataProviderResult> QgsLayerMetadataProviderRegistry::search( const QString &searchString )
+{
+  QList<QgsLayerMetadataProviderResult> results;
+  for ( auto it = mMetadataProviders.cbegin(); it != mMetadataProviders.cend(); ++it )
+  {
+    const QList<QgsLayerMetadataProviderResult> providerResults { it.value()->search( searchString ) };
+    for ( const auto &result : std::as_const( providerResults ) )
+    {
+      results.push_back( result );
+    }
+  }
+  return results;
+}

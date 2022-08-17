@@ -10,15 +10,6 @@
 
 
 
-
-struct QgsLayerMetadataProviderResult
-{
-  QgsLayerMetadata metadata;
-  QString uri;
-  QString dataProviderName;
-};
-
-
 class QgsLayerMetadataProviderRegistry : QObject
 {
 %Docstring(signature="appended")

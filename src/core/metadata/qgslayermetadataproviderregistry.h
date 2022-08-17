@@ -24,21 +24,7 @@
 #include "qgslayermetadata.h"
 
 class QgsAbstractLayerMetadataProvider;
-
-
-/**
- * \ingroup core
- * \brief Result of layer metadata provider search.
- *
- * \since QGIS 3.28
- */
-struct CORE_EXPORT QgsLayerMetadataProviderResult
-{
-  QgsLayerMetadata metadata;
-  QString uri;
-  QString dataProviderName;
-};
-
+struct QgsLayerMetadataProviderResult;
 
 /**
  * \ingroup core

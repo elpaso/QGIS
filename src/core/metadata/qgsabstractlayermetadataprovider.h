@@ -21,6 +21,21 @@
 #include "qgis_core.h"
 #include "qgis.h"
 
+#include "qgslayermetadata.h"
+
+/**
+ * \ingroup core
+ * \brief Result of layer metadata provider search.
+ *
+ * \since QGIS 3.28
+ */
+struct CORE_EXPORT QgsLayerMetadataProviderResult
+{
+  QgsLayerMetadata metadata;
+  QString uri;
+  QString dataProviderName;
+};
+
 /**
  * \ingroup core
  * \brief Layer metadata provider backends interface.
@@ -35,7 +50,7 @@ class CORE_EXPORT QgsAbstractLayerMetadataProvider : public QObject
 
     virtual QString &type() const = 0;
 
-  private:
+    virtual QList<QgsLayerMetadataProviderResult> search( const QString &searchString ) const = 0;
 
 
 };
