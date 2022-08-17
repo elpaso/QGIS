@@ -166,6 +166,8 @@ set(QGIS_CORE_SRCS
   metadata/qgslayermetadataformatter.cpp
   metadata/qgsmetadatautils.cpp
   metadata/qgsprojectmetadata.cpp
+  metadata/qgsabstractlayermetadataprovider.cpp
+  metadata/qgslayermetadataproviderregistry.cpp
 
   numericformats/qgsbasicnumericformat.cpp
   numericformats/qgsbearingnumericformat.cpp
@@ -1595,6 +1597,8 @@ set(QGIS_CORE_HDRS
   metadata/qgslayermetadatavalidator.h
   metadata/qgsmetadatautils.h
   metadata/qgsprojectmetadata.h
+  metadata/qgsabstractlayermetadataprovider.h
+  metadata/qgslayermetadataproviderregistry.h
 
   network/qgsblockingnetworkrequest.h
   network/qgsfiledownloader.h

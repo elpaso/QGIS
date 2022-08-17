@@ -1,0 +1,35 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/core/metadata/qgsabstractlayermetadataprovider.h                 *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+class QgsAbstractLayerMetadataProvider : QObject
+{
+%Docstring(signature="appended")
+Layer metadata provider backends interface.
+
+.. versionadded:: 3.28
+%End
+
+%TypeHeaderCode
+#include "qgsabstractlayermetadataprovider.h"
+%End
+  public:
+    explicit QgsAbstractLayerMetadataProvider( QObject *parent = 0 );
+
+    virtual QString &type() const = 0;
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/core/metadata/qgsabstractlayermetadataprovider.h                 *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/

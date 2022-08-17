@@ -1,0 +1,69 @@
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/core/metadata/qgslayermetadataproviderregistry.h                 *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
+
+
+
+
+
+
+struct QgsLayerMetadataProviderResult
+{
+  QgsLayerMetadata metadata;
+  QString uri;
+  QString dataProviderName;
+};
+
+
+class QgsLayerMetadataProviderRegistry : QObject
+{
+%Docstring(signature="appended")
+Registry of layer metadata provider backends.
+
+This is a singleton that should be accessed through :py:func:`QgsApplication.layerMetadataProviderRegistry()`.
+
+.. versionadded:: 3.28
+%End
+
+%TypeHeaderCode
+#include "qgslayermetadataproviderregistry.h"
+%End
+  public:
+    explicit QgsLayerMetadataProviderRegistry( QObject *parent = 0 );
+
+    void registerLayerMetadataProvider( QgsAbstractLayerMetadataProvider *metadataProvider /Transfer/ );
+%Docstring
+Registers a layer metadata provider and takes ownership of it
+%End
+
+    void unregisterLayerMetadataProvider( QgsAbstractLayerMetadataProvider *metadataProvider );
+%Docstring
+Unregisters a layer metadata provider and destroys its instance
+%End
+
+    QList<QgsAbstractLayerMetadataProvider *> layerMetadataProviders() const;
+
+    QgsAbstractLayerMetadataProvider *layerMetadataProviderFromType( const QString &type );
+%Docstring
+Returns metadata provider implementation if the type matches one. Returns ``None`` otherwise.
+%End
+
+    QList<QgsLayerMetadataProviderResult> search( const QString &searchString );
+%Docstring
+Searchs for layers in the registered layer metadata providers
+%End
+
+
+};
+
+/************************************************************************
+ * This file has been generated automatically from                      *
+ *                                                                      *
+ * src/core/metadata/qgslayermetadataproviderregistry.h                 *
+ *                                                                      *
+ * Do not edit manually ! Edit header and run scripts/sipify.pl again   *
+ ************************************************************************/
