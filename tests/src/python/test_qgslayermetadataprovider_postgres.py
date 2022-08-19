@@ -43,11 +43,12 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase):
         if 'QGIS_PGTEST_DB' in os.environ:
             dbconn = os.environ['QGIS_PGTEST_DB']
 
-        pg_layer = QgsVectorLayer('{} table="qgis_test"."someData" sql='.format(dbconn), "someData", "postgres")
+        pg_layer = QgsVectorLayer('{} table="qgis_test"."someData" (geom) sql='.format(dbconn), "someData", "postgres")
         self.assertTrue(pg_layer.isValid())
 
         m = pg_layer.metadata()
         m.setAbstract('QGIS Some Data')
+        m.setIdentifier('MD012345')
         pg_layer.setMetadata(m)
 
         md = QgsProviderRegistry.instance().providerMetadata('postgres')
@@ -63,8 +64,9 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase):
         # Check the table
         data = conn.execSql('SELECT * FROM qgis_layer_metadata')
 
-        pg_layer = QgsVectorLayer('{} table="qgis_test"."someData" sql='.format(dbconn), "someData", "postgres")
+        pg_layer = QgsVectorLayer('{} table="qgis_test"."someData" (geom) sql='.format(dbconn), "someData", "postgres")
         m = pg_layer.metadata()
+        self.assertEqual(m.identifier(), 'MD012345')
         self.assertEqual(m.abstract(), 'QGIS Some Data')
 
 

@@ -219,20 +219,18 @@ QgsPostgresProvider::QgsPostgresProvider( QString const &uri, const ProviderOpti
     // TODO: also filter CRS?
     const QString selectQuery = QStringLiteral( R"SQL(
             SELECT
-              xmd
+              qmd
            FROM qgis_layer_metadata
              WHERE
-                f_table_catalog=%1
-                AND f_table_schema=%2
-                AND f_table_name=%3
-                AND f_geometry_column=%4
+                f_table_schema=%1
+                AND f_table_name=%2
+                AND f_geometry_column %3
            )SQL" )
-                                .arg( QgsPostgresConn::quotedValue( mUri.database() ) )
                                 .arg( QgsPostgresConn::quotedValue( mUri.schema() ) )
                                 .arg( QgsPostgresConn::quotedValue( mUri.table() ) )
-                                .arg( QgsPostgresConn::quotedValue( mUri.geometryColumn() ) );
+                                .arg( mUri.geometryColumn().isEmpty() ? QStringLiteral( "IS NULL" ) : QStringLiteral( "=%1" ).arg( QgsPostgresConn::quotedValue( mUri.geometryColumn() ) ) );
 
-    QgsPostgresResult res( mConnectionRO->LoggedPQexec( "QgsPostgresProviderMetadata", selectQuery ) );
+    QgsPostgresResult res( mConnectionRO->LoggedPQexec( "QgsPostgresProvider", selectQuery ) );
     if ( res.PQntuples() > 0 )
     {
       QgsLayerMetadata metadata;
@@ -5524,7 +5522,7 @@ bool QgsPostgresProviderMetadata::saveStyle( const QString &uri, const QString &
                        .arg( QgsPostgresConn::quotedValue( dsUri.database() ) )
                        .arg( QgsPostgresConn::quotedValue( dsUri.schema() ) )
                        .arg( QgsPostgresConn::quotedValue( dsUri.table() ) )
-                       .arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn() ) )
+                       .arg( dsUri.geometryColumn().isEmpty() ? QStringLiteral( "IS NULL" ) : QStringLiteral( "=%1" ).arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn() ) ) )
                        .arg( wkbTypeString )
                        .arg( QgsPostgresConn::quotedValue( styleName.isEmpty() ? dsUri.table() : styleName ) );
 
@@ -5551,7 +5549,7 @@ bool QgsPostgresProviderMetadata::saveStyle( const QString &uri, const QString &
           .arg( QgsPostgresConn::quotedValue( dsUri.database() ) )
           .arg( QgsPostgresConn::quotedValue( dsUri.schema() ) )
           .arg( QgsPostgresConn::quotedValue( dsUri.table() ) )
-          .arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn() ) )
+          .arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn().isEmpty() ? QStringLiteral( "IS NULL" ) : QStringLiteral( "=%1" ).arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn() ) ) ) )
           .arg( QgsPostgresConn::quotedValue( styleName.isEmpty() ? dsUri.table() : styleName ) )
           // Must be the final .arg replacement - see above
           .arg( QgsPostgresConn::quotedValue( qmlStyle ),
@@ -5570,7 +5568,7 @@ bool QgsPostgresProviderMetadata::saveStyle( const QString &uri, const QString &
                                .arg( QgsPostgresConn::quotedValue( dsUri.database() ) )
                                .arg( QgsPostgresConn::quotedValue( dsUri.schema() ) )
                                .arg( QgsPostgresConn::quotedValue( dsUri.table() ) )
-                               .arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn() ) )
+                               .arg( dsUri.geometryColumn().isEmpty() ? QStringLiteral( "IS NULL" ) : QStringLiteral( "=%1" ).arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn() ) ) )
                                .arg( wkbTypeString );
 
     sql = QStringLiteral( "BEGIN; %1; %2; COMMIT;" ).arg( removeDefaultSql, sql );
