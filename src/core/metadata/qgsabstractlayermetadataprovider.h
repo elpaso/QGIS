@@ -52,10 +52,6 @@ class CORE_EXPORT QgsAbstractLayerMetadataProvider : public QObject
 
     virtual QList<QgsLayerMetadataProviderResult> search( const QString &searchString ) const = 0;
 
-    virtual bool hasMetadataTable( const QString &connectionName ) const  = 0;
-
-    virtual bool createMetadataTable( const QString &connectionName ) const  = 0;
-
 
 };
 

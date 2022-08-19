@@ -612,7 +612,7 @@ class CORE_EXPORT QgsProviderMetadata : public QObject
      * the search functionality.
      * \since QGIS 3.28
      */
-    virtual QList<QgsLayerMetadataProviderResult> searchLayerMetadata( const QString &uri, const QString &searchString );
+    virtual QList<QgsLayerMetadataProviderResult> searchLayerMetadata( const QString &uri, const QString &searchString, QString &errCause );
 
     /**
      * Returns TRUE if a layer style with the specified \a styleId exists in the provider defined by \a uri.

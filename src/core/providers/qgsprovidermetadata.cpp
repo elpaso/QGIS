@@ -240,10 +240,11 @@ int QgsProviderMetadata::listStyles( const QString &, QStringList &, QStringList
   return -1;
 }
 
-QList<QgsLayerMetadataProviderResult> QgsProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString )
+QList<QgsLayerMetadataProviderResult> QgsProviderMetadata::searchLayerMetadata(const QString &uri, const QString &searchString , QString &errorMessage )
 {
   Q_UNUSED( searchString );
   Q_UNUSED( uri );
+  errorMessage = QObject::tr( "Provider %1 has no %2 method" ).arg( key(), QStringLiteral( "searchLayerMetadata" ) );
   return {};
 }
 

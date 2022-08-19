@@ -22,6 +22,7 @@
 #include "qgsmessageoutput.h"
 #include "qgsmessagelog.h"
 #include "qgsprojectstorageregistry.h"
+#include "qgslayermetadataproviderregistry.h"
 #include "qgsrectangle.h"
 #include "qgscoordinatereferencesystem.h"
 #include "qgsxmlutils.h"
@@ -42,6 +43,8 @@
 #include "qgsstringutils.h"
 #include "qgsjsonutils.h"
 #include "qgsdbquerylog.h"
+#include "qgsproject.h"
+#include "qgspostgreslayermetadataprovider.h"
 
 #include "qgspostgresprovider.h"
 #include "qgsprovidermetadata.h"
@@ -5819,18 +5822,25 @@ QgsAbstractProviderConnection *QgsPostgresProviderMetadata::createConnection( co
 
 
 QgsPostgresProjectStorage *gPgProjectStorage = nullptr;   // when not null it is owned by QgsApplication::projectStorageRegistry()
+QgsPostgresLayerMetadataProvider *gPgLayerMetadataProvider = nullptr;   // when not null it is owned by QgsApplication::layerMetadataProviderRegistry()
 
 void QgsPostgresProviderMetadata::initProvider()
 {
   Q_ASSERT( !gPgProjectStorage );
   gPgProjectStorage = new QgsPostgresProjectStorage;
   QgsApplication::projectStorageRegistry()->registerProjectStorage( gPgProjectStorage );  // takes ownership
+  Q_ASSERT( !gPgLayerMetadataProvider );
+  gPgLayerMetadataProvider = new QgsPostgresLayerMetadataProvider();
+  QgsApplication::layerMetadataProviderRegistry()->registerLayerMetadataProvider( gPgLayerMetadataProvider );  // takes ownership
+
 }
 
 void QgsPostgresProviderMetadata::cleanupProvider()
 {
   QgsApplication::projectStorageRegistry()->unregisterProjectStorage( gPgProjectStorage );  // destroys the object
   gPgProjectStorage = nullptr;
+  QgsApplication::layerMetadataProviderRegistry()->unregisterLayerMetadataProvider( gPgLayerMetadataProvider );
+  gPgLayerMetadataProvider = nullptr;
 
   QgsPostgresConnPool::cleanupInstance();
 }
@@ -6070,10 +6080,193 @@ QList<QgsMapLayerType> QgsPostgresProviderMetadata::supportedLayerTypes() const
 
 bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const QgsLayerMetadata &metadata, QString &errorMessage )
 {
+    QgsDataSourceUri dsUri( uri );
 
+    QgsPostgresConn *conn = QgsPostgresConn::connectDb( dsUri.connectionInfo( false ), false );
+    if ( !conn )
+    {
+      errorMessage = QObject::tr( "Connection to database failed" );
+      return false;
+    }
+
+    if ( !tableExists( *conn, QStringLiteral( "qgis_layer_metadata" ) ) )
+    {
+      QgsPostgresResult res( conn->LoggedPQexec( QStringLiteral( "QgsPostgresProviderMetadata" ),
+           R"SQL(
+            CREATE TABLE qgis_layer_metadata (
+              id SERIAL PRIMARY KEY
+              ,f_table_catalog VARCHAR
+              ,f_table_schema VARCHAR
+              ,f_table_name VARCHAR
+              ,f_geometry_column VARCHAR
+              ,abstract TEXT
+              ,identifier TEXT
+              ,geometry_type VARCHAR
+              ,extent GEOMETRY(MULTIPOLYGON, 4326)
+              ,crs VARCHAR
+              ,qmd XML
+              ,owner VARCHAR(63) DEFAULT CURRENT_USER
+              ,update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+          )SQL" ) );
+      if ( res.PQresultStatus() != PGRES_COMMAND_OK )
+      {
+        errorMessage = QObject::tr( "Unable to save layer metadata. It's not possible to create the destination table on the database. Maybe this is due to table permissions (user=%1). Please contact your database admin" ).arg( dsUri.username() );
+        conn->unref();
+        return false;
+      }
+    }
+    else
+    {
+      if ( !columnExists( *conn, QStringLiteral( "qmd" ), QStringLiteral( "type" ) ) )
+      {
+        QgsPostgresResult res( conn->LoggedPQexec( QStringLiteral( "QgsPostgresProviderMetadata" ), "ALTER TABLE layer_styles ADD COLUMN type varchar NULL" ) );
+        if ( res.PQresultStatus() != PGRES_COMMAND_OK )
+        {
+          errorMessage = QObject::tr( "Unable to add column qmd to qgis_layer_metadata table. Maybe this is due to table permissions (user=%1). Please contact your database admin" ).arg( dsUri.username() );
+          conn->unref();
+          return false;
+        }
+      }
+    }
+
+    if ( dsUri.database().isEmpty() ) // typically when a service file is used
+    {
+      dsUri.setDatabase( conn->currentDatabase() );
+    }
+
+    const QString wkbTypeString = QgsPostgresConn::quotedValue( QgsWkbTypes::geometryDisplayString( QgsWkbTypes::geometryType( dsUri.wkbType() ) ) );
+
+    const QgsCoordinateReferenceSystem metadataCrs { metadata.crs() };
+    QgsCoordinateReferenceSystem destCrs {QgsCoordinateReferenceSystem::fromEpsgId( 4326) };
+    QVector<QgsGeometry> extents;
+
+    const auto cExtents { metadata.extent().spatialExtents() };
+    for(const auto &ext: std::as_const( cExtents ) )
+    {
+        QgsGeometry geom { QgsGeometry::fromRect( ext.bounds.toRectangle() ) };
+        QgsCoordinateTransform ct { ext.extentCrs, QgsCoordinateReferenceSystem::fromEpsgId( 4326 ), QgsProject::instance()->transformContext() };
+        geom.transform( ct );
+        extents.append( geom );
+    }
+
+    const QgsGeometry extent { QgsGeometry::collectGeometry( extents )};
+
+    // export metadata to XML
+    QDomImplementation domImplementation;
+    QDomDocumentType documentType = domImplementation.createDocumentType( QStringLiteral( "qgis" ), QStringLiteral( "http://mrcc.com/qgis.dtd" ), QStringLiteral( "SYSTEM" ) );
+    QDomDocument document( documentType );
+
+    QDomElement rootNode = document.createElement( QStringLiteral( "qgis" ) );
+    rootNode.setAttribute( QStringLiteral( "version" ), Qgis::version() );
+    document.appendChild( rootNode );
+
+    if ( !metadata.writeMetadataXml( rootNode, document ) )
+    {
+      errorMessage = QObject::tr( "Error exporting metadata to XML" );
+      return false;
+    }
+
+    QString metadataXml;
+    QTextStream textStream( &metadataXml );
+    document.save( textStream, 2 );
+
+    // Note: in the construction of the INSERT and UPDATE strings the qmd values
+    // can contain user entered strings, which may themselves include %## values that would be
+    // replaced by the QString.arg function.  To ensure that the final SQL string is not corrupt these
+    // two values are both replaced in the final .arg call of the string construction.
+
+    QString upsertSql = QStringLiteral( R"SQL(
+            INSERT INTO qgis_layer_metadata(
+               f_table_catalog
+              ,f_table_schema
+              ,f_table_name
+              ,f_geometry_column
+              ,abstract
+              ,identifier
+              ,geometry_type
+              ,extent
+              ,crs
+              ,qmd) VALUES (
+               %1,%2,%3,%4,%5,%6,%7,ST_GeomFromText(%8, 4326),%9,XMLPARSE(DOCUMENT %10))
+             )SQL" )
+                  .arg( QgsPostgresConn::quotedValue( dsUri.database() ) )
+                  .arg( QgsPostgresConn::quotedValue( dsUri.schema() ) )
+                  .arg( QgsPostgresConn::quotedValue( dsUri.table() ) )
+                  .arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn() ) )
+                  .arg( QgsPostgresConn::quotedValue( metadata.abstract() ) )
+                  .arg( QgsPostgresConn::quotedValue( metadata.identifier() ) )
+                  .arg( QgsPostgresConn::quotedValue( wkbTypeString ) )
+                  .arg( QgsPostgresConn::quotedValue( extent.asWkt() ) )
+                  .arg( QgsPostgresConn::quotedValue( metadataCrs.authid() ) )
+                  // Must be the final .arg replacement - see above
+                  .arg( QgsPostgresConn::quotedValue( metadataXml ) );
+
+    QString checkQuery = QStringLiteral( R"SQL(
+            SELECT
+               f_table_catalog
+              ,f_table_schema
+              ,f_table_name
+              ,f_geometry_column
+              ,identifier
+           FROM qgis_layer_metadata
+             WHERE
+                f_table_catalog=%1
+                AND f_table_schema=%2
+                AND f_table_name=%3
+                AND f_geometry_column=%4
+                AND identifier = %5
+           )SQL" )
+                         .arg( QgsPostgresConn::quotedValue( dsUri.database() ) )
+                         .arg( QgsPostgresConn::quotedValue( dsUri.schema() ) )
+                         .arg( QgsPostgresConn::quotedValue( dsUri.table() ) )
+                         .arg( QgsPostgresConn::quotedValue( metadata.identifier() ) );
+
+    QgsPostgresResult res( conn->LoggedPQexec( "QgsPostgresProviderMetadata", checkQuery ) );
+    if ( res.PQntuples() > 0 )
+    {
+        upsertSql = QStringLiteral( R"SQL(
+                UPDATE qgis_layer_metadata(
+                  SET
+                  owner=CURRENT_USER
+                  ,abstract=%6
+                  ,geometry_type=%7
+                  ,extent=ST_GeomFromText(%8, 4326)
+                  ,crs=%9
+                  ,qmd=XMLPARSE(DOCUMENT %10)
+                    WHERE
+                        f_table_catalog=%1
+                        AND f_table_schema=%2
+                        AND f_table_name=%3
+                        AND f_geometry_column=%4
+                        AND identifier = %5
+                 )SQL" )
+                      .arg( QgsPostgresConn::quotedValue( dsUri.database() ) )
+                      .arg( QgsPostgresConn::quotedValue( dsUri.schema() ) )
+                      .arg( QgsPostgresConn::quotedValue( dsUri.table() ) )
+                      .arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn() ) )
+                      .arg( QgsPostgresConn::quotedValue( metadata.identifier() ) )
+                .arg( QgsPostgresConn::quotedValue( metadata.abstract() )
+                      .arg( QgsPostgresConn::quotedValue( wkbTypeString ) )
+                      .arg( QgsPostgresConn::quotedValue( extent.asWkt() ) )
+                      .arg( QgsPostgresConn::quotedValue( metadataCrs.authid() ) )
+                      // Must be the final .arg replacement - see above
+                      .arg( QgsPostgresConn::quotedValue( metadataXml ) ) );
+
+      }
+
+    res = conn->LoggedPQexec( "QgsPostgresProviderMetadata", upsertSql );
+
+    bool saved = res.PQresultStatus() == PGRES_COMMAND_OK;
+    if ( !saved )
+      errorMessage = QObject::tr( "Unable to save layer metadata. It's not possible to insert a new record into the qgis_layer_metadata table. Maybe this is due to table permissions (user=%1). Please contact your database administrator." ).arg( dsUri.username() );
+
+    conn->unref();
+
+    return saved;
 }
 
-QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString )
+QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadata::searchLayerMetadata(const QString &uri, const QString &searchString, QString &errorMessage )
 {
   QList<QgsLayerMetadataProviderResult> results;
   return results;

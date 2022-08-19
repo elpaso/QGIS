@@ -27,8 +27,6 @@ class QgsPostgresLayerMetadataProvider : public QgsAbstractLayerMetadataProvider
   public:
     QString type() const override;
     QList<QgsLayerMetadataProviderResult> search( const QString &searchString ) const override;
-    bool hasMetadataTable( const QString &connectionName ) const override;
-    bool createMetadataTable( const QString &connectionName ) const override;
 };
 
 #endif // QGSPOSTGRESLAYERMETADATAPROVIDER_H

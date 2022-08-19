@@ -39,8 +39,9 @@ QList<QgsLayerMetadataProviderResult> QgsPostgresLayerMetadataProvider::search( 
     {
       if ( conn->configuration().value( QStringLiteral( "metadataInDatabase" ), false ).toBool() )
       {
-
-        const QList<QgsLayerMetadataProviderResult> res { md->searchLayerMetadata( conn->uri(), searchString ) };
+        QString errorMessage;
+        const QList<QgsLayerMetadataProviderResult> res { md->searchLayerMetadata( conn->uri(), searchString, errorMessage ) };
+        // TODO: log errors
         for ( const auto &result : std::as_const( res ) )
         {
           results.push_back( result );
@@ -51,64 +52,3 @@ QList<QgsLayerMetadataProviderResult> QgsPostgresLayerMetadataProvider::search( 
   return results;
 }
 
-bool QgsPostgresLayerMetadataProvider::hasMetadataTable( const QString &connectionName ) const
-{
-  QgsProviderMetadata *md { QgsProviderRegistry::instance()->providerMetadata( type( ) ) };
-  if ( md )
-  {
-    std::unique_ptr< QgsAbstractDatabaseProviderConnection > connection;
-    connection.reset( static_cast< QgsAbstractDatabaseProviderConnection * >( md->createConnection( connectionName ) ) );
-    try
-    {
-      if ( connection->tableExists( QStringLiteral( "public" ), QStringLiteral( "qgis_layer_metadata" ) ) )
-      {
-        return true;
-      }
-    }
-    catch ( const QgsProviderConnectionException & )
-    {
-      return false;
-    }
-
-  }
-  return false;
-}
-
-bool QgsPostgresLayerMetadataProvider::createMetadataTable( const QString &connectionName ) const
-{
-
-  if ( hasMetadataTable( connectionName ) )
-  {
-    return false;
-  }
-
-  QgsProviderMetadata *md { QgsProviderRegistry::instance()->providerMetadata( type( ) ) };
-  if ( md )
-  {
-    std::unique_ptr< QgsAbstractDatabaseProviderConnection > connection;
-    connection.reset( static_cast< QgsAbstractDatabaseProviderConnection * >( md->createConnection( connectionName ) ) );
-    try
-    {
-      connection->executeSql( QStringLiteral( R"SQL(
-        CREATE TABLE qgis_layer_metadata (
-          id SERIAL PRIMARY KEY
-          ,f_table_catalog VARCHAR
-          ,f_table_schema VARCHAR
-          ,f_table_name VARCHAR
-          ,f_geometry_column VARCHAR
-          ,description TEXT
-          ,identifier TEXT
-          ,extent GEOMETRY(POLYGON, 4326)
-          ,QMD XML
-          ,owner VARCHAR(63) DEFAULT CURRENT_USER
-          ,update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      )SQL" ) );
-    }
-    catch ( const QgsProviderConnectionException & )
-    {
-      return false;
-    }
-  }
-  return false;
-}
