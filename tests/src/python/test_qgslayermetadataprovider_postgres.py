@@ -22,6 +22,7 @@ from qgis.testing import start_app, unittest
 
 QGIS_APP = start_app()
 
+
 class TestPostgresLayerMetadataProvider(unittest.TestCase):
 
     def setUp(self):
@@ -34,7 +35,6 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase):
         md = QgsProviderRegistry.instance().providerMetadata('postgres')
         conn = md.createConnection(dbconn, {})
         conn.execSql('DROP TABLE IF EXISTS qgis_layer_metadata')
-
 
     def testMetadataWrite(self):
 
@@ -54,13 +54,18 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase):
         self.assertIsNotNone(md)
 
         layer_uri = pg_layer.dataProvider().uri().uri()
-        md.saveLayerMetadata(layer_uri, m)
+        self.assertTrue(md.saveLayerMetadata(layer_uri, m))
 
         conn = md.createConnection(dbconn, {})
 
         self.assertTrue(conn.tableExists('public', 'qgis_layer_metadata'))
 
-        from IPython import embed; embed(using=False)
+        # Check the table
+        data = conn.execSql('SELECT * FROM qgis_layer_metadata')
+
+        pg_layer = QgsVectorLayer('{} table="qgis_test"."someData" sql='.format(dbconn), "someData", "postgres")
+        m = pg_layer.metadata()
+        self.assertEqual(m.abstract(), 'QGIS Some Data')
 
 
 if __name__ == '__main__':
