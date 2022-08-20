@@ -17,13 +17,27 @@ import os
 from qgis.core import (
     QgsVectorLayer,
     QgsProviderRegistry,
+    QgsWkbTypes,
+    QgsLayerMetadata,
+    QgsBox3d,
 )
+
+from qgis.PyQt.QtCore import QCoreApplication
+from utilities import compareWkt
 from qgis.testing import start_app, unittest
 
 QGIS_APP = start_app()
 
 
 class TestPostgresLayerMetadataProvider(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """Run before all tests"""
+
+        QCoreApplication.setOrganizationName("QGIS_Test")
+        QCoreApplication.setOrganizationDomain(cls.__name__)
+        QCoreApplication.setApplicationName(cls.__name__)
 
     def setUp(self):
 
@@ -36,19 +50,25 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase):
         conn = md.createConnection(dbconn, {})
         conn.execSql('DROP TABLE IF EXISTS qgis_layer_metadata')
 
-    def testMetadataWrite(self):
+    def testMetadataWriteRead(self):
 
         # init connection string
         dbconn = 'service=qgis_test'
         if 'QGIS_PGTEST_DB' in os.environ:
             dbconn = os.environ['QGIS_PGTEST_DB']
 
-        pg_layer = QgsVectorLayer('{} table="qgis_test"."someData" (geom) sql='.format(dbconn), "someData", "postgres")
+        pg_layer = QgsVectorLayer('{} type=Point table="qgis_test"."someData" (geom) sql='.format(dbconn), "someData", "postgres")
         self.assertTrue(pg_layer.isValid())
 
         m = pg_layer.metadata()
         m.setAbstract('QGIS Some Data')
         m.setIdentifier('MD012345')
+        ext = QgsLayerMetadata.Extent()
+        spatial_ext = QgsLayerMetadata.SpatialExtent()
+        spatial_ext.bounds = QgsBox3d(pg_layer.extent())
+        spatial_ext.crs = pg_layer.crs()
+        ext.setSpatialExtents([spatial_ext])
+        m.setExtent(ext)
         pg_layer.setMetadata(m)
 
         md = QgsProviderRegistry.instance().providerMetadata('postgres')
@@ -64,10 +84,32 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase):
         # Check the table
         data = conn.execSql('SELECT * FROM qgis_layer_metadata')
 
-        pg_layer = QgsVectorLayer('{} table="qgis_test"."someData" (geom) sql='.format(dbconn), "someData", "postgres")
+        conn.setConfiguration({'metadataInDatabase': True})
+        conn.store('PG Metadata Enbled Connection')
+
+        pg_layer = QgsVectorLayer('{} type=Point table="qgis_test"."someData" (geom) sql='.format(dbconn), "someData", "postgres")
         m = pg_layer.metadata()
         self.assertEqual(m.identifier(), 'MD012345')
         self.assertEqual(m.abstract(), 'QGIS Some Data')
+        self.assertEqual(m.crs().authid(), 'EPSG:4326')
+
+        reg = QGIS_APP.layerMetadataProviderRegistry()
+        md_provider = reg.layerMetadataProviderFromType('postgres')
+        results = md_provider.search('QGIS Some Data')
+        self.assertEqual(len(results), 1)
+
+        result = results[0]
+
+        self.assertEqual(result.abstract, 'QGIS Some Data')
+        self.assertEqual(result.identifier, 'MD012345')
+        self.assertEqual(result.crs, 'EPSG:4326')
+        self.assertEqual(result.geometryType, QgsWkbTypes.PointGeometry)
+        self.assertEqual(result.dataProviderName, 'postgres')
+        self.assertTrue(compareWkt(result.extent.asWkt(), """MultiPolygon (((-71.12300000000000466 66.32999999999999829, -65.31999999999999318 66.32999999999999829, -65.31999999999999318 78.29999999999999716, -71.12300000000000466 78.29999999999999716, -71.12300000000000466 66.32999999999999829)))"""))
+
+        # Check layer load
+        md_pg_layer = QgsVectorLayer(result.uri, 'PG MD Layer', result.dataProviderName)
+        self.assertTrue(md_pg_layer.isValid())
 
 
 if __name__ == '__main__':

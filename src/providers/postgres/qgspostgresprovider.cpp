@@ -6166,7 +6166,7 @@ bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const Q
     dsUri.setDatabase( conn->currentDatabase() );
   }
 
-  const QString wkbTypeString = QgsPostgresConn::quotedValue( QgsWkbTypes::geometryDisplayString( QgsWkbTypes::geometryType( dsUri.wkbType() ) ) );
+  const QString wkbTypeString = QgsWkbTypes::geometryDisplayString( QgsWkbTypes::geometryType( dsUri.wkbType() ) );
 
   const QgsCoordinateReferenceSystem metadataCrs { metadata.crs() };
   QgsCoordinateReferenceSystem destCrs {QgsCoordinateReferenceSystem::fromEpsgId( 4326 ) };
@@ -6278,12 +6278,12 @@ bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const Q
                 .arg( QgsPostgresConn::quotedValue( dsUri.table() ) )
                 .arg( QgsPostgresConn::quotedValue( dsUri.geometryColumn() ) )
                 .arg( QgsPostgresConn::quotedValue( metadata.identifier() ) )
-                .arg( QgsPostgresConn::quotedValue( metadata.abstract() )
-                      .arg( QgsPostgresConn::quotedValue( wkbTypeString ) )
-                      .arg( QgsPostgresConn::quotedValue( extent.asWkt() ) )
-                      .arg( QgsPostgresConn::quotedValue( metadataCrs.authid() ) )
-                      // Must be the final .arg replacement - see above
-                      .arg( QgsPostgresConn::quotedValue( metadataXml ) ) );
+                .arg( QgsPostgresConn::quotedValue( metadata.abstract() ) )
+                .arg( QgsPostgresConn::quotedValue( wkbTypeString ) )
+                .arg( QgsPostgresConn::quotedValue( extent.asWkt() ) )
+                .arg( QgsPostgresConn::quotedValue( metadataCrs.authid() ) )
+                // Must be the final .arg replacement - see above
+                .arg( QgsPostgresConn::quotedValue( metadataXml ) );
 
   }
 
@@ -6314,7 +6314,7 @@ QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadata::searchLayerMe
       where = QStringLiteral( "WHERE abstract ILIKE %1 OR identifier ILIKE %1" ).arg( QgsPostgresConn::quotedValue( QString( searchString ).prepend( QChar( '%' ) ).append( QChar( '%' ) ) ) );
     }
 
-    QString listQuery = QStringLiteral( R"SQL(
+    const QString listQuery = QStringLiteral( R"SQL(
             SELECT
                f_table_catalog
               ,f_table_schema
@@ -6342,6 +6342,11 @@ QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadata::searchLayerMe
       uri.setSchema( res.PQgetvalue( 0, 1 ) );
       uri.setTable( res.PQgetvalue( 0, 2 ) );
       uri.setGeometryColumn( res.PQgetvalue( 0, 3 ) );
+      result.abstract = res.PQgetvalue( 0, 4 );
+      result.identifier = res.PQgetvalue( 0, 5 );
+      result.geometryType = QgsWkbTypes::geometryType( QgsWkbTypes::parseType( res.PQgetvalue( 0, 6 ) ) );
+      result.extent = QgsGeometry::fromWkt( res.PQgetvalue( 0, 7 ) );
+      result.crs = res.PQgetvalue( 0, 8 );
       result.uri = uri.uri();
       QgsLayerMetadata metadata;
       QDomDocument doc;

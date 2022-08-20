@@ -22,18 +22,26 @@
 #include "qgis.h"
 
 #include "qgslayermetadata.h"
+#include "qgsgeometry.h"
 
 /**
  * \ingroup core
  * \brief Result of layer metadata provider search.
+ * The results contains all information that is required
+ * by QGIS to load a layer from the results.
  *
  * \since QGIS 3.28
  */
 struct CORE_EXPORT QgsLayerMetadataProviderResult
 {
-  QgsLayerMetadata metadata;
+  QString identifier;
+  QString abstract;
+  QgsGeometry extent;
+  QgsWkbTypes::GeometryType geometryType;
+  QString crs;
   QString uri;
   QString dataProviderName;
+  QgsLayerMetadata metadata;
 };
 
 /**

@@ -11,9 +11,14 @@
 
 struct QgsLayerMetadataProviderResult
 {
-  QgsLayerMetadata metadata;
+  QString identifier;
+  QString abstract;
+  QgsGeometry extent;
+  QgsWkbTypes::GeometryType geometryType;
+  QString crs;
   QString uri;
   QString dataProviderName;
+  QgsLayerMetadata metadata;
 };
 
 class QgsAbstractLayerMetadataProvider : QObject
