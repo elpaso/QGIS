@@ -48,7 +48,7 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase):
 
         md = QgsProviderRegistry.instance().providerMetadata('postgres')
         conn = md.createConnection(dbconn, {})
-        conn.execSql('DROP TABLE IF EXISTS qgis_layer_metadata')
+        conn.execSql('DROP TABLE IF EXISTS qgis_test.qgis_layer_metadata')
 
     def testMetadataWriteRead(self):
 
@@ -79,13 +79,13 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase):
 
         conn = md.createConnection(dbconn, {})
 
-        self.assertTrue(conn.tableExists('public', 'qgis_layer_metadata'))
+        self.assertTrue(conn.tableExists('qgis_test', 'qgis_layer_metadata'))
 
         # Check the table
-        data = conn.execSql('SELECT * FROM qgis_layer_metadata')
+        data = conn.execSql('SELECT * FROM qgis_test.qgis_layer_metadata')
 
         conn.setConfiguration({'metadataInDatabase': True})
-        conn.store('PG Metadata Enbled Connection')
+        conn.store('PG Metadata Enabled Connection')
 
         pg_layer = QgsVectorLayer('{} type=Point table="qgis_test"."someData" (geom) sql='.format(dbconn), "someData", "postgres")
         m = pg_layer.metadata()
@@ -102,6 +102,7 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase):
 
         self.assertEqual(result.abstract, 'QGIS Some Data')
         self.assertEqual(result.identifier, 'MD012345')
+        self.assertEqual(result.layerType, 'vector')
         self.assertEqual(result.crs, 'EPSG:4326')
         self.assertEqual(result.geometryType, QgsWkbTypes.PointGeometry)
         self.assertEqual(result.dataProviderName, 'postgres')

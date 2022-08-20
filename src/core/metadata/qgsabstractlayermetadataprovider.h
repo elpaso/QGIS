@@ -41,6 +41,7 @@ struct CORE_EXPORT QgsLayerMetadataProviderResult
   QString crs;
   QString uri;
   QString dataProviderName;
+  QString layerType;
   QgsLayerMetadata metadata;
 };
 
