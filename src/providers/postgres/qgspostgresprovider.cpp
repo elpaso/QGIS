@@ -6151,6 +6151,7 @@ bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const Q
               ,f_geometry_column VARCHAR
               ,abstract TEXT
               ,identifier TEXT NOT NULL
+              ,title TEXT NOT NULL
               ,geometry_type VARCHAR
               ,extent GEOMETRY(MULTIPOLYGON, 4326)
               ,crs VARCHAR
