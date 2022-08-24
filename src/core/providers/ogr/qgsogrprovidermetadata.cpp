@@ -20,6 +20,8 @@ email                : nyall dot dawson at gmail dot com
 #include "qgssettings.h"
 #include "qgsmessagelog.h"
 #include "qgsogrtransaction.h"
+#include "qgsogrlayermetadataprovider.h"
+#include "qgslayermetadataproviderregistry.h"
 #include "qgsgeopackageprojectstorage.h"
 #include "qgsapplication.h"
 #include "qgsogrconnpool.h"
@@ -32,6 +34,7 @@ email                : nyall dot dawson at gmail dot com
 #include "qgsgdalutils.h"
 #include "qgsproviderregistry.h"
 #include "qgsvectorfilewriter.h"
+#include "qgsvectorlayer.h"
 
 #include <gdal.h>
 #include <QFileInfo>
@@ -1071,6 +1074,83 @@ bool QgsOgrProviderMetadata::saveLayerMetadata( const QString &uri, const QgsLay
   throw QgsNotSupportedException( QObject::tr( "Storing metadata for the specified uri is not supported" ) );
 }
 
+QList<QgsLayerMetadataProviderResult> QgsOgrProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString, const QgsRectangle &geographicExtent )
+{
+
+  QList<QgsLayerMetadataProviderResult> results;
+  QgsProviderMetadata *md { QgsProviderRegistry::instance()->providerMetadata( QStringLiteral( "ogr" ) ) };
+  Q_ASSERT( md );
+  std::unique_ptr<QgsAbstractDatabaseProviderConnection> conn;
+  conn.reset( static_cast<QgsAbstractDatabaseProviderConnection *>( md->createConnection( uri, {} ) ) );
+  if ( conn )
+  {
+    try
+    {
+      const QList<QgsAbstractDatabaseProviderConnection::TableProperty> cTables { conn->tables() };
+      for ( const QgsAbstractDatabaseProviderConnection::TableProperty &table : std::as_const( cTables ) )
+      {
+        // TODO: open RO when flag will be implemented
+        QgsVectorLayer vl { conn->tableUri( QString(), table.tableName() ), QString( "MD Layer" ), QStringLiteral( "ogr" ) };
+        if ( vl.isValid() )
+        {
+          QgsLayerMetadataProviderResult result;
+          result.metadata = vl.metadata();
+
+          // String filter?
+          if ( ! searchString.isEmpty() )
+          {
+            if ( ! result.metadata.title().contains( searchString, Qt::CaseInsensitive ) &&
+                 ! result.metadata.identifier().contains( searchString, Qt::CaseInsensitive ) &&
+                 ! result.metadata.abstract().contains( searchString, Qt::CaseInsensitive ) )
+            {
+              continue;
+            }
+          }
+
+          const QgsCoordinateReferenceSystem metadataCrs { result.metadata.crs() };
+          QgsCoordinateReferenceSystem destCrs {QgsCoordinateReferenceSystem::fromEpsgId( 4326 ) };
+          QgsRectangle extents;
+
+          const auto cExtents { result.metadata.extent().spatialExtents() };
+          for ( const auto &ext : std::as_const( cExtents ) )
+          {
+            QgsRectangle bbox {  ext.bounds.toRectangle()  };
+            QgsCoordinateTransform ct { ext.extentCrs, QgsCoordinateReferenceSystem::fromEpsgId( 4326 ), vl.transformContext() };
+            ct.transform( bbox );
+            extents.combineExtentWith( bbox );
+          }
+
+          QgsPolygon extentPoly;
+          extentPoly.fromWkt( extents.asWktPolygon() );
+          result.geographicExtent = extentPoly;
+
+          // Filter by extent?
+          if ( ! geographicExtent.isEmpty() && ! geographicExtent.intersects( extentPoly.boundingBox() ) )
+          {
+            continue;
+          }
+
+          result.dataProviderName = QStringLiteral( "ogr" );
+          result.crs = vl.crs().authid();
+          result.abstract = result.metadata.abstract();
+          result.title = result.metadata.title();
+          result.identifier = result.metadata.identifier();
+          result.uri = vl.source();
+          result.geometryType = vl.geometryType();
+          result.layerType = vl.type();
+
+          results.push_back( result );
+        }
+      }
+    }
+    catch ( const QgsProviderConnectionException &ex )
+    {
+      QgsDebugMsg( QStringLiteral( "Error fetching metdadata from connection %1: %2" ).arg( uri, ex.what() ) );
+    }
+  }
+  return results;
+}
+
 QgsTransaction *QgsOgrProviderMetadata::createTransaction( const QString &connString )
 {
   auto ds = QgsOgrProviderUtils::getAlreadyOpenedDataset( connString );
@@ -1085,12 +1165,16 @@ QgsTransaction *QgsOgrProviderMetadata::createTransaction( const QString &connSt
 }
 
 QgsGeoPackageProjectStorage *gGeoPackageProjectStorage = nullptr;   // when not null it is owned by QgsApplication::projectStorageRegistry()
+QgsOgrLayerMetadataProvider *gOgrLayerMetadataProvider = nullptr;   // when not null it is owned by QgsApplication::layerMetadataProviderRegistry()
 
 void QgsOgrProviderMetadata::initProvider()
 {
   Q_ASSERT( !gGeoPackageProjectStorage );
   gGeoPackageProjectStorage = new QgsGeoPackageProjectStorage;
   QgsApplication::projectStorageRegistry()->registerProjectStorage( gGeoPackageProjectStorage );  // takes ownership
+  Q_ASSERT( !gOgrLayerMetadataProvider );
+  gOgrLayerMetadataProvider = new QgsOgrLayerMetadataProvider();
+  QgsApplication::layerMetadataProviderRegistry()->registerLayerMetadataProvider( gOgrLayerMetadataProvider );  // takes ownership
 }
 
 
@@ -1098,6 +1182,8 @@ void QgsOgrProviderMetadata::cleanupProvider()
 {
   QgsApplication::projectStorageRegistry()->unregisterProjectStorage( gGeoPackageProjectStorage );  // destroys the object
   gGeoPackageProjectStorage = nullptr;
+  QgsApplication::layerMetadataProviderRegistry()->unregisterLayerMetadataProvider( gOgrLayerMetadataProvider );
+  gOgrLayerMetadataProvider = nullptr;
   QgsOgrConnPool::cleanupInstance();
   // NOTE: QgsApplication takes care of
   // calling OGRCleanupAll();

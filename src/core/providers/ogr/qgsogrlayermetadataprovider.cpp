@@ -1,8 +1,8 @@
 /***************************************************************************
-  qgsabstractlayermetadataprovider.cpp - QgsAbstractLayerMetadataProvider
+  qgsogrlayermetadataprovider.cpp - QgsOgrLayerMetadataProvider
 
  ---------------------
- begin                : 17.8.2022
+ begin                : 24.8.2022
  copyright            : (C) 2022 by Alessandro Pasotti
  email                : elpaso at itopen dot it
  ***************************************************************************
@@ -13,16 +13,21 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#include "qgsabstractlayermetadataprovider.h"
+#include "qgsogrlayermetadataprovider.h"
 #include "qgsprovidermetadata.h"
 #include "qgsproviderregistry.h"
 
-QgsAbstractLayerMetadataProvider::QgsAbstractLayerMetadataProvider( QObject *parent ) : QObject( parent )
+QgsOgrLayerMetadataProvider::QgsOgrLayerMetadataProvider( QObject *parent ) : QgsAbstractLayerMetadataProvider( parent )
 {
 
 }
 
-QgsLayerMetadataSearchResult QgsAbstractLayerMetadataProvider::search( const QString &searchString, const QgsRectangle &geographicExtent ) const
+QString QgsOgrLayerMetadataProvider::type() const
+{
+  return QStringLiteral( "ogr" );
+}
+
+QgsLayerMetadataSearchResult QgsOgrLayerMetadataProvider::search( const QString &searchString, const QgsRectangle &geographicExtent ) const
 {
   QList<QgsLayerMetadataProviderResult> results;
   QStringList errors;
@@ -30,23 +35,20 @@ QgsLayerMetadataSearchResult QgsAbstractLayerMetadataProvider::search( const QSt
 
   if ( md )
   {
-    const auto cConnections { md->connections( ) };
+    const QMap<QString, QgsAbstractProviderConnection *> cConnections { md->connections( ) };
     for ( const auto &conn : std::as_const( cConnections ) )
     {
-      if ( conn->configuration().value( QStringLiteral( "metadataInDatabase" ), false ).toBool() )
+      try
       {
-        try
+        const QList<QgsLayerMetadataProviderResult> res { md->searchLayerMetadata( conn->uri(), searchString, geographicExtent ) };
+        for ( const auto &result : std::as_const( res ) )
         {
-          const QList<QgsLayerMetadataProviderResult> res { md->searchLayerMetadata( conn->uri(), searchString, geographicExtent ) };
-          for ( const auto &result : std::as_const( res ) )
-          {
-            results.push_back( result );
-          }
+          results.push_back( result );
         }
-        catch ( const QgsProviderConnectionException &ex )
-        {
-          errors.push_back( tr( "An error occourred while searching for metadata in connection %1: %2" ).arg( conn->uri(), ex.what() ) );
-        }
+      }
+      catch ( const QgsProviderConnectionException &ex )
+      {
+        errors.push_back( tr( "An error occourred while searching for metadata in connection %1: %2" ).arg( conn->uri(), ex.what() ) );
       }
     }
   }

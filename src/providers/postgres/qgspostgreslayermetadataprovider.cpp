@@ -14,9 +14,6 @@
  *                                                                         *
  ***************************************************************************/
 #include "qgspostgreslayermetadataprovider.h"
-#include "qgsproviderregistry.h"
-#include "qgsprovidermetadata.h"
-#include "qgsabstractdatabaseproviderconnection.h"
 
 QgsPostgresLayerMetadataProvider::QgsPostgresLayerMetadataProvider( QObject *parent ) : QgsAbstractLayerMetadataProvider( parent )
 {
@@ -28,27 +25,4 @@ QString QgsPostgresLayerMetadataProvider::type() const
   return QStringLiteral( "postgres" );
 }
 
-QList<QgsLayerMetadataProviderResult> QgsPostgresLayerMetadataProvider::search( const QString &searchString ) const
-{
-  QList<QgsLayerMetadataProviderResult> results;
-  QgsProviderMetadata *md { QgsProviderRegistry::instance()->providerMetadata( type( ) ) };
-  if ( md )
-  {
-    const auto cConnections { md->connections( ) };
-    for ( const auto &conn : std::as_const( cConnections ) )
-    {
-      if ( conn->configuration().value( QStringLiteral( "metadataInDatabase" ), false ).toBool() )
-      {
-        QString errorMessage;
-        const QList<QgsLayerMetadataProviderResult> res { md->searchLayerMetadata( conn->uri(), searchString, errorMessage ) };
-        // TODO: log errors
-        for ( const auto &result : std::as_const( res ) )
-        {
-          results.push_back( result );
-        }
-      }
-    }
-  }
-  return results;
-}
 

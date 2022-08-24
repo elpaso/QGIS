@@ -556,11 +556,15 @@ Lists stored layer styles in the provider defined by ``uri``
 .. versionadded:: 3.10
 %End
 
-    virtual QList<QgsLayerMetadataProviderResult> searchLayerMetadata( const QString &uri, const QString &searchString, QString &errCause );
+    virtual QList<QgsLayerMetadataProviderResult> searchLayerMetadata( const QString &uri, const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle() ) throw( QgsProviderConnectionException );
 %Docstring
-Search for the ``searchString`` in the stored layer metadata in the provider defined by ``uri``
+Search in the stored layer metadata in the connection defined by ``uri``,
+optionally limiting the search to the metadata identifier, title and abstract matching
+``searchString`` or to metadata having an extent intersecting ``geographicExtent``.
 The default implementation returns an empty list, data providers may implement
 the search functionality.
+
+:raises QgsProviderConnectionException: 
 
 .. versionadded:: 3.28
 %End

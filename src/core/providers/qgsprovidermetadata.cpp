@@ -240,12 +240,12 @@ int QgsProviderMetadata::listStyles( const QString &, QStringList &, QStringList
   return -1;
 }
 
-QList<QgsLayerMetadataProviderResult> QgsProviderMetadata::searchLayerMetadata(const QString &uri, const QString &searchString , QString &errorMessage )
+QList<QgsLayerMetadataProviderResult> QgsProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString, const QgsRectangle &geographicExtent )
 {
   Q_UNUSED( searchString );
   Q_UNUSED( uri );
-  errorMessage = QObject::tr( "Provider %1 has no %2 method" ).arg( key(), QStringLiteral( "searchLayerMetadata" ) );
-  return {};
+  Q_UNUSED( geographicExtent );
+  throw QgsProviderConnectionException( QObject::tr( "Provider %1 has no %2 method" ).arg( key(), QStringLiteral( "searchLayerMetadata" ) ) );
 }
 
 bool QgsProviderMetadata::styleExists( const QString &, const QString &, QString &errorCause )

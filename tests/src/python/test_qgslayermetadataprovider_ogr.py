@@ -1,5 +1,5 @@
 # coding=utf-8
-""""Test for postgres layer metadata provider
+""""Test for ogr layer metadata provider
 
 .. note:: This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -13,6 +13,7 @@ __date__ = '2022-08-19'
 __copyright__ = 'Copyright 2022, ItOpen'
 
 import os
+import shutil
 
 from qgis.core import (
     QgsVectorLayer,
@@ -23,45 +24,37 @@ from qgis.core import (
     QgsBox3d,
 )
 
-from qgis.PyQt.QtCore import QCoreApplication
+from qgis.PyQt.QtCore import QCoreApplication, QTemporaryDir
 from utilities import compareWkt
 from qgis.testing import start_app, unittest
-from qgslayermetadataprovidertestbase import LayerMetadataProviderTestBase
+from qgslayermetadataprovidertestbase import LayerMetadataProviderTestBase, TEST_DATA_DIR
 
 
 class TestPostgresLayerMetadataProvider(unittest.TestCase, LayerMetadataProviderTestBase):
 
     def getProviderName(self) -> str:
 
-        return 'postgres'
+        return 'ogr'
 
     def getLayer(self) -> QgsVectorLayer:
 
-        return QgsVectorLayer('{} type=Point table="qgis_test"."someData" (geom) sql='.format(self.getConnectionUri()), "someData", self.getProviderName())
+        return QgsVectorLayer('{}|layername=geopackage'.format(self.getConnectionUri()), "someData", self.getProviderName())
 
     def getConnectionUri(self) -> str:
 
-        dbconn = 'service=qgis_test'
-
-        if 'QGIS_PGTEST_DB' in os.environ:
-            dbconn = os.environ['QGIS_PGTEST_DB']
-
-        return dbconn
+        return self.conn
 
     def setUp(self):
 
         super().setUp()
-
-        dbconn = 'service=qgis_test'
-
-        if 'QGIS_PGTEST_DB' in os.environ:
-            dbconn = os.environ['QGIS_PGTEST_DB']
-
-        md = QgsProviderRegistry.instance().providerMetadata('postgres')
+        self.temp_dir = QTemporaryDir()
+        self.temp_path = self.temp_dir.path()
+        srcpath = os.path.join(TEST_DATA_DIR, 'provider')
+        shutil.copy(os.path.join(srcpath, 'geopackage.gpkg'), self.temp_path)
+        self.conn = os.path.join(self.temp_path, 'geopackage.gpkg')
+        md = QgsProviderRegistry.instance().providerMetadata('ogr')
         conn = md.createConnection(self.getConnectionUri(), {})
-        conn.execSql('DROP TABLE IF EXISTS qgis_test.qgis_layer_metadata')
-        conn.setConfiguration({'metadataInDatabase': True})
-        conn.store('PG Metadata Enabled Connection')
+        conn.store('OGR Metadata Enabled Connection')
 
 
 if __name__ == '__main__':

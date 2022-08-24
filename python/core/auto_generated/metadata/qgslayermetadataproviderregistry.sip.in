@@ -10,6 +10,11 @@
 
 
 
+
+%ModuleHeaderCode
+#include "qgsabstractlayermetadataprovider.h"
+%End
+
 class QgsLayerMetadataProviderRegistry : QObject
 {
 %Docstring(signature="appended")
@@ -43,11 +48,10 @@ Unregisters a layer metadata provider and destroys its instance
 Returns metadata provider implementation if the type matches one. Returns ``None`` otherwise.
 %End
 
-    QList<QgsLayerMetadataProviderResult> search( const QString &searchString );
+    QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle() );
 %Docstring
-Searchs for layers in the registered layer metadata providers
+Searchs for layers in all the registered layer metadata providers, optionally filtering by ``searchString`` and ``geographicExtent``.
 %End
-
 
 };
 

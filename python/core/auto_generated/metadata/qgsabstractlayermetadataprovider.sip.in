@@ -12,14 +12,21 @@
 struct QgsLayerMetadataProviderResult
 {
   QString identifier;
+  QString title;
   QString abstract;
-  QgsGeometry extent;
+  QgsPolygon geographicExtent;
   QgsWkbTypes::GeometryType geometryType;
   QString crs;
   QString uri;
   QString dataProviderName;
-  QString layerType;
+  QgsMapLayerType layerType;
   QgsLayerMetadata metadata;
+};
+
+struct QgsLayerMetadataSearchResult
+{
+  QList<QgsLayerMetadataProviderResult> metadata;
+  QStringList errors;
 };
 
 class QgsAbstractLayerMetadataProvider : QObject
@@ -38,7 +45,7 @@ Layer metadata provider backends interface.
 
     virtual QString type() const = 0;
 
-    virtual QList<QgsLayerMetadataProviderResult> search( const QString &searchString ) const = 0;
+    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle() ) const;
 
 
 };

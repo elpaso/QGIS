@@ -280,6 +280,7 @@ set(QGIS_CORE_SRCS
 
   providers/meshmemory/qgsmeshmemorydataprovider.cpp
 
+  providers/ogr/qgsogrlayermetadataprovider.cpp
   providers/ogr/qgsogrprovider.cpp
   providers/ogr/qgsogrprovidermetadata.cpp
   providers/ogr/qgsogrproviderutils.cpp
@@ -1694,6 +1695,7 @@ set(QGIS_CORE_HDRS
 
   providers/meshmemory/qgsmeshmemorydataprovider.h
 
+  providers/ogr/qgsogrlayermetadataprovider.h
   providers/ogr/qgsgeopackagedataitems.h
   providers/ogr/qgsgeopackageprojectstorage.h
   providers/ogr/qgsgeopackageproviderconnection.h

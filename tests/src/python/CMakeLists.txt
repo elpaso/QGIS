@@ -438,6 +438,7 @@ endif()
 
 if (ENABLE_PGTEST)
   ADD_PYTHON_TEST(PyQgsImportIntoPostGIS test_processing_importintopostgis.py)
+  ADD_PYTHON_TEST(PyQgsLayerMetadataProviderPostgres test_qgslayermetadataprovider_postgres.py)
   ADD_PYTHON_TEST(PyQgsVectorFileWriterPostgres test_qgsvectorfilewriter_postgres.py)
   ADD_PYTHON_TEST(PyQgsQueryResultModel test_qgsqueryresultmodel.py)
   ADD_PYTHON_TEST(PyQgsVectorLayerUtilsPostgres test_qgsvectorlayerutils_postgres.py)

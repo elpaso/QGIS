@@ -24,7 +24,14 @@
 #include "qgslayermetadata.h"
 
 class QgsAbstractLayerMetadataProvider;
-struct QgsLayerMetadataProviderResult;
+struct QgsLayerMetadataSearchResult;
+
+
+#ifdef SIP_RUN
+% ModuleHeaderCode
+#include "qgsabstractlayermetadataprovider.h"
+% End
+#endif
 
 /**
  * \ingroup core
@@ -36,6 +43,7 @@ struct QgsLayerMetadataProviderResult;
  */
 class CORE_EXPORT QgsLayerMetadataProviderRegistry : public QObject
 {
+
     Q_OBJECT
   public:
     explicit QgsLayerMetadataProviderRegistry( QObject *parent = nullptr );
@@ -51,10 +59,8 @@ class CORE_EXPORT QgsLayerMetadataProviderRegistry : public QObject
     //! Returns metadata provider implementation if the type matches one. Returns NULLPTR otherwise.
     QgsAbstractLayerMetadataProvider *layerMetadataProviderFromType( const QString &type );
 
-    //! Searchs for layers in the registered layer metadata providers
-    QList<QgsLayerMetadataProviderResult> search( const QString &searchString );
-
-    // TODO: search filters
+    //! Searchs for layers in all the registered layer metadata providers, optionally filtering by \a searchString and \a geographicExtent.
+    QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle() );
 
   private:
 
