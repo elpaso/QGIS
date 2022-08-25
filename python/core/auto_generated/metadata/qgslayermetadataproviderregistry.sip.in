@@ -10,7 +10,6 @@
 
 
 
-
 %ModuleHeaderCode
 #include "qgsabstractlayermetadataprovider.h"
 %End
@@ -48,9 +47,10 @@ Unregisters a layer metadata provider and destroys its instance
 Returns metadata provider implementation if the type matches one. Returns ``None`` otherwise.
 %End
 
-    QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle() );
+    QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback *feedback = 0 );
 %Docstring
-Searchs for layers in all the registered layer metadata providers, optionally filtering by ``searchString`` and ``geographicExtent``.
+Searchs for layers in all the registered layer metadata providers, optionally filtering by ``searchString``
+and ``geographicExtent``, an optional ``feedback`` can be used to monitor and control the search process.
 %End
 
 };

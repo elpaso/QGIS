@@ -240,8 +240,9 @@ int QgsProviderMetadata::listStyles( const QString &, QStringList &, QStringList
   return -1;
 }
 
-QList<QgsLayerMetadataProviderResult> QgsProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString, const QgsRectangle &geographicExtent )
+QList<QgsLayerMetadataProviderResult> QgsProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback )
 {
+  Q_UNUSED( feedback );
   Q_UNUSED( searchString );
   Q_UNUSED( uri );
   Q_UNUSED( geographicExtent );

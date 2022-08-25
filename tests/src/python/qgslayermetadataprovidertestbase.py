@@ -81,7 +81,7 @@ class LayerMetadataProviderTestBase():
         self.assertEqual(m.abstract(), 'QGIS Some Data')
         self.assertEqual(m.crs().authid(), 'EPSG:4326')
 
-        del(self.test_layer)
+        del self.test_layer
 
         reg = QGIS_APP.layerMetadataProviderRegistry()
         md_provider = reg.layerMetadataProviderFromType(self.getProviderName())

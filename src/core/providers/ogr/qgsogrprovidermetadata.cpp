@@ -1075,7 +1075,7 @@ bool QgsOgrProviderMetadata::saveLayerMetadata( const QString &uri, const QgsLay
   throw QgsNotSupportedException( QObject::tr( "Storing metadata for the specified uri is not supported" ) );
 }
 
-QList<QgsLayerMetadataProviderResult> QgsOgrProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString, const QgsRectangle &geographicExtent )
+QList<QgsLayerMetadataProviderResult> QgsOgrProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback )
 {
 
   QList<QgsLayerMetadataProviderResult> results;
@@ -1083,7 +1083,7 @@ QList<QgsLayerMetadataProviderResult> QgsOgrProviderMetadata::searchLayerMetadat
   Q_ASSERT( md );
   std::unique_ptr<QgsAbstractDatabaseProviderConnection> conn;
   conn.reset( static_cast<QgsAbstractDatabaseProviderConnection *>( md->createConnection( uri, {} ) ) );
-  if ( conn )
+  if ( conn && ( ! feedback || ! feedback->isCanceled() ) )
   {
     try
     {
@@ -1105,6 +1105,12 @@ QList<QgsLayerMetadataProviderResult> QgsOgrProviderMetadata::searchLayerMetadat
       const QList<QVariantList> cMetadataResults { conn->executeSql( searchQuery ) };
       for ( const QVariantList &mdRow : std::as_const( cMetadataResults ) )
       {
+
+        if ( feedback && feedback->isCanceled() )
+        {
+          break;
+        }
+
         // Read MD from the XML
         QDomDocument doc;
         doc.setContent( mdRow[1].toString() );

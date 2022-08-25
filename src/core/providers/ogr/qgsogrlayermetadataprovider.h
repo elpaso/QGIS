@@ -26,7 +26,7 @@ class QgsOgrLayerMetadataProvider : public QgsAbstractLayerMetadataProvider
     // QgsAbstractLayerMetadataProvider interface
   public:
     QString type() const override;
-    QgsLayerMetadataSearchResult search( const QString &searchString, const QgsRectangle &geographicExtent ) const override;
+    QgsLayerMetadataSearchResult search( const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback = nullptr ) const override;
 };
 
 #endif // QGSOGRLAYERMETADATAPROVIDER_H

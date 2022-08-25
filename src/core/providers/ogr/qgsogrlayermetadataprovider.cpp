@@ -16,6 +16,7 @@
 #include "qgsogrlayermetadataprovider.h"
 #include "qgsprovidermetadata.h"
 #include "qgsproviderregistry.h"
+#include "qgsfeedback.h"
 
 QgsOgrLayerMetadataProvider::QgsOgrLayerMetadataProvider( QObject *parent ) : QgsAbstractLayerMetadataProvider( parent )
 {
@@ -27,20 +28,26 @@ QString QgsOgrLayerMetadataProvider::type() const
   return QStringLiteral( "ogr" );
 }
 
-QgsLayerMetadataSearchResult QgsOgrLayerMetadataProvider::search( const QString &searchString, const QgsRectangle &geographicExtent ) const
+QgsLayerMetadataSearchResult QgsOgrLayerMetadataProvider::search( const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback ) const
 {
   QList<QgsLayerMetadataProviderResult> results;
   QStringList errors;
   QgsProviderMetadata *md { QgsProviderRegistry::instance()->providerMetadata( type( ) ) };
 
-  if ( md )
+  if ( md && ( ! feedback || ! feedback->isCanceled( ) ) )
   {
     const QMap<QString, QgsAbstractProviderConnection *> cConnections { md->connections( ) };
     for ( const auto &conn : std::as_const( cConnections ) )
     {
+
+      if ( feedback && feedback->isCanceled() )
+      {
+        break;
+      }
+
       try
       {
-        const QList<QgsLayerMetadataProviderResult> res { md->searchLayerMetadata( conn->uri(), searchString, geographicExtent ) };
+        const QList<QgsLayerMetadataProviderResult> res { md->searchLayerMetadata( conn->uri(), searchString, geographicExtent, feedback ) };
         for ( const auto &result : std::as_const( res ) )
         {
           results.push_back( result );

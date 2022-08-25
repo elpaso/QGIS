@@ -6309,13 +6309,13 @@ bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const Q
   return saved;
 }
 
-QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString, const QgsRectangle &geographicExtent )
+QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadata::searchLayerMetadata( const QString &uri, const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback )
 {
   QList<QgsLayerMetadataProviderResult> results;
   QgsDataSourceUri dsUri( uri );
 
   QgsPostgresConn *conn = QgsPostgresConn::connectDb( dsUri.connectionInfo( false ), false );
-  if ( conn )
+  if ( conn && ( ! feedback || ! feedback->isCanceled() ) )
   {
 
     QString schemaName { QStringLiteral( "public" ) };
@@ -6367,6 +6367,12 @@ QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadata::searchLayerMe
 
     for ( int row = 0; row < res.PQntuples( ); ++row )
     {
+
+      if ( feedback && feedback->isCanceled() )
+      {
+        break;
+      }
+
       QgsLayerMetadataProviderResult result;
       result.dataProviderName = QStringLiteral( "postgres" );
       QgsDataSourceUri uri { dsUri };

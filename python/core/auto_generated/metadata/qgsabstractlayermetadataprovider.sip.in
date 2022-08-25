@@ -9,6 +9,8 @@
 
 
 
+
+
 struct QgsLayerMetadataProviderResult
 {
   QString identifier;
@@ -50,7 +52,7 @@ Returns the name of the layer metadata provider implementation, usually the name
 but if can be another unique identifier.
 %End
 
-    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle() ) const;
+    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback * = 0 ) const;
 %Docstring
 Searches for metadata optionally filtering by ``searchString`` and ``geographicExtent``.
 

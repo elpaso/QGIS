@@ -25,6 +25,9 @@
 #include "qgsrectangle.h"
 #include "qgspolygon.h"
 
+
+class QgsFeedback;
+
 /**
  * \ingroup core
  * \brief Result record of layer metadata provider search.
@@ -100,7 +103,7 @@ class CORE_EXPORT QgsAbstractLayerMetadataProvider : public QObject
      * \param geographicExtent defines a filter where the spatial extent matches the given extent in EPSG:4326
      * \returns a QgsLayerMetadataSearchResult object with a list of metadata and errors
      */
-    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle() ) const;
+    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback * = nullptr ) const;
 
 };
 

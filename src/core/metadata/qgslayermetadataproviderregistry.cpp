@@ -15,6 +15,7 @@
  ***************************************************************************/
 #include "qgslayermetadataproviderregistry.h"
 #include "qgsabstractlayermetadataprovider.h"
+#include "qgsfeedback.h"
 
 QgsLayerMetadataProviderRegistry::QgsLayerMetadataProviderRegistry( QObject *parent ) : QObject( parent )
 {
@@ -41,11 +42,17 @@ QgsAbstractLayerMetadataProvider *QgsLayerMetadataProviderRegistry::layerMetadat
   return mMetadataProviders.value( type, nullptr );
 }
 
-QgsLayerMetadataSearchResult QgsLayerMetadataProviderRegistry::search( const QString &searchString, const QgsRectangle &geographicExtent )
+QgsLayerMetadataSearchResult QgsLayerMetadataProviderRegistry::search( const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback )
 {
   QgsLayerMetadataSearchResult results;
   for ( auto it = mMetadataProviders.cbegin(); it != mMetadataProviders.cend(); ++it )
   {
+
+    if ( feedback && feedback->isCanceled() )
+    {
+      break;
+    }
+
     const QgsLayerMetadataSearchResult providerResults { it.value()->search( searchString, geographicExtent ) };
     for ( const QgsLayerMetadataProviderResult &metadata : std::as_const( providerResults.metadata ) )
     {
