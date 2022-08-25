@@ -113,7 +113,3 @@ class LayerMetadataProviderTestBase():
         self.assertEqual(len(results.metadata), 0)
         results = md_provider.search('QGIS', test_layer.extent())
         self.assertEqual(len(results.metadata), 1)
-
-
-if __name__ == '__main__':
-    unittest.main()
