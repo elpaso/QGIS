@@ -53,13 +53,15 @@ struct CORE_EXPORT QgsLayerMetadataProviderResult
   QString dataProviderName;
   //! Layer type (vector, raster etc.)
   QgsMapLayerType layerType;
-  //! Metadata QMD (XML)
+  //! Metadata standard uri, QGIS QMD metadata format uses "http://mrcc.com/qgis.dtd"
+  QString standardUri;
+  //! Metadata XML
   QgsLayerMetadata metadata;
 };
 
 /**
  * \ingroup core
- * \brief Result of a layer metadata search, it contains
+ * \brief List of results from a layer metadata search, it contains
  * the records of the layer metadata provider that matched the search
  * criteria and the list of the errors that occourred while searching
  * for metadata.
@@ -68,7 +70,9 @@ struct CORE_EXPORT QgsLayerMetadataProviderResult
  */
 struct CORE_EXPORT QgsLayerMetadataSearchResult
 {
+  //! List of metadata that matched the search criteria
   QList<QgsLayerMetadataProviderResult> metadata;
+  //! List of errors occourred while searching
   QStringList errors;
 };
 
@@ -84,10 +88,19 @@ class CORE_EXPORT QgsAbstractLayerMetadataProvider : public QObject
   public:
     explicit QgsAbstractLayerMetadataProvider( QObject *parent = nullptr );
 
+    /**
+     * Returns the name of the layer metadata provider implementation, usually the name of the data provider
+     * but if can be another unique identifier.
+     */
     virtual QString type() const = 0;
 
+    /**
+     * Searches for metadata optionally filtering by \a searchString and \a geographicExtent.
+     * \param searchString defines a filter to limit the results to the records where the search string appears in the "identifier", "title" or "abstract" metadata fields, a case-insensitive comparison is used for the match.
+     * \param geographicExtent defines a filter where the spatial extent matches the given extent in EPSG:4326
+     * \returns a QgsLayerMetadataSearchResult object with a list of metadata and errors
+     */
     virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle() ) const;
-
 
 };
 

@@ -6153,7 +6153,7 @@ bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const Q
               ,title TEXT NOT NULL
               ,abstract TEXT
               ,geometry_type VARCHAR
-              ,extent GEOMETRY(MULTIPOLYGON, 4326)
+              ,extent GEOMETRY(POLYGON, 4326)
               ,crs VARCHAR
               ,layer_type VARCHAR NOT NULL
               ,qmd XML NOT NULL
@@ -6174,18 +6174,16 @@ bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const Q
 
   const QgsCoordinateReferenceSystem metadataCrs { metadata.crs() };
   QgsCoordinateReferenceSystem destCrs {QgsCoordinateReferenceSystem::fromEpsgId( 4326 ) };
-  QVector<QgsGeometry> extents;
+  QgsRectangle extents;
 
   const auto cExtents { metadata.extent().spatialExtents() };
   for ( const auto &ext : std::as_const( cExtents ) )
   {
-    QgsGeometry geom { QgsGeometry::fromRect( ext.bounds.toRectangle() ) };
+    QgsRectangle bbox {  ext.bounds.toRectangle()  };
     QgsCoordinateTransform ct { ext.extentCrs, QgsCoordinateReferenceSystem::fromEpsgId( 4326 ), QgsProject::instance()->transformContext() };
-    geom.transform( ct );
-    extents.append( geom );
+    ct.transform( bbox );
+    extents.combineExtentWith( bbox );
   }
-
-  const QgsGeometry extent { QgsGeometry::collectGeometry( extents )};
 
   // export metadata to XML
   QDomImplementation domImplementation;
@@ -6236,7 +6234,7 @@ bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const Q
                       .arg( QgsPostgresConn::quotedValue( metadata.title() ) )
                       .arg( QgsPostgresConn::quotedValue( metadata.abstract() ) )
                       .arg( QgsPostgresConn::quotedValue( wkbTypeString ) )
-                      .arg( QgsPostgresConn::quotedValue( extent.asWkt() ) )
+                      .arg( QgsPostgresConn::quotedValue( extents.asWktPolygon() ) )
                       .arg( QgsPostgresConn::quotedValue( metadataCrs.authid() ) )
                       // Must be the final .arg replacement - see above
                       .arg( QgsPostgresConn::quotedValue( metadataXml ) );
@@ -6293,7 +6291,7 @@ bool QgsPostgresProviderMetadata::saveLayerMetadata( const QString &uri, const Q
                 .arg( QgsPostgresConn::quotedValue( metadata.title() ) )
                 .arg( QgsPostgresConn::quotedValue( metadata.abstract() ) )
                 .arg( QgsPostgresConn::quotedValue( wkbTypeString ) )
-                .arg( QgsPostgresConn::quotedValue( extent.asWkt() ) )
+                .arg( QgsPostgresConn::quotedValue( extents.asWktPolygon() ) )
                 .arg( QgsPostgresConn::quotedValue( metadataCrs.authid() ) )
                 // Must be the final .arg replacement - see above
                 .arg( QgsPostgresConn::quotedValue( metadataXml ) );
@@ -6379,6 +6377,7 @@ QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadata::searchLayerMe
       result.identifier = res.PQgetvalue( 0, 4 );
       result.title = res.PQgetvalue( 0, 5 );
       result.abstract = res.PQgetvalue( 0, 6 );
+      result.standardUri = QStringLiteral( "http://mrcc.com/qgis.dtd" );
       result.geometryType = QgsWkbTypes::geometryType( QgsWkbTypes::parseType( res.PQgetvalue( 0, 7 ) ) );
       QgsPolygon geographicExtent;
       geographicExtent.fromWkt( res.PQgetvalue( 0, 8 ) );

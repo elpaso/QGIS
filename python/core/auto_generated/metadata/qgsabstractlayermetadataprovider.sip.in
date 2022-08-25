@@ -20,6 +20,7 @@ struct QgsLayerMetadataProviderResult
   QString uri;
   QString dataProviderName;
   QgsMapLayerType layerType;
+  QString standardUri;
   QgsLayerMetadata metadata;
 };
 
@@ -44,9 +45,20 @@ Layer metadata provider backends interface.
     explicit QgsAbstractLayerMetadataProvider( QObject *parent = 0 );
 
     virtual QString type() const = 0;
+%Docstring
+Returns the name of the layer metadata provider implementation, usually the name of the data provider
+but if can be another unique identifier.
+%End
 
     virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle() ) const;
+%Docstring
+Searches for metadata optionally filtering by ``searchString`` and ``geographicExtent``.
 
+:param searchString: defines a filter to limit the results to the records where the search string appears in the "identifier", "title" or "abstract" metadata fields, a case-insensitive comparison is used for the match.
+:param geographicExtent: defines a filter where the spatial extent matches the given extent in EPSG:4326
+
+:return: a :py:class:`QgsLayerMetadataSearchResult` object with a list of metadata and errors
+%End
 
 };
 

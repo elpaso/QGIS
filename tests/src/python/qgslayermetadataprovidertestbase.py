@@ -22,6 +22,7 @@ from qgis.core import (
     QgsLayerMetadata,
     QgsProviderMetadata,
     QgsBox3d,
+    QgsRectangle,
 )
 
 from qgis.PyQt.QtCore import QCoreApplication
@@ -96,6 +97,7 @@ class LayerMetadataProviderTestBase():
         self.assertEqual(result.crs, 'EPSG:4326')
         self.assertEqual(result.geometryType, QgsWkbTypes.PointGeometry)
         self.assertEqual(result.dataProviderName, self.getProviderName())
+        self.assertEqual(result.standardUri, 'http://mrcc.com/qgis.dtd')
         self.assertTrue(compareWkt(result.geographicExtent.asWkt(), extent_as_wkt))
 
         # Check layer load
@@ -103,6 +105,14 @@ class LayerMetadataProviderTestBase():
         self.assertTrue(test_layer.isValid())
 
         # Test search filters
+        results = md_provider.search('', QgsRectangle(0, 0, 1, 1))
+        self.assertEqual(len(results.metadata), 0)
+        results = md_provider.search('', test_layer.extent())
+        self.assertEqual(len(results.metadata), 1)
+        results = md_provider.search('NOT HERE!', test_layer.extent())
+        self.assertEqual(len(results.metadata), 0)
+        results = md_provider.search('QGIS', test_layer.extent())
+        self.assertEqual(len(results.metadata), 1)
 
 
 if __name__ == '__main__':
