@@ -1,5 +1,5 @@
 /***************************************************************************
-  qgspostgreslayermetadataprovider.cpp - QgsPostgresLayerMetadataProvider
+  qgspostgresrasterlayermetadataprovider.cpp - QgsPostgresRasterLayerMetadataProvider
 
  ---------------------
  begin                : 17.8.2022
@@ -13,31 +13,34 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#include "qgspostgreslayermetadataprovider.h"
+#include "qgspostgresrasterlayermetadataprovider.h"
 #include "qgsproviderregistry.h"
-#include "qgsprovidermetadata.h"
-#include "qgsabstractproviderconnection.h"
 #include "qgsfeedback.h"
+#include "qgsabstractproviderconnection.h"
+#include "qgsprovidermetadata.h"
 
-QgsPostgresLayerMetadataProvider::QgsPostgresLayerMetadataProvider( QObject *parent ) : QgsAbstractLayerMetadataProvider( parent )
+QgsPostgresRasterLayerMetadataProvider::QgsPostgresRasterLayerMetadataProvider( QObject *parent ) : QgsAbstractLayerMetadataProvider( parent )
 {
 
 }
 
-QString QgsPostgresLayerMetadataProvider::type() const
+QString QgsPostgresRasterLayerMetadataProvider::type() const
 {
-  return QStringLiteral( "postgres" );
+  return QStringLiteral( "postgresraster" );
 }
 
-QgsLayerMetadataSearchResult QgsPostgresLayerMetadataProvider::search( const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback ) const
+QgsLayerMetadataSearchResult QgsPostgresRasterLayerMetadataProvider::search( const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback ) const
 {
   QList<QgsLayerMetadataProviderResult> results;
   QStringList errors;
-  QgsProviderMetadata *md { QgsProviderRegistry::instance()->providerMetadata( QStringLiteral( "postgres" ) ) };
 
-  if ( md && ( ! feedback || ! feedback->isCanceled() ) )
+  // PG raster does not have its own connections, get them from vector PG
+  QgsProviderMetadata *pgMd { QgsProviderRegistry::instance()->providerMetadata( QStringLiteral( "postgres" ) ) };
+  QgsProviderMetadata *md { QgsProviderRegistry::instance()->providerMetadata( QStringLiteral( "postgresraster" ) ) };
+
+  if ( md && pgMd && ( ! feedback || ! feedback->isCanceled() ) )
   {
-    const QMap<QString, QgsAbstractProviderConnection *> cConnections { md->connections( ) };
+    const QMap<QString, QgsAbstractProviderConnection *> cConnections { pgMd->connections( ) };
     for ( const QgsAbstractProviderConnection *conn : std::as_const( cConnections ) )
     {
 

@@ -16,6 +16,7 @@ import os
 
 from qgis.core import (
     QgsVectorLayer,
+    QgsRasterLayer,
     QgsMapLayerType,
     QgsProviderRegistry,
     QgsWkbTypes,
@@ -37,7 +38,7 @@ class LayerMetadataProviderTestBase():
     """Base test for layer metadata providers
 
     Provider tests must implement:
-    - getLayer() -> QgsVectorLayer
+    - getLayer() -> return a QgsVectorLayer or a QgsRasterLayer
     - getProviderName() -> str returns the name of the data provider to be tested ('ogr', 'postgres' ...)
     """
 
@@ -54,6 +55,8 @@ class LayerMetadataProviderTestBase():
         self.test_layer = self.getLayer()
         self.assertTrue(self.test_layer.isValid())
         extent_as_wkt = self.test_layer.extent().asWktPolygon()
+        layer_type = self.test_layer.type()
+        layer_authid = self.test_layer.crs().authid()
 
         m = self.test_layer.metadata()
         m.setAbstract('QGIS Some Data')
@@ -79,7 +82,7 @@ class LayerMetadataProviderTestBase():
         self.assertEqual(m.title(), 'QGIS Test Tile')
         self.assertEqual(m.identifier(), 'MD012345')
         self.assertEqual(m.abstract(), 'QGIS Some Data')
-        self.assertEqual(m.crs().authid(), 'EPSG:4326')
+        self.assertEqual(m.crs().authid(), layer_authid)
 
         del self.test_layer
 
@@ -93,15 +96,23 @@ class LayerMetadataProviderTestBase():
         self.assertEqual(result.abstract, 'QGIS Some Data')
         self.assertEqual(result.identifier, 'MD012345')
         self.assertEqual(result.title, 'QGIS Test Tile')
-        self.assertEqual(result.layerType, QgsMapLayerType.VectorLayer)
-        self.assertEqual(result.crs, 'EPSG:4326')
-        self.assertEqual(result.geometryType, QgsWkbTypes.PointGeometry)
+        self.assertEqual(result.layerType, layer_type)
+        self.assertEqual(result.crs, layer_authid)
+        # For raster is unknown
+        if layer_type != QgsMapLayerType.VectorLayer:
+            self.assertEqual(result.geometryType, QgsWkbTypes.UnknownGeometry)
+        else:
+            self.assertEqual(result.geometryType, QgsWkbTypes.PointGeometry)
         self.assertEqual(result.dataProviderName, self.getProviderName())
         self.assertEqual(result.standardUri, 'http://mrcc.com/qgis.dtd')
         self.assertTrue(compareWkt(result.geographicExtent.asWkt(), extent_as_wkt))
 
         # Check layer load
-        test_layer = QgsVectorLayer(result.uri, 'PG MD Layer', result.dataProviderName)
+        if layer_type == QgsMapLayerType.VectorLayer:
+            test_layer = QgsVectorLayer(result.uri, 'PG MD Layer', result.dataProviderName)
+        else:
+            test_layer = QgsRasterLayer(result.uri, 'PG MD Layer', result.dataProviderName)
+
         self.assertTrue(test_layer.isValid())
 
         # Test search filters

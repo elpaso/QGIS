@@ -98,12 +98,13 @@ class CORE_EXPORT QgsAbstractLayerMetadataProvider : public QObject
     virtual QString type() const = 0;
 
     /**
-     * Searches for metadata optionally filtering by \a searchString and \a geographicExtent.
+     * Searches for metadata optionally filtering by search string and geographic extent.
      * \param searchString defines a filter to limit the results to the records where the search string appears in the "identifier", "title" or "abstract" metadata fields, a case-insensitive comparison is used for the match.
      * \param geographicExtent defines a filter where the spatial extent matches the given extent in EPSG:4326
+     * \param feedback can be used to monitor and control the search process.
      * \returns a QgsLayerMetadataSearchResult object with a list of metadata and errors
      */
-    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback * = nullptr ) const;
+    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback * = nullptr ) const = 0;
 
 };
 

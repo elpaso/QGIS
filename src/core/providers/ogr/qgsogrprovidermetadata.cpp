@@ -1102,7 +1102,7 @@ QList<QgsLayerMetadataProviderResult> QgsOgrProviderMetadata::searchLayerMetadat
         AND md.md_scope = 'dataset'
       )SQL" ) };
 
-      const QList<QVariantList> cMetadataResults { conn->executeSql( searchQuery ) };
+      const QList<QVariantList> cMetadataResults { conn->executeSql( searchQuery, feedback ) };
       for ( const QVariantList &mdRow : std::as_const( cMetadataResults ) )
       {
 

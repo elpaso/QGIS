@@ -15,8 +15,11 @@ __copyright__ = 'Copyright 2022, ItOpen'
 import os
 
 from qgis.core import (
-    QgsVectorLayer,
+    QgsRasterLayer,
+    QgsMapLayerType,
     QgsProviderRegistry,
+    QgsWkbTypes,
+    QgsLayerMetadata,
 )
 
 from qgis.PyQt.QtCore import QCoreApplication
@@ -29,11 +32,11 @@ class TestPostgresLayerMetadataProvider(unittest.TestCase, LayerMetadataProvider
 
     def getProviderName(self) -> str:
 
-        return 'postgres'
+        return 'postgresraster'
 
     def getLayer(self):
 
-        return QgsVectorLayer('{} type=Point table="qgis_test"."someData" (geom) sql='.format(self.getConnectionUri()), "someData", self.getProviderName())
+        return QgsRasterLayer('{} table="qgis_test"."Raster1" (Rast)'.format(self.getConnectionUri()), "someData", self.getProviderName())
 
     def getConnectionUri(self) -> str:
 

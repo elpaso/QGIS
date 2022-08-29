@@ -52,12 +52,13 @@ Returns the name of the layer metadata provider implementation, usually the name
 but if can be another unique identifier.
 %End
 
-    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback * = 0 ) const;
+    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback * = 0 ) const = 0;
 %Docstring
-Searches for metadata optionally filtering by ``searchString`` and ``geographicExtent``.
+Searches for metadata optionally filtering by search string and geographic extent.
 
 :param searchString: defines a filter to limit the results to the records where the search string appears in the "identifier", "title" or "abstract" metadata fields, a case-insensitive comparison is used for the match.
 :param geographicExtent: defines a filter where the spatial extent matches the given extent in EPSG:4326
+:param feedback: can be used to monitor and control the search process.
 
 :return: a :py:class:`QgsLayerMetadataSearchResult` object with a list of metadata and errors
 %End

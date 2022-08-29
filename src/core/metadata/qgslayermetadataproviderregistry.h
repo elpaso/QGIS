@@ -39,6 +39,7 @@ class QgsFeedback;
  *
  * This is a singleton that should be accessed through QgsApplication::layerMetadataProviderRegistry().
  *
+ * \see QgsAbstractLayerMetadataProvider
  * \since QGIS 3.28
  */
 class CORE_EXPORT QgsLayerMetadataProviderRegistry : public QObject
@@ -46,17 +47,19 @@ class CORE_EXPORT QgsLayerMetadataProviderRegistry : public QObject
 
     Q_OBJECT
   public:
+
+    //! Creates the layer metadata provider registry, with an optional \a parent
     explicit QgsLayerMetadataProviderRegistry( QObject *parent = nullptr );
 
-    //! Registers a layer metadata provider and takes ownership of it
+    //! Registers a layer metadata provider \a metadataProvider and takes ownership of it
     void registerLayerMetadataProvider( QgsAbstractLayerMetadataProvider *metadataProvider SIP_TRANSFER );
 
-    //! Unregisters a layer metadata provider and destroys its instance
+    //! Unregisters a layer metadata provider \a metadataProvider and destroys its instance
     void unregisterLayerMetadataProvider( QgsAbstractLayerMetadataProvider *metadataProvider );
 
     QList<QgsAbstractLayerMetadataProvider *> layerMetadataProviders() const;
 
-    //! Returns metadata provider implementation if the type matches one. Returns NULLPTR otherwise.
+    //! Returns metadata provider implementation if the \a type matches one. Returns NULLPTR otherwise.
     QgsAbstractLayerMetadataProvider *layerMetadataProviderFromType( const QString &type );
 
     /**

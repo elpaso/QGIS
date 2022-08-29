@@ -1,5 +1,5 @@
 /***************************************************************************
-  qgsabstractlayermetadataprovider.cpp - QgsAbstractLayerMetadataProvider
+  qgspostgresrasterlayermetadataprovider.h - QgsPostgresRasterLayerMetadataProvider
 
  ---------------------
  begin                : 17.8.2022
@@ -13,13 +13,17 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
+#ifndef QGSPOSTGRESRASTERLAYERMETADATAPROVIDER_H
+#define QGSPOSTGRESRASTERLAYERMETADATAPROVIDER_H
+
 #include "qgsabstractlayermetadataprovider.h"
-#include "qgsprovidermetadata.h"
-#include "qgsproviderregistry.h"
-#include "qgsfeedback.h"
 
-QgsAbstractLayerMetadataProvider::QgsAbstractLayerMetadataProvider( QObject *parent ) : QObject( parent )
+class QgsPostgresRasterLayerMetadataProvider : public QgsAbstractLayerMetadataProvider
 {
+  public:
+    explicit QgsPostgresRasterLayerMetadataProvider( QObject *parent = nullptr );
+    QString type() const override;
+    QgsLayerMetadataSearchResult search( const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback ) const override;
+};
 
-}
-
+#endif // QGSPOSTGRESRASTERLAYERMETADATAPROVIDER_H
