@@ -38,12 +38,8 @@ class QgsFeedback;
  */
 struct CORE_EXPORT QgsLayerMetadataProviderResult
 {
-  //! Metadata identifier
-  QString identifier;
-  //! Metadata title
-  QString title;
-  //! Metadata abstract
-  QString abstract;
+  //! Metadata
+  QgsLayerMetadata metadata;
   //! Metadata extent in EPSG:4326
   QgsPolygon geographicExtent;
   //! Layer geometry type (Point, Polygon, Linestring)
@@ -58,8 +54,15 @@ struct CORE_EXPORT QgsLayerMetadataProviderResult
   QgsMapLayerType layerType;
   //! Metadata standard uri, QGIS QMD metadata format uses "http://mrcc.com/qgis.dtd"
   QString standardUri;
-  //! Metadata XML
-  QgsLayerMetadata metadata;
+
+  // Convenience accessors to metadata fields:
+
+  //! Metadata identifier
+  QString identifier() const;
+  //! Metadata title
+  QString title() const;
+  //! Metadata abstract
+  QString abstract() const;
 };
 
 /**

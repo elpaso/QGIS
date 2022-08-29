@@ -13,9 +13,7 @@
 
 struct QgsLayerMetadataProviderResult
 {
-  QString identifier;
-  QString title;
-  QString abstract;
+  QgsLayerMetadata metadata;
   QgsPolygon geographicExtent;
   QgsWkbTypes::GeometryType geometryType;
   QString crs;
@@ -23,7 +21,20 @@ struct QgsLayerMetadataProviderResult
   QString dataProviderName;
   QgsMapLayerType layerType;
   QString standardUri;
-  QgsLayerMetadata metadata;
+
+
+  QString identifier() const;
+%Docstring
+Metadata identifier
+%End
+  QString title() const;
+%Docstring
+Metadata title
+%End
+  QString abstract() const;
+%Docstring
+Metadata abstract
+%End
 };
 
 struct QgsLayerMetadataSearchResult

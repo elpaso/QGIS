@@ -108,9 +108,6 @@ QList<QgsLayerMetadataProviderResult> QgsPostgresProviderMetadataUtils::searchLa
       uri.setSchema( res.PQgetvalue( 0, 1 ) );
       uri.setTable( res.PQgetvalue( 0, 2 ) );
       uri.setGeometryColumn( res.PQgetvalue( 0, 3 ) );
-      result.identifier = res.PQgetvalue( 0, 4 );
-      result.title = res.PQgetvalue( 0, 5 );
-      result.abstract = res.PQgetvalue( 0, 6 );
       result.standardUri = QStringLiteral( "http://mrcc.com/qgis.dtd" );
       result.geometryType = QgsWkbTypes::geometryType( QgsWkbTypes::parseType( res.PQgetvalue( 0, 7 ) ) );
       QgsPolygon geographicExtent;

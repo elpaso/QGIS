@@ -1151,9 +1151,6 @@ QList<QgsLayerMetadataProviderResult> QgsOgrProviderMetadata::searchLayerMetadat
           result.standardUri = QStringLiteral( "http://mrcc.com/qgis.dtd" );
           result.dataProviderName = QStringLiteral( "ogr" );
           result.crs = layerMetadata.crs().authid();
-          result.abstract = result.metadata.abstract();
-          result.title = result.metadata.title();
-          result.identifier = result.metadata.identifier();
           result.uri = conn->tableUri( QString(), mdRow[0].toString() );
           const QString geomType { mdRow[2].toString().toUpper() };
           if ( geomType == QStringLiteral( "POINT" ) )

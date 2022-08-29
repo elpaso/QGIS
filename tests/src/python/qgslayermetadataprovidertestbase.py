@@ -93,9 +93,9 @@ class LayerMetadataProviderTestBase():
 
         result = results.metadata[0]
 
-        self.assertEqual(result.abstract, 'QGIS Some Data')
-        self.assertEqual(result.identifier, 'MD012345')
-        self.assertEqual(result.title, 'QGIS Test Tile')
+        self.assertEqual(result.abstract(), 'QGIS Some Data')
+        self.assertEqual(result.identifier(), 'MD012345')
+        self.assertEqual(result.title(), 'QGIS Test Tile')
         self.assertEqual(result.layerType, layer_type)
         self.assertEqual(result.crs, layer_authid)
         # For raster is unknown

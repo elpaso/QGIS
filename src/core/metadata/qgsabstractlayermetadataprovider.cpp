@@ -23,3 +23,17 @@ QgsAbstractLayerMetadataProvider::QgsAbstractLayerMetadataProvider( QObject *par
 
 }
 
+QString QgsLayerMetadataProviderResult::identifier() const
+{
+  return metadata.identifier();
+}
+
+QString QgsLayerMetadataProviderResult::title() const
+{
+  return metadata.title();
+}
+
+QString QgsLayerMetadataProviderResult::abstract() const
+{
+  return metadata.abstract();
+}
