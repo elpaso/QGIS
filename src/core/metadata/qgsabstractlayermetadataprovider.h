@@ -70,7 +70,7 @@ struct CORE_EXPORT QgsLayerMetadataProviderResult
  * \brief Container of result records from a layer metadata search.
  *
  * Contains the records of the layer metadata provider that matched the
- * search criteria and the list of the errors that occourred while
+ * search criteria and the list of the errors that occurred while
  * searching for metadata.
  *
  * \since QGIS 3.28
@@ -91,7 +91,7 @@ class CORE_EXPORT QgsLayerMetadataSearchResult
     void addMetadata( const QgsLayerMetadataProviderResult &newMetadata );
 
     /**
-     * Returns the list of errors occourred during a metadata search.
+     * Returns the list of errors occurred during a metadata search.
      */
     const QStringList &errors() const;
 
@@ -104,7 +104,7 @@ class CORE_EXPORT QgsLayerMetadataSearchResult
 
     //! List of metadata that matched the search criteria
     QList<QgsLayerMetadataProviderResult> mMetadata;
-    //! List of errors occourred while searching
+    //! List of errors occurred while searching
     QStringList mErrors;
 };
 

@@ -616,7 +616,7 @@ class CORE_EXPORT QgsProviderMetadata : public QObject
      * the search functionality.
      *
      * \returns a (possibly empty) list of QgsLayerMetadataProviderResult, throws a QgsProviderConnectionException
-     * if any error occourred during the search.
+     * if any error occurred during the search.
      * \throws QgsProviderConnectionException
      * \since QGIS 3.28
      */

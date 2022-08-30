@@ -43,7 +43,7 @@ class QgsLayerMetadataSearchResult
 Container of result records from a layer metadata search.
 
 Contains the records of the layer metadata provider that matched the
-search criteria and the list of the errors that occourred while
+search criteria and the list of the errors that occurred while
 searching for metadata.
 
 .. versionadded:: 3.28
@@ -66,7 +66,7 @@ Adds a ``newMetadata`` record to the list of results.
 
     const QStringList &errors() const;
 %Docstring
-Returns the list of errors occourred during a metadata search.
+Returns the list of errors occurred during a metadata search.
 %End
 
     void addError( const QString &newError );

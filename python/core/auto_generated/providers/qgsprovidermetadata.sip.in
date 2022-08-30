@@ -567,7 +567,7 @@ The default implementation returns an empty list, data providers may implement
 the search functionality.
 
 :return: a (possibly empty) list of :py:class:`QgsLayerMetadataProviderResult`, throws a :py:class:`QgsProviderConnectionException`
-         if any error occourred during the search.
+         if any error occurred during the search.
 
 :raises QgsProviderConnectionException: 
 

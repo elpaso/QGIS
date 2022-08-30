@@ -57,7 +57,7 @@ QgsLayerMetadataSearchResult QgsPostgresRasterLayerMetadataProvider::search( con
         }
         catch ( const QgsProviderConnectionException &ex )
         {
-          results.addError( QObject::tr( "An error occourred while searching for metadata in connection %1: %2" ).arg( conn->uri(), ex.what() ) );
+          results.addError( QObject::tr( "An error occurred while searching for metadata in connection %1: %2" ).arg( conn->uri(), ex.what() ) );
         }
       }
     }
