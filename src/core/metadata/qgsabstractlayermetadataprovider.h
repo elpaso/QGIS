@@ -69,7 +69,7 @@ struct CORE_EXPORT QgsLayerMetadataProviderResult
  * \ingroup core
  * \brief Container of result records from a layer metadata search.
  *
- * Containsthe records of the layer metadata provider that matched the
+ * Contains the records of the layer metadata provider that matched the
  * search criteria and the list of the errors that occourred while
  * searching for metadata.
  *
