@@ -24,7 +24,7 @@
 #include "qgslayermetadata.h"
 
 class QgsAbstractLayerMetadataProvider;
-struct QgsLayerMetadataSearchResult;
+class QgsLayerMetadataSearchResult;
 class QgsFeedback;
 
 #ifdef SIP_RUN
