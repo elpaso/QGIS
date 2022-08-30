@@ -852,7 +852,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
 
     bool authDbOpen() const;
 
-    bool authDbQuery( QSqlQuery *query ) const;
+    bool authDbQuery( QSqlQuery *query, const QString &sql = QString() ) const;
 
     bool authDbStartTransaction() const;
 

@@ -124,8 +124,12 @@ QSqlDatabase QgsAuthManager::authDatabaseConnection() const
   if ( !QSqlDatabase::contains( connectionName ) )
   {
     QgsDebugMsgLevel( QStringLiteral( "No existing connection, creating a new one" ), 2 );
-    authdb = QSqlDatabase::addDatabase( QStringLiteral( "QSQLITE" ), connectionName );
-    authdb.setDatabaseName( authenticationDatabasePath() );
+    authdb = QSqlDatabase::addDatabase( QStringLiteral( "QPSQL" ), connectionName );
+    authdb.setHostName( "127.0.0.1" );
+    authdb.setDatabaseName( "qgis_tests" );
+    authdb.setUserName( "ale" );
+    authdb.setPassword( "ale" );
+    //authdb.setDatabaseName( authenticationDatabasePath() );
     // for background threads, remove database when current thread finishes
     if ( QThread::currentThread() != QCoreApplication::instance()->thread() )
     {
@@ -293,6 +297,9 @@ bool QgsAuthManager::initPrivate( const QString &pluginPath, const QString &auth
       if ( !createCertTables() )
         return false;
 
+      if ( !createCertTables() )
+        return false;
+
       updateConfigAuthMethods();
 
 #ifndef QT_NO_SSL
@@ -387,35 +394,36 @@ bool QgsAuthManager::createConfigTables()
   QString qstr;
 
   qstr = QStringLiteral( "CREATE TABLE %1 (\n"
-                         "    'salt' TEXT NOT NULL,\n"
-                         "    'civ' TEXT NOT NULL\n"
-                         ", 'hash' TEXT  NOT NULL);" ).arg( authDbPassTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+                         "    salt TEXT NOT NULL,\n"
+                         "    civ TEXT NOT NULL\n"
+                         ", hash TEXT  NOT NULL);" ).arg( authDbPassTable() );
+
+  if ( !authDbQuery( &query, qstr ) )
     return false;
+
   query.clear();
 
   qstr = QStringLiteral( "CREATE TABLE %1 (\n"
-                         "    'id' TEXT NOT NULL,\n"
-                         "    'name' TEXT NOT NULL,\n"
-                         "    'uri' TEXT,\n"
-                         "    'type' TEXT NOT NULL,\n"
-                         "    'version' INTEGER NOT NULL\n"
-                         ", 'config' TEXT  NOT NULL);" ).arg( authDatabaseConfigTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+                         "    id TEXT NOT NULL,\n"
+                         "    name TEXT NOT NULL,\n"
+                         "    uri TEXT,\n"
+                         "    type TEXT NOT NULL,\n"
+                         "    version INTEGER NOT NULL\n"
+                         ", config TEXT  NOT NULL);" ).arg( authDatabaseConfigTable() );
+  if ( !authDbQuery( &query, qstr ) )
+    return false;
+
+  query.clear();
+
+  qstr = QStringLiteral( "CREATE UNIQUE INDEX id_index on %1 (id ASC);" ).arg( authDatabaseConfigTable() );
+
+  if ( !authDbQuery( &query, qstr ) )
     return false;
   query.clear();
 
-  qstr = QStringLiteral( "CREATE UNIQUE INDEX 'id_index' on %1 (id ASC);" ).arg( authDatabaseConfigTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
-    return false;
-  query.clear();
+  qstr = QStringLiteral( "CREATE INDEX uri_index on %1 (uri ASC);" ).arg( authDatabaseConfigTable() );
 
-  qstr = QStringLiteral( "CREATE INDEX 'uri_index' on %1 (uri ASC);" ).arg( authDatabaseConfigTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+  if ( !authDbQuery( &query, qstr ) )
     return false;
   query.clear();
 
@@ -434,73 +442,86 @@ bool QgsAuthManager::createCertTables()
   QString qstr;
 
   qstr = QStringLiteral( "CREATE TABLE IF NOT EXISTS %1 (\n"
-                         "    'setting' TEXT NOT NULL\n"
-                         ", 'value' TEXT);" ).arg( authDbSettingsTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+                         "   setting TEXT NOT NULL\n"
+                         ", value TEXT);" ).arg( authDbSettingsTable() );
+
+  if ( !authDbQuery( &query, qstr ) )
     return false;
+
+  query.clear();
+
+  qstr = QStringLiteral( "CREATE TABLE IF NOT EXISTS %1 (\n"
+                         "    id TEXT NOT NULL,\n"
+                         "    key TEXT NOT NULL\n"
+                         ", cert TEXT  NOT NULL);" ).arg( authDbIdentitiesTable() );
+
+
+  if ( !authDbQuery( &query, qstr ) )
+    return false;
+
+  query.clear();
+
+  qstr = QStringLiteral( "CREATE UNIQUE INDEX IF NOT EXISTS id_index on %1 (id ASC);" ).arg( authDbIdentitiesTable() );
+
+  if ( !authDbQuery( &query, qstr ) )
+    return false;
+
   query.clear();
 
 
   qstr = QStringLiteral( "CREATE TABLE IF NOT EXISTS %1 (\n"
-                         "    'id' TEXT NOT NULL,\n"
-                         "    'key' TEXT NOT NULL\n"
-                         ", 'cert' TEXT  NOT NULL);" ).arg( authDbIdentitiesTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+                         "    id TEXT NOT NULL,\n"
+                         "    host TEXT NOT NULL,\n"
+                         "    cert TEXT\n"
+                         ", config TEXT  NOT NULL);" ).arg( authDatabaseServersTable() );
+
+  if ( !authDbQuery( &query, qstr ) )
     return false;
+
   query.clear();
 
-  qstr = QStringLiteral( "CREATE UNIQUE INDEX IF NOT EXISTS 'id_index' on %1 (id ASC);" ).arg( authDbIdentitiesTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
-    return false;
-  query.clear();
+  qstr = QStringLiteral( "CREATE UNIQUE INDEX IF NOT EXISTS host_index on %1 (host ASC);" ).arg( authDatabaseServersTable() );
 
 
-  qstr = QStringLiteral( "CREATE TABLE IF NOT EXISTS %1 (\n"
-                         "    'id' TEXT NOT NULL,\n"
-                         "    'host' TEXT NOT NULL,\n"
-                         "    'cert' TEXT\n"
-                         ", 'config' TEXT  NOT NULL);" ).arg( authDatabaseServersTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+  if ( !authDbQuery( &query, qstr ) )
     return false;
-  query.clear();
 
-  qstr = QStringLiteral( "CREATE UNIQUE INDEX IF NOT EXISTS 'host_index' on %1 (host ASC);" ).arg( authDatabaseServersTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
-    return false;
   query.clear();
 
 
   qstr = QStringLiteral( "CREATE TABLE IF NOT EXISTS %1 (\n"
-                         "    'id' TEXT NOT NULL\n"
-                         ", 'cert' TEXT  NOT NULL);" ).arg( authDbAuthoritiesTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+                         "    id TEXT NOT NULL\n"
+                         ", cert TEXT  NOT NULL);" ).arg( authDbAuthoritiesTable() );
+
+
+  if ( !authDbQuery( &query, qstr ) )
     return false;
+
   query.clear();
 
-  qstr = QStringLiteral( "CREATE UNIQUE INDEX IF NOT EXISTS 'id_index' on %1 (id ASC);" ).arg( authDbAuthoritiesTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+  qstr = QStringLiteral( "CREATE UNIQUE INDEX IF NOT EXISTS id_index on %1 (id ASC);" ).arg( authDbAuthoritiesTable() );
+
+
+  if ( !authDbQuery( &query, qstr ) )
     return false;
+
   query.clear();
 
   qstr = QStringLiteral( "CREATE TABLE IF NOT EXISTS %1 (\n"
-                         "    'id' TEXT NOT NULL\n"
-                         ", 'policy' TEXT  NOT NULL);" ).arg( authDbTrustTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+                         "    id TEXT NOT NULL\n"
+                         ", policy TEXT  NOT NULL);" ).arg( authDbTrustTable() );
+
+  if ( !authDbQuery( &query, qstr ) )
     return false;
+
   query.clear();
 
-  qstr = QStringLiteral( "CREATE UNIQUE INDEX IF NOT EXISTS 'id_index' on %1 (id ASC);" ).arg( authDbTrustTable() );
-  query.prepare( qstr );
-  if ( !authDbQuery( &query ) )
+  qstr = QStringLiteral( "CREATE UNIQUE INDEX IF NOT EXISTS id_index on %1 (id ASC);" ).arg( authDbTrustTable() );
+
+
+  if ( !authDbQuery( &query, qstr ) )
     return false;
+
   query.clear();
 
   return true;
@@ -4079,7 +4100,7 @@ bool QgsAuthManager::authDbOpen() const
   return true;
 }
 
-bool QgsAuthManager::authDbQuery( QSqlQuery *query ) const
+bool QgsAuthManager::authDbQuery( QSqlQuery *query, const QString &sql ) const
 {
   ensureInitialized();
 
@@ -4087,7 +4108,10 @@ bool QgsAuthManager::authDbQuery( QSqlQuery *query ) const
     return false;
 
   query->setForwardOnly( true );
-  if ( !query->exec() )
+
+  const bool result { sql.isEmpty() ? query->exec() : query->exec( sql ) };
+
+  if ( !result )
   {
     const char *err = QT_TR_NOOP( "Auth db query exec() FAILED" );
     QgsDebugError( err );
