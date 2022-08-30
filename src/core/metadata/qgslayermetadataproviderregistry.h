@@ -64,7 +64,7 @@ class CORE_EXPORT QgsLayerMetadataProviderRegistry : public QObject
     QgsAbstractLayerMetadataProvider *layerMetadataProviderFromType( const QString &type );
 
     /**
-     * Searchs for layers in all the registered layer metadata providers, optionally filtering by \a searchString
+     * Search for layers in all the registered layer metadata providers, optionally filtering by \a searchString
      * and \a geographicExtent, an optional \a feedback can be used to monitor and control the search process.
      */
     QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback *feedback = nullptr );
