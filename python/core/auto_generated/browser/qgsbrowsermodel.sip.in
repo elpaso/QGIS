@@ -56,6 +56,9 @@ Constructor for QgsBrowserModel, with the specified ``parent`` object.
       CommentRole,
       SortRole,
       ProviderKeyRole,
+      MetadataIdentifierRole,
+      MetadataTitleRole,
+      MetadataAbstractRole,
     };
 
     virtual Qt::ItemFlags flags( const QModelIndex &index ) const;

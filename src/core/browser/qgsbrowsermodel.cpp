@@ -325,6 +325,33 @@ QVariant QgsBrowserModel::data( const QModelIndex &index, int role ) const
     }
     return QVariant();
   }
+  else if ( role == QgsBrowserModel::MetadataIdentifierRole )
+  {
+    if ( item->type() == Qgis::BrowserItemType::Layer )
+    {
+      QgsLayerItem *lyrItem = qobject_cast<QgsLayerItem *>( item );
+      return lyrItem->metadata().identifier();
+    }
+    return QVariant();
+  }
+  else if ( role == QgsBrowserModel::MetadataTitleRole )
+  {
+    if ( item->type() == Qgis::BrowserItemType::Layer )
+    {
+      QgsLayerItem *lyrItem = qobject_cast<QgsLayerItem *>( item );
+      return lyrItem->metadata().title();
+    }
+    return QVariant();
+  }
+  else if ( role == QgsBrowserModel::MetadataAbstractRole )
+  {
+    if ( item->type() == Qgis::BrowserItemType::Layer )
+    {
+      QgsLayerItem *lyrItem = qobject_cast<QgsLayerItem *>( item );
+      return lyrItem->metadata().abstract();
+    }
+    return QVariant();
+  }
   else if ( role == QgsBrowserModel::ProviderKeyRole )
   {
     return item->providerKey();

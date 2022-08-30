@@ -72,6 +72,9 @@ class CORE_EXPORT QgsBrowserModel : public QAbstractItemModel
       CommentRole = Qt::UserRole + 1, //!< Item comment
       SortRole, //!< Custom sort role, see QgsDataItem::sortKey()
       ProviderKeyRole, //!< Data item provider key that created the item, see QgsDataItem::providerKey() \since QGIS 3.12
+      MetadataIdentifierRole, //!< Layer metadata identifier from layer metadata providers \since QGIS 3.28
+      MetadataTitleRole, //!< Layer metadata title from layer metadata providers \since QGIS 3.28
+      MetadataAbstractRole, //!< Layer metadata abstract from layer metadata providers \since QGIS 3.28
     };
     // implemented methods from QAbstractItemModel for read-only access
 

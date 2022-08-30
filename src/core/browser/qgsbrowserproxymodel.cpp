@@ -227,9 +227,16 @@ bool QgsBrowserProxyModel::filterAcceptsItem( const QModelIndex &sourceIndex ) c
   if ( !mFilter.isEmpty() )
   {
     //accept item if either displayed text or comment role matches string
-    const QString comment = mModel->data( sourceIndex, QgsBrowserModel::CommentRole ).toString();
+    // also search in metadata title, identifier and abstract
+    const QString comment = mModel->data( sourceIndex, QgsBrowserModel::CommentRole ).toString().trimmed();
+    const QString metadataTitle = mModel->data( sourceIndex, QgsBrowserModel::MetadataTitleRole ).toString().trimmed();
+    const QString metadataIdentifier = mModel->data( sourceIndex, QgsBrowserModel::MetadataIdentifierRole ).toString().trimmed();
+    const QString metadataAbstract = mModel->data( sourceIndex, QgsBrowserModel::MetadataAbstractRole ).toString().trimmed();
     return ( filterAcceptsString( mModel->data( sourceIndex, Qt::DisplayRole ).toString() )
-             || ( !comment.isEmpty() && filterAcceptsString( comment ) ) );
+             || ( !comment.isEmpty() && filterAcceptsString( comment ) )
+             || ( !metadataTitle.isEmpty() && filterAcceptsString( metadataTitle ) )
+             || ( !metadataIdentifier.isEmpty() && filterAcceptsString( metadataIdentifier ) )
+             || ( !metadataAbstract.isEmpty() && filterAcceptsString( metadataAbstract ) ) );
   }
 
   return true;

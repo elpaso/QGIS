@@ -29,6 +29,7 @@
 #include "qgsvectorlayerexporter.h"
 #include "qgsprojectitem.h"
 #include "qgsfieldsitem.h"
+#include "qgsproviderregistry.h"
 #include <QMessageBox>
 #include <climits>
 
@@ -416,7 +417,33 @@ QVector<QgsDataItem *> QgsPGSchemaItem::createChildren()
 
   const bool dontResolveType = QgsPostgresConn::dontResolveType( mConnectionName );
   const bool estimatedMetadata = QgsPostgresConn::useEstimatedMetadata( mConnectionName );
+  const bool allowMetadataInDatabase = QgsPostgresConn::allowMetadataInDatabase( mConnectionName );
   const auto constLayerProperties = layerProperties;
+
+  // Retrieve metadata for layer items
+  QMap<QString, QgsLayerMetadata> layerMetadata;
+  if ( allowMetadataInDatabase )
+  {
+    QgsProviderMetadata *md { QgsProviderRegistry::instance()->providerMetadata( "postgres" ) };
+    if ( md )
+    {
+      try
+      {
+        const QList<QgsLayerMetadataProviderResult> cResults { md->searchLayerMetadata( uri.connectionInfo( false ) ) };
+        for ( const QgsLayerMetadataProviderResult &result : std::as_const( cResults ) )
+        {
+          const QgsDataSourceUri resUri { result.uri };
+          layerMetadata.insert( QStringLiteral( "%1.%2" ).arg( resUri.schema(), resUri.table() ), result.metadata );
+        }
+
+      }
+      catch ( const QgsProviderConnectionException & )
+      {
+        // ignore
+      }
+    }
+  }
+
   for ( QgsPostgresLayerProperty layerProperty : constLayerProperties )
   {
     if ( layerProperty.schemaName != mName )
@@ -446,7 +473,19 @@ QVector<QgsDataItem *> QgsPGSchemaItem::createChildren()
       QgsDataItem *layerItem = nullptr;
       layerItem = createLayer( layerProperty.at( i ) );
       if ( layerItem )
+      {
         items.append( layerItem );
+
+        // Attach metadata
+        const QString mdKey { QStringLiteral( "%1.%2" ).arg( layerProperty.at( i ).schemaName, layerProperty.at( i ).tableName ) };
+        if ( allowMetadataInDatabase && layerMetadata.contains( mdKey ) )
+        {
+          if ( QgsLayerItem *lItem = static_cast<QgsLayerItem *>( layerItem ) )
+          {
+            lItem->setMetadata( layerMetadata.value( mdKey ) );
+          }
+        }
+      }
     }
   }
 
@@ -540,6 +579,7 @@ QgsPGLayerItem *QgsPGSchemaItem::createLayer( QgsPostgresLayerProperty layerProp
   }
 
   QgsPGLayerItem *layerItem = new QgsPGLayerItem( this, layerProperty.defaultName(), mPath + '/' + layerProperty.tableName, layerType, layerProperty );
+
   layerItem->setToolTip( tip );
   return layerItem;
 }

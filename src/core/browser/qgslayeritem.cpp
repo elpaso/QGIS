@@ -166,6 +166,11 @@ Qgis::BrowserLayerType QgsLayerItem::typeFromMapLayer( QgsMapLayer *layer )
   return Qgis::BrowserLayerType::Vector; // no warnings
 }
 
+QgsLayerMetadata QgsLayerItem::metadata() const
+{
+  return mMetadata;
+}
+
 QString QgsLayerItem::layerTypeAsString( Qgis::BrowserLayerType layerType )
 {
   return qgsEnumValueToKey( layerType );
@@ -200,6 +205,11 @@ QString QgsLayerItem::iconName( Qgis::BrowserLayerType layerType )
 bool QgsLayerItem::deleteLayer()
 {
   return false;
+}
+
+void QgsLayerItem::setMetadata( const QgsLayerMetadata &newMetadata )
+{
+  mMetadata = newMetadata;
 }
 
 bool QgsLayerItem::equal( const QgsDataItem *other )

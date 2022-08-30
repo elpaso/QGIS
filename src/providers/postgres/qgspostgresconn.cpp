@@ -2670,6 +2670,12 @@ bool QgsPostgresConn::allowProjectsInDatabase( const QString &connName )
   return settings.value( "/PostgreSQL/connections/" + connName + "/projectsInDatabase", false ).toBool();
 }
 
+bool QgsPostgresConn::allowMetadataInDatabase( const QString &connName )
+{
+  QgsSettings settings;
+  return settings.value( "/PostgreSQL/connections/" + connName + "/metadataInDatabase", false ).toBool();
+}
+
 void QgsPostgresConn::deleteConnection( const QString &connName )
 {
   QgsSettings settings;

@@ -21,6 +21,7 @@
 #include "qgis_core.h"
 #include "qgis.h"
 #include "qgsdataitem.h"
+#include "qgslayermetadata.h"
 
 /**
  * \ingroup core
@@ -89,6 +90,12 @@ class CORE_EXPORT QgsLayerItem : public QgsDataItem
     virtual QString comments() const { return QString(); }
 
     /**
+     * Returns metadata of the layer loaded from layer metadata provider
+     * \since QGIS 3.28
+     */
+    virtual QgsLayerMetadata metadata() const;
+
+    /**
      * Returns the string representation of the given \a layerType
      * \since QGIS 3
      */
@@ -117,6 +124,8 @@ class CORE_EXPORT QgsLayerItem : public QgsDataItem
     QStringList mSupportedCRS;
     //! The list of supported formats
     QStringList mSupportFormats;
+    //! Layer metadata loaded from layer metadata provider
+    QgsLayerMetadata mMetadata;
 
   public:
 
@@ -141,7 +150,7 @@ class CORE_EXPORT QgsLayerItem : public QgsDataItem
     //! \returns the layer name
     virtual QString layerName() const { return name(); }
     QgsAbstractDatabaseProviderConnection *databaseConnection() const override;
-
+    void setMetadata( const QgsLayerMetadata &newMetadata );
 };
 
 #endif // QGSLAYERITEM_H
