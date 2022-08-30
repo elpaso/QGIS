@@ -57,6 +57,7 @@ class CORE_EXPORT QgsLayerMetadataProviderRegistry : public QObject
     //! Unregisters a layer metadata provider \a metadataProvider and destroys its instance
     void unregisterLayerMetadataProvider( QgsAbstractLayerMetadataProvider *metadataProvider );
 
+    //! Returns the list of all registered layer metadata providers.
     QList<QgsAbstractLayerMetadataProvider *> layerMetadataProviders() const;
 
     //! Returns metadata provider implementation if the \a type matches one. Returns NULLPTR otherwise.

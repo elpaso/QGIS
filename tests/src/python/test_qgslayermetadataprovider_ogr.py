@@ -17,16 +17,11 @@ import shutil
 
 from qgis.core import (
     QgsVectorLayer,
-    QgsMapLayerType,
     QgsProviderRegistry,
-    QgsWkbTypes,
-    QgsLayerMetadata,
-    QgsBox3d,
 )
 
-from qgis.PyQt.QtCore import QCoreApplication, QTemporaryDir
-from utilities import compareWkt
-from qgis.testing import start_app, unittest
+from qgis.PyQt.QtCore import QTemporaryDir
+from qgis.testing import unittest
 from qgslayermetadataprovidertestbase import LayerMetadataProviderTestBase, TEST_DATA_DIR
 
 

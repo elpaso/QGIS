@@ -19,10 +19,6 @@
 #include "qgsabstractproviderconnection.h"
 #include "qgsfeedback.h"
 
-QgsPostgresLayerMetadataProvider::QgsPostgresLayerMetadataProvider( QObject *parent ) : QgsAbstractLayerMetadataProvider( parent )
-{
-
-}
 
 QString QgsPostgresLayerMetadataProvider::type() const
 {
@@ -31,8 +27,7 @@ QString QgsPostgresLayerMetadataProvider::type() const
 
 QgsLayerMetadataSearchResult QgsPostgresLayerMetadataProvider::search( const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback ) const
 {
-  QList<QgsLayerMetadataProviderResult> results;
-  QStringList errors;
+  QgsLayerMetadataSearchResult results;
   QgsProviderMetadata *md { QgsProviderRegistry::instance()->providerMetadata( QStringLiteral( "postgres" ) ) };
 
   if ( md && ( ! feedback || ! feedback->isCanceled() ) )
@@ -53,18 +48,18 @@ QgsLayerMetadataSearchResult QgsPostgresLayerMetadataProvider::search( const QSt
           const QList<QgsLayerMetadataProviderResult> res { md->searchLayerMetadata( conn->uri(), searchString, geographicExtent, feedback ) };
           for ( const QgsLayerMetadataProviderResult &result : std::as_const( res ) )
           {
-            results.push_back( result );
+            results.addMetadata( result );
           }
         }
         catch ( const QgsProviderConnectionException &ex )
         {
-          errors.push_back( tr( "An error occourred while searching for metadata in connection %1: %2" ).arg( conn->uri(), ex.what() ) );
+          results.addError( QObject::tr( "An error occourred while searching for metadata in connection %1: %2" ).arg( conn->uri(), ex.what() ) );
         }
       }
     }
   }
 
-  return QgsLayerMetadataSearchResult{ results, errors };
+  return results;
 }
 
 

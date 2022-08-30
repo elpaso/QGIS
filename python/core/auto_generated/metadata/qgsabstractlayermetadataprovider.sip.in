@@ -37,13 +37,46 @@ Metadata abstract
 %End
 };
 
-struct QgsLayerMetadataSearchResult
+class QgsLayerMetadataSearchResult
 {
-  QList<QgsLayerMetadataProviderResult> metadata;
-  QStringList errors;
+%Docstring(signature="appended")
+Container of result records from a layer metadata search.
+
+Containsthe records of the layer metadata provider that matched the
+search criteria and the list of the errors that occourred while
+searching for metadata.
+
+.. versionadded:: 3.28
+%End
+
+%TypeHeaderCode
+#include "qgsabstractlayermetadataprovider.h"
+%End
+  public:
+
+    const QList<QgsLayerMetadataProviderResult> &metadata() const;
+%Docstring
+Returns the list of metadata results.
+%End
+
+    void addMetadata( const QgsLayerMetadataProviderResult &newMetadata );
+%Docstring
+Adds a ``newMetadata`` record to the list of results.
+%End
+
+    const QStringList &errors() const;
+%Docstring
+Returns the list of errors occourred during a metadata search.
+%End
+
+    void addError( const QString &newError );
+%Docstring
+Adds a ``newError`` to the list of errors.
+%End
+
 };
 
-class QgsAbstractLayerMetadataProvider : QObject
+class QgsAbstractLayerMetadataProvider
 {
 %Docstring(signature="appended")
 Layer metadata provider backends interface.
@@ -55,7 +88,6 @@ Layer metadata provider backends interface.
 #include "qgsabstractlayermetadataprovider.h"
 %End
   public:
-    explicit QgsAbstractLayerMetadataProvider( QObject *parent = 0 );
 
     virtual QString type() const = 0;
 %Docstring
@@ -63,7 +95,7 @@ Returns the name of the layer metadata provider implementation, usually the name
 but if can be another unique identifier.
 %End
 
-    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback * = 0 ) const = 0;
+    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback *feedback = 0 ) const = 0;
 %Docstring
 Searches for metadata optionally filtering by search string and geographic extent.
 
@@ -73,6 +105,8 @@ Searches for metadata optionally filtering by search string and geographic exten
 
 :return: a :py:class:`QgsLayerMetadataSearchResult` object with a list of metadata and errors
 %End
+
+    virtual ~QgsAbstractLayerMetadataProvider();
 
 };
 

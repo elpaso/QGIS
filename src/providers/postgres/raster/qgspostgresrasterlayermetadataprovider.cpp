@@ -19,10 +19,6 @@
 #include "qgsabstractproviderconnection.h"
 #include "qgsprovidermetadata.h"
 
-QgsPostgresRasterLayerMetadataProvider::QgsPostgresRasterLayerMetadataProvider( QObject *parent ) : QgsAbstractLayerMetadataProvider( parent )
-{
-
-}
 
 QString QgsPostgresRasterLayerMetadataProvider::type() const
 {
@@ -31,8 +27,8 @@ QString QgsPostgresRasterLayerMetadataProvider::type() const
 
 QgsLayerMetadataSearchResult QgsPostgresRasterLayerMetadataProvider::search( const QString &searchString, const QgsRectangle &geographicExtent, QgsFeedback *feedback ) const
 {
-  QList<QgsLayerMetadataProviderResult> results;
-  QStringList errors;
+  QgsLayerMetadataSearchResult results;
+
 
   // PG raster does not have its own connections, get them from vector PG
   QgsProviderMetadata *pgMd { QgsProviderRegistry::instance()->providerMetadata( QStringLiteral( "postgres" ) ) };
@@ -56,18 +52,18 @@ QgsLayerMetadataSearchResult QgsPostgresRasterLayerMetadataProvider::search( con
           const QList<QgsLayerMetadataProviderResult> res { md->searchLayerMetadata( conn->uri(), searchString, geographicExtent, feedback ) };
           for ( const QgsLayerMetadataProviderResult &result : std::as_const( res ) )
           {
-            results.push_back( result );
+            results.addMetadata( result );
           }
         }
         catch ( const QgsProviderConnectionException &ex )
         {
-          errors.push_back( tr( "An error occourred while searching for metadata in connection %1: %2" ).arg( conn->uri(), ex.what() ) );
+          results.addError( QObject::tr( "An error occourred while searching for metadata in connection %1: %2" ).arg( conn->uri(), ex.what() ) );
         }
       }
     }
   }
 
-  return QgsLayerMetadataSearchResult{ results, errors };
+  return results;
 }
 
 

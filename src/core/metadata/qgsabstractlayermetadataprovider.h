@@ -67,19 +67,45 @@ struct CORE_EXPORT QgsLayerMetadataProviderResult
 
 /**
  * \ingroup core
- * \brief List of results from a layer metadata search, it contains
- * the records of the layer metadata provider that matched the search
- * criteria and the list of the errors that occourred while searching
- * for metadata.
+ * \brief Container of result records from a layer metadata search.
+ *
+ * Containsthe records of the layer metadata provider that matched the
+ * search criteria and the list of the errors that occourred while
+ * searching for metadata.
  *
  * \since QGIS 3.28
  */
-struct CORE_EXPORT QgsLayerMetadataSearchResult
+class CORE_EXPORT QgsLayerMetadataSearchResult
 {
-  //! List of metadata that matched the search criteria
-  QList<QgsLayerMetadataProviderResult> metadata;
-  //! List of errors occourred while searching
-  QStringList errors;
+
+  public:
+
+    /**
+     * Returns the list of metadata results.
+     */
+    const QList<QgsLayerMetadataProviderResult> &metadata() const;
+
+    /**
+     * Adds a \a newMetadata record to the list of results.
+     */
+    void addMetadata( const QgsLayerMetadataProviderResult &newMetadata );
+
+    /**
+     * Returns the list of errors occourred during a metadata search.
+     */
+    const QStringList &errors() const;
+
+    /**
+     * Adds a \a newError to the list of errors.
+     */
+    void addError( const QString &newError );
+
+  private:
+
+    //! List of metadata that matched the search criteria
+    QList<QgsLayerMetadataProviderResult> mMetadata;
+    //! List of errors occourred while searching
+    QStringList mErrors;
 };
 
 /**
@@ -88,11 +114,10 @@ struct CORE_EXPORT QgsLayerMetadataSearchResult
  *
  * \since QGIS 3.28
  */
-class CORE_EXPORT QgsAbstractLayerMetadataProvider : public QObject
+class CORE_EXPORT QgsAbstractLayerMetadataProvider
 {
-    Q_OBJECT
+
   public:
-    explicit QgsAbstractLayerMetadataProvider( QObject *parent = nullptr );
 
     /**
      * Returns the name of the layer metadata provider implementation, usually the name of the data provider
@@ -107,7 +132,9 @@ class CORE_EXPORT QgsAbstractLayerMetadataProvider : public QObject
      * \param feedback can be used to monitor and control the search process.
      * \returns a QgsLayerMetadataSearchResult object with a list of metadata and errors
      */
-    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback * = nullptr ) const = 0;
+    virtual QgsLayerMetadataSearchResult search( const QString &searchString = QString(), const QgsRectangle &geographicExtent = QgsRectangle(), QgsFeedback *feedback = nullptr ) const = 0;
+
+    virtual ~QgsAbstractLayerMetadataProvider() = default;
 
 };
 

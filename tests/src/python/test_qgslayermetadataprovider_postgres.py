@@ -19,9 +19,7 @@ from qgis.core import (
     QgsProviderRegistry,
 )
 
-from qgis.PyQt.QtCore import QCoreApplication
-from utilities import compareWkt
-from qgis.testing import start_app, unittest
+from qgis.testing import unittest
 from qgslayermetadataprovidertestbase import LayerMetadataProviderTestBase
 
 

@@ -21,8 +21,6 @@
 class QgsOgrLayerMetadataProvider : public QgsAbstractLayerMetadataProvider
 {
   public:
-    explicit QgsOgrLayerMetadataProvider( QObject *parent = nullptr );
-
     // QgsAbstractLayerMetadataProvider interface
   public:
     QString type() const override;

@@ -18,11 +18,6 @@
 #include "qgsproviderregistry.h"
 #include "qgsfeedback.h"
 
-QgsAbstractLayerMetadataProvider::QgsAbstractLayerMetadataProvider( QObject *parent ) : QObject( parent )
-{
-
-}
-
 QString QgsLayerMetadataProviderResult::identifier() const
 {
   return metadata.identifier();
@@ -37,3 +32,25 @@ QString QgsLayerMetadataProviderResult::abstract() const
 {
   return metadata.abstract();
 }
+
+const QList<QgsLayerMetadataProviderResult> &QgsLayerMetadataSearchResult::metadata() const
+{
+  return mMetadata;
+}
+
+void QgsLayerMetadataSearchResult::addMetadata( const QgsLayerMetadataProviderResult &newMetadata )
+{
+  mMetadata.push_back( newMetadata );
+}
+
+
+const QStringList &QgsLayerMetadataSearchResult::errors() const
+{
+  return mErrors;
+}
+
+void QgsLayerMetadataSearchResult::addError( const QString &newError )
+{
+  mErrors.push_back( newError );
+}
+

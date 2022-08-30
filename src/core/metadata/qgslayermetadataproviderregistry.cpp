@@ -54,13 +54,15 @@ QgsLayerMetadataSearchResult QgsLayerMetadataProviderRegistry::search( const QSt
     }
 
     const QgsLayerMetadataSearchResult providerResults { it.value()->search( searchString, geographicExtent ) };
-    for ( const QgsLayerMetadataProviderResult &metadata : std::as_const( providerResults.metadata ) )
+    const QList<QgsLayerMetadataProviderResult> cMetadata { providerResults.metadata() };
+    for ( const QgsLayerMetadataProviderResult &metadata : std::as_const( cMetadata ) )
     {
-      results.metadata.push_back( metadata );
+      results.addMetadata( metadata );
     }
-    for ( const QString &error : std::as_const( providerResults.errors ) )
+    const QList<QString> cErrors { providerResults.errors() };
+    for ( const QString &error : std::as_const( cErrors ) )
     {
-      results.errors.push_back( error );
+      results.addError( error );
     }
   }
   return results;

@@ -47,6 +47,9 @@ Unregisters a layer metadata provider ``metadataProvider`` and destroys its inst
 %End
 
     QList<QgsAbstractLayerMetadataProvider *> layerMetadataProviders() const;
+%Docstring
+Returns the list of all registered layer metadata providers.
+%End
 
     QgsAbstractLayerMetadataProvider *layerMetadataProviderFromType( const QString &type );
 %Docstring
