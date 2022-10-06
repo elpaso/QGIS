@@ -1094,6 +1094,13 @@ bool QgsMapToolIdentify::identifyRasterLayer( QList<IdentifyResult> *results, Qg
               for ( int colIdx = 0; colIdx < std::min( rat->fields().count( ), row.count() ); ++colIdx )
               {
                 const QgsRasterAttributeTable::Field ratField { rat->fields().at( colIdx ) };
+
+                // Skip value and color fields
+                if ( QgsRasterAttributeTable::valueAndColorFieldUsages().contains( ratField.usage ) )
+                {
+                  continue;
+                }
+
                 QString ratValue;
                 switch ( ratField.type )
                 {
