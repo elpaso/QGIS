@@ -203,33 +203,56 @@ QgsAttributeTableDialog::QgsAttributeTableDialog( QgsVectorLayer *layer, QgsAttr
   QgsAttributeEditorContext editorContext = QgisApp::instance()->createAttributeEditorContext();
   editorContext.setDistanceArea( da );
 
-  QgsFeatureRequest r;
+  QgsFeatureRequest request;
   bool needsGeom = false;
   if ( mLayer->geometryType() != QgsWkbTypes::NullGeometry &&
        initialMode == QgsAttributeTableFilterModel::ShowVisible )
   {
     QgsMapCanvas *mc = QgisApp::instance()->mapCanvas();
     QgsRectangle extent( mc->mapSettings().mapToLayerCoordinates( layer, mc->extent() ) );
-    r.setFilterRect( extent );
+    request.setFilterRect( extent );
     needsGeom = true;
   }
   else if ( initialMode == QgsAttributeTableFilterModel::ShowSelected )
   {
-    r.setFilterFids( layer->selectedFeatureIds() );
+    request.setFilterFids( layer->selectedFeatureIds() );
   }
   else if ( initialMode == QgsAttributeTableFilterModel::ShowEdited )
   {
-    r.setFilterFids( layer->editBuffer() ? layer->editBuffer()->allAddedOrEditedFeatures() : QgsFeatureIds() );
+    request.setFilterFids( layer->editBuffer() ? layer->editBuffer()->allAddedOrEditedFeatures() : QgsFeatureIds() );
   }
   else if ( !filterExpression.isEmpty() )
   {
-    r.setFilterExpression( filterExpression );
+    request.setFilterExpression( filterExpression );
   }
   if ( !needsGeom )
-    r.setFlags( QgsFeatureRequest::NoGeometry );
+    request.setFlags( QgsFeatureRequest::NoGeometry );
+
+  // Remove hidden fields
+  QgsAttributeList visibleFields;
+  bool hasHiddenField { false };
+  for ( int i = 0; i < static_cast<int>( layer->fields().count() ); ++i )
+  {
+    if ( layer->fields().fieldOrigin( i ) == QgsFields::FieldOrigin::OriginProvider )
+    {
+      if ( layer->fields().at( i ).configurationFlags().testFlag( QgsField::ConfigurationFlag::HideFromAttributeTable ) )
+      {
+        hasHiddenField = true;
+      }
+      else
+      {
+        visibleFields.push_back( i );
+      }
+    }
+  }
+
+  if ( hasHiddenField )
+  {
+    request.setSubsetOfAttributes( visibleFields );
+  }
 
   // Initialize dual view
-  mMainView->init( mLayer, QgisApp::instance()->mapCanvas(), r, editorContext, false );
+  mMainView->init( mLayer, QgisApp::instance()->mapCanvas(), request, editorContext, false );
 
   QgsAttributeTableConfig config = mLayer->attributeTableConfig();
   mMainView->setAttributeTableConfig( config );

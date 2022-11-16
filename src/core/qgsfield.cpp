@@ -399,6 +399,8 @@ QString QgsField::readableConfigurationFlag( QgsField::ConfigurationFlag flag )
       return QObject::tr( "Do not expose via WMS" );
     case ConfigurationFlag::HideFromWfs:
       return QObject::tr( "Do not expose via WFS" );
+    case ConfigurationFlag::HideFromAttributeTable:
+      return QObject::tr( "Do not expose in the attribute table" );
   }
   return QString();
 }

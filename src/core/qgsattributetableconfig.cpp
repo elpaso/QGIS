@@ -67,7 +67,7 @@ void QgsAttributeTableConfig::update( const QgsFields &fields )
       {
         mColumns.remove( i );
       }
-      else
+      else if ( ! fields.field( column.name ).configurationFlags().testFlag( QgsField::ConfigurationFlag::HideFromAttributeTable ) )
       {
         columns.append( column.name );
       }
@@ -80,7 +80,7 @@ void QgsAttributeTableConfig::update( const QgsFields &fields )
 
   for ( const auto &field : fields )
   {
-    if ( !columns.contains( field.name() ) )
+    if ( !columns.contains( field.name() ) && ! field.configurationFlags().testFlag( QgsField::ConfigurationFlag::HideFromAttributeTable ) )
     {
       ColumnConfig newColumn;
       newColumn.hidden = false;
