@@ -63,11 +63,11 @@ void QgsAttributeTableConfig::update( const QgsFields &fields )
     const ColumnConfig &column = mColumns.at( i );
     if ( column.type == Field )
     {
-      if ( fields.indexOf( column.name ) == -1 )
+      if ( fields.indexOf( column.name ) == -1 || fields.field( column.name ).configurationFlags().testFlag( QgsField::ConfigurationFlag::HideFromAttributeTable ) )
       {
         mColumns.remove( i );
       }
-      else if ( ! fields.field( column.name ).configurationFlags().testFlag( QgsField::ConfigurationFlag::HideFromAttributeTable ) )
+      else
       {
         columns.append( column.name );
       }
