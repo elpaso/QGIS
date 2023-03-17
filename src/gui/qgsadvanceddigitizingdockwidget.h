@@ -30,7 +30,6 @@
 #include "qgspointxy.h"
 #include "qgspointlocator.h"
 #include "qgssnapindicator.h"
-#include "qgscadutils.h"
 
 
 class QgsAdvancedDigitizingCanvasItem;
@@ -930,12 +929,22 @@ class GUI_EXPORT QgsAdvancedDigitizingDockWidget : public QgsDockWidget, private
     //! update the current point in the CAD point list
     void updateCurrentPoint( const QgsPoint &point );
 
-
     /**
      * filters key press
      * \note called by eventFilter (filter on line edits), canvasKeyPressEvent (filter on map tool) and keyPressEvent (filter on dock)
      */
     bool filterKeyPress( QKeyEvent *e );
+
+    /**
+     * filters key release
+     * \note called by eventFilter (filter on line edits) for release events when the filter system is waiting for the release event of a corrensponding override key press.
+     */
+    bool filterKeyRelease( QKeyEvent *e );
+
+    /**
+     * Toggles snap to common angles on/off.
+     */
+    void toggleCommonAngleSnap();
 
     /**
      * event filter for line edits in the dock UI (angle/distance/x/y line edits)
@@ -999,6 +1008,7 @@ class GUI_EXPORT QgsAdvancedDigitizingDockWidget : public QgsDockWidget, private
     std::unique_ptr< CadConstraint > mXyVertexConstraint;
     Qgis::BetweenLineConstraint mBetweenLineConstraint;
     double mCommonAngleConstraint; // if 0: do not snap to common angles
+    double mPreviousCommonAngleConstraint = 0; // Temporarily store common angle when toggling it
 
     // point list and current snap point / segment
     QList<QgsPoint> mCadPointList;

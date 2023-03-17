@@ -16,6 +16,8 @@
 #include <QMenu>
 #include <QEvent>
 #include <QCoreApplication>
+#include <QShortcut>
+#include <QActionGroup>
 
 #include <cmath>
 
@@ -27,15 +29,12 @@
 #include "qgsmapcanvas.h"
 #include "qgsmaptooledit.h"
 #include "qgsmaptooladvanceddigitizing.h"
-#include "qgsmessagebaritem.h"
 #include "qgsfocuswatcher.h"
 #include "qgssettings.h"
 #include "qgssnappingutils.h"
 #include "qgsproject.h"
 #include "qgsmapmouseevent.h"
 #include "qgsmeshlayer.h"
-
-#include <QActionGroup>
 
 
 QgsAdvancedDigitizingDockWidget::QgsAdvancedDigitizingDockWidget( QgsMapCanvas *canvas, QWidget *parent )
@@ -145,7 +144,7 @@ QgsAdvancedDigitizingDockWidget::QgsAdvancedDigitizingDockWidget( QgsMapCanvas *
   qobject_cast< QToolButton *>( mToolbar->widgetForAction( mSettingsAction ) )->setPopupMode( QToolButton::InstantPopup );
   mSettingsAction->setMenu( menu );
   mSettingsAction->setCheckable( true );
-  mSettingsAction->setToolTip( tr( "Snap to common angles" ) );
+  mSettingsAction->setToolTip( tr( "Snap to common angles<br>(press and hold j to temporarily toggle on/off)" ) );
   mSettingsAction->setChecked( mCommonAngleConstraint != 0 );
   connect( menu, &QMenu::triggered, this, &QgsAdvancedDigitizingDockWidget::settingsButtonTriggered );
 
@@ -218,6 +217,27 @@ QgsAdvancedDigitizingDockWidget::QgsAdvancedDigitizingDockWidget( QgsMapCanvas *
 
   updateCapacity( true );
   connect( QgsProject::instance(), &QgsProject::snappingConfigChanged, this, [ = ] { updateCapacity( true ); } );
+
+  QShortcut *shortcutToggleCommonAngleSnap = new QShortcut( Qt::Key_J, this );
+  QTimer  *shortcutHoldTimer = new QTimer{ this };
+  shortcutHoldTimer->setSingleShot( true );
+  connect( shortcutHoldTimer, &QTimer::timeout, this, [ = ]
+  {
+    toggleCommonAngleSnap();
+  } );
+
+  QObject::connect( shortcutToggleCommonAngleSnap, &QShortcut::activated, this, [ = ]()
+  {
+    if ( mPreviousCommonAngleConstraint == 0 )
+    {
+      toggleCommonAngleSnap();
+      shortcutHoldTimer->start( 1000 );
+    }
+    else
+    {
+      shortcutHoldTimer->start( 500 );
+    }
+  } );
 
   disable();
 }
@@ -1618,6 +1638,40 @@ bool QgsAdvancedDigitizingDockWidget::filterKeyPress( QKeyEvent *e )
   }
   return e->isAccepted();
 }
+
+void QgsAdvancedDigitizingDockWidget::toggleCommonAngleSnap()
+{
+  bool angleConstraintChanged { false };
+  if ( mPreviousCommonAngleConstraint != 0 )
+  {
+    mCommonAngleConstraint = mPreviousCommonAngleConstraint;
+    mPreviousCommonAngleConstraint = 0;
+    angleConstraintChanged = true;
+  }
+  else if ( mCommonAngleConstraint != 0 )
+  {
+    mPreviousCommonAngleConstraint = mCommonAngleConstraint;
+    mCommonAngleConstraint = 0;
+    angleConstraintChanged = true;
+  }
+  if ( angleConstraintChanged )
+  {
+    for ( auto angleActionIt = mCommonAngleActions.begin(); angleActionIt != mCommonAngleActions.end(); ++angleActionIt )
+    {
+      if ( angleActionIt.value() == mCommonAngleConstraint )
+      {
+        angleActionIt.key()->setChecked( true );
+      }
+      else
+      {
+        angleActionIt.key()->setChecked( false );
+      }
+    }
+    mSettingsAction->setChecked( mCommonAngleConstraint != 0 );
+    emit pointChangedV2( mCadPointList.value( 0 ) );
+  }
+}
+
 
 void QgsAdvancedDigitizingDockWidget::enable()
 {
