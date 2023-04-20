@@ -5676,6 +5676,35 @@ QString QgsVectorLayer::htmlMetadata() const
   myMetadata += htmlFormatter.historySectionHtml( );
   myMetadata += QLatin1String( "<br><br>\n" );
 
+  // Add custom properties
+  if ( ! customProperties().keys().isEmpty() )
+  {
+    myMetadata += QStringLiteral( "<h1>" ) + tr( "Custom Properties" ) + QStringLiteral( "</h1>\n<hr>\n" );
+    myMetadata += QStringLiteral( "<table class=\"list-view\">\n<tbody>" );
+    const QStringList keys { customPropertyKeys() };
+    for ( const QString &propertyKey : std::as_const( keys ) )
+    {
+      const QVariant propValue = customProperty( propertyKey );
+      if ( propValue.isNull() )
+      {
+        continue;
+      }
+
+      QJsonDocument jDoc { QJsonDocument::fromVariant( propValue ) };
+      if ( jDoc.isEmpty() )
+      {
+        continue;
+      }
+
+      const QString propValueRepresentation { jDoc.toJson().data() };
+      const QString propHtml {QLatin1String( "<tr><td>%1</td><td>%2</td></tr>" ).arg( propertyKey.toHtmlEscaped(), propValueRepresentation.toHtmlEscaped() )};
+      myMetadata += propHtml;
+    }
+    myMetadata += QStringLiteral( "</tbody></table>\n" );
+    myMetadata += QLatin1String( "<br><br>\n" );
+
+  }
+
   myMetadata += QLatin1String( "\n</body>\n</html>\n" );
   return myMetadata;
 }
