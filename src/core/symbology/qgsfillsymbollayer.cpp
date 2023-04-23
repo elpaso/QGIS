@@ -5272,6 +5272,45 @@ void QgsRasterFillSymbolLayer::setOutputUnit( Qgis::RenderUnit unit )
   mWidthUnit = unit;
 }
 
+void QgsRasterFillSymbolLayer::toSld( QDomDocument &doc, QDomElement &element, const QVariantMap &props ) const
+{
+  std::unique_ptr<QgsRasterFillSymbolLayer> symbolClone;
+  symbolClone.reset( clone() );
+  QBrush brush;
+  QgsRenderContext rCtx;
+  QgsSymbolRenderContext ctx { rCtx, Qgis::RenderUnit::Pixels, 1 };
+  symbolClone->applyPattern( brush, mImageFilePath, width(), 0, ctx );
+
+  const QImage image { brush.textureImage() };
+  if ( image.isNull() )
+  {
+    QgsImageFillSymbolLayer::toSld( doc, element, props );
+    return;
+  }
+
+  QDomElement symbolizerElem = doc.createElement( QStringLiteral( "se:PolygonSymbolizer" ) );
+  if ( !props.value( QStringLiteral( "uom" ), QString() ).toString().isEmpty() )
+    symbolizerElem.setAttribute( QStringLiteral( "uom" ), props.value( QStringLiteral( "uom" ), QString() ).toString() );
+  element.appendChild( symbolizerElem );
+
+  // <Geometry>
+  QgsSymbolLayerUtils::createGeometryElement( doc, symbolizerElem, props.value( QStringLiteral( "geom" ), QString() ).toString() );
+
+  QDomElement fillElem = doc.createElement( QStringLiteral( "se:Fill" ) );
+  symbolizerElem.appendChild( fillElem );
+
+  QDomElement graphicFillElem = doc.createElement( QStringLiteral( "se:GraphicFill" ) );
+  fillElem.appendChild( graphicFillElem );
+
+  QDomElement graphicElem = doc.createElement( QStringLiteral( "se:Graphic" ) );
+  graphicFillElem.appendChild( graphicElem );
+
+  const QgsSldExportContext context { props.value( QStringLiteral( "SldExportContext" ), QVariant::fromValue( QgsSldExportContext() ) ).value< QgsSldExportContext >() };
+
+  QgsSymbolLayerUtils::externalGraphicToSld( doc, graphicElem, mImageFilePath, QStringLiteral( "image/png" ), QColor(), image.height() );
+
+}
+
 void QgsRasterFillSymbolLayer::setImageFilePath( const QString &imagePath )
 {
   mImageFilePath = imagePath;
@@ -5342,7 +5381,7 @@ bool QgsRasterFillSymbolLayer::applyBrushTransformFromContext( QgsSymbolRenderCo
   return false;
 }
 
-void QgsRasterFillSymbolLayer::applyPattern( QBrush &brush, const QString &imageFilePath, const double width, const double alpha, const QgsSymbolRenderContext &context )
+void QgsRasterFillSymbolLayer::applyPattern( QBrush &brush, const QString &imageFilePath, const double width, const double alpha, const QgsSymbolRenderContext &context ) const
 {
   QSize size;
   if ( width > 0 )

@@ -920,7 +920,7 @@ class CORE_EXPORT QgsRasterFillSymbolLayer: public QgsImageFillSymbolLayer
     bool usesMapUnits() const override;
     QColor color() const override;
     void setOutputUnit( Qgis::RenderUnit unit ) override;
-
+    void toSld( QDomDocument &doc, QDomElement &element, const QVariantMap &props ) const override;
     //override QgsImageFillSymbolLayer's support for sub symbols
     QgsSymbol *subSymbol() override { return nullptr; }
     bool setSubSymbol( QgsSymbol *symbol SIP_TRANSFER ) override;
@@ -1100,7 +1100,7 @@ class CORE_EXPORT QgsRasterFillSymbolLayer: public QgsImageFillSymbolLayer
 
     //! Applies the image pattern to the brush
     void applyPattern( QBrush &brush, const QString &imageFilePath, double width, double opacity,
-                       const QgsSymbolRenderContext &context );
+                       const QgsSymbolRenderContext &context ) const;
 };
 
 /**

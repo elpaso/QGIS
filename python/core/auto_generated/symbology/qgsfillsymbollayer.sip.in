@@ -979,6 +979,7 @@ Used internally when reading/writing symbols.
 
     virtual void setOutputUnit( Qgis::RenderUnit unit );
 
+    virtual void toSld( QDomDocument &doc, QDomElement &element, const QVariantMap &props ) const;
 
     virtual QgsSymbol *subSymbol();
     virtual bool setSubSymbol( QgsSymbol *symbol /Transfer/ );
