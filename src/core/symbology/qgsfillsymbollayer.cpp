@@ -5274,19 +5274,6 @@ void QgsRasterFillSymbolLayer::setOutputUnit( Qgis::RenderUnit unit )
 
 void QgsRasterFillSymbolLayer::toSld( QDomDocument &doc, QDomElement &element, const QVariantMap &props ) const
 {
-  std::unique_ptr<QgsRasterFillSymbolLayer> symbolClone;
-  symbolClone.reset( clone() );
-  QBrush brush;
-  QgsRenderContext rCtx;
-  QgsSymbolRenderContext ctx { rCtx, Qgis::RenderUnit::Pixels, 1 };
-  symbolClone->applyPattern( brush, mImageFilePath, width(), 0, ctx );
-
-  const QImage image { brush.textureImage() };
-  if ( image.isNull() )
-  {
-    QgsImageFillSymbolLayer::toSld( doc, element, props );
-    return;
-  }
 
   QDomElement symbolizerElem = doc.createElement( QStringLiteral( "se:PolygonSymbolizer" ) );
   if ( !props.value( QStringLiteral( "uom" ), QString() ).toString().isEmpty() )
@@ -5296,6 +5283,23 @@ void QgsRasterFillSymbolLayer::toSld( QDomDocument &doc, QDomElement &element, c
   // <Geometry>
   QgsSymbolLayerUtils::createGeometryElement( doc, symbolizerElem, props.value( QStringLiteral( "geom" ), QString() ).toString() );
 
+  const QgsSldExportContext context { props.value( QStringLiteral( "SldExportContext" ), QVariant::fromValue( QgsSldExportContext() ) ).value< QgsSldExportContext >() };
+
+  std::unique_ptr<QgsRasterFillSymbolLayer> symbolClone;
+  symbolClone.reset( clone() );
+  QBrush brush;
+  QgsRenderContext rCtx;
+  QgsSymbolRenderContext ctx { rCtx, Qgis::RenderUnit::Pixels, 1 };
+  symbolClone->applyPattern( brush, mImageFilePath, width(), 0, ctx );
+
+
+  const QImage image { brush.textureImage() };
+  if ( image.isNull() )
+  {
+    QgsImageFillSymbolLayer::toSld( doc, element, props );
+    return;
+  }
+
   QDomElement fillElem = doc.createElement( QStringLiteral( "se:Fill" ) );
   symbolizerElem.appendChild( fillElem );
 
@@ -5304,8 +5308,6 @@ void QgsRasterFillSymbolLayer::toSld( QDomDocument &doc, QDomElement &element, c
 
   QDomElement graphicElem = doc.createElement( QStringLiteral( "se:Graphic" ) );
   graphicFillElem.appendChild( graphicElem );
-
-  const QgsSldExportContext context { props.value( QStringLiteral( "SldExportContext" ), QVariant::fromValue( QgsSldExportContext() ) ).value< QgsSldExportContext >() };
 
   QgsSymbolLayerUtils::externalGraphicToSld( doc, graphicElem, mImageFilePath, QStringLiteral( "image/png" ), QColor(), image.height() );
 
