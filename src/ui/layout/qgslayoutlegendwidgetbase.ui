@@ -63,9 +63,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>0</y>
-        <width>367</width>
-        <height>2191</height>
+        <y>-2299</y>
+        <width>517</width>
+        <height>3237</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="mainLayout">
@@ -1006,7 +1006,33 @@
           <item row="0" column="0">
            <widget class="QLabel" name="label_31s">
             <property name="text">
-             <string>&lt;b&gt;Legend Title&lt;/b&gt;</string>
+             <string>&lt;b&gt;Legend Items&lt;/b&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="20" column="1">
+           <widget class="QgsDoubleSpinBox" name="mColumnSpaceSpinBox">
+            <property name="prefix">
+             <string/>
+            </property>
+            <property name="suffix">
+             <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
+           </widget>
+          </item>
+          <item row="15" column="1">
+           <widget class="QgsDoubleSpinBox" name="mSymbolSideSpaceSpinBox">
+            <property name="prefix">
+             <string/>
+            </property>
+            <property name="suffix">
+             <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
             </property>
            </widget>
           </item>
@@ -1122,12 +1148,28 @@
             <property name="suffix">
              <string> mm</string>
             </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
            </widget>
           </item>
           <item row="8" column="0">
            <widget class="QLabel" name="label_32">
             <property name="text">
              <string>&lt;b&gt;Subgroups&lt;/b&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item row="12" column="1">
+           <widget class="QgsDoubleSpinBox" name="mSpaceBelowSubgroupHeadingSpinBox">
+            <property name="prefix">
+             <string/>
+            </property>
+            <property name="suffix">
+             <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
             </property>
            </widget>
           </item>
@@ -1149,6 +1191,9 @@
             <property name="suffix">
              <string> mm</string>
             </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
            </widget>
           </item>
           <item row="10" column="0">
@@ -1161,13 +1206,29 @@
             </property>
            </widget>
           </item>
-          <item row="10" column="1">
-           <widget class="QgsDoubleSpinBox" name="mSubgroupIndentSpinBox">
+          <item row="17" column="1">
+           <widget class="QgsDoubleSpinBox" name="mIconLabelSpaceSpinBox">
             <property name="prefix">
              <string/>
             </property>
             <property name="suffix">
              <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QgsDoubleSpinBox" name="mGroupIndentSpinBox">
+            <property name="prefix">
+             <string/>
+            </property>
+            <property name="suffix">
+             <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
             </property>
            </widget>
           </item>
@@ -1183,6 +1244,16 @@
             <property name="toolTip">
              <string>Space above text using group style.</string>
             </property>
+            <property name="suffix">
+             <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_31">
             <property name="text">
              <string>Below heading</string>
             </property>
@@ -1195,6 +1266,9 @@
             </property>
             <property name="suffix">
              <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
             </property>
            </widget>
           </item>
@@ -1216,6 +1290,9 @@
             <property name="suffix">
              <string> mm</string>
             </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
            </widget>
           </item>
           <item row="14" column="0">
@@ -1235,13 +1312,69 @@
             </property>
            </widget>
           </item>
-          <item row="15" column="1">
-           <widget class="QgsDoubleSpinBox" name="mSymbolSideSpaceSpinBox">
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_18">
+            <property name="toolTip">
+             <string>Space above text using group style.</string>
+            </property>
+            <property name="text">
+             <string>Below heading</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="1">
+           <widget class="QgsDoubleSpinBox" name="mSubgroupIndentSpinBox">
             <property name="prefix">
              <string/>
             </property>
             <property name="suffix">
              <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
+           </widget>
+          </item>
+          <item row="17" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="toolTip">
+             <string>Space between symbol icon and symbol label (symbol label left margin).</string>
+            </property>
+            <property name="text">
+             <string>Symbol label space</string>
+            </property>
+           </widget>
+          </item>
+          <item row="20" column="0">
+           <widget class="QLabel" name="label_12">
+            <property name="text">
+             <string>Column space</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QgsDoubleSpinBox" name="mTitleSpaceBottomSpinBox">
+            <property name="toolTip">
+             <string>Space below title.</string>
+            </property>
+            <property name="suffix">
+             <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QgsDoubleSpinBox" name="mLayerSpaceSpinBox">
+            <property name="prefix">
+             <string/>
+            </property>
+            <property name="suffix">
+             <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
             </property>
            </widget>
           </item>
@@ -1306,6 +1439,9 @@
             </property>
             <property name="suffix">
              <string> mm</string>
+            </property>
+            <property name="maximum">
+             <double>9999.989999999999782</double>
             </property>
            </widget>
           </item>
