@@ -130,7 +130,7 @@ QSqlDatabase QgsAuthManager::authDatabaseConnection() const
 
       // If the URI starts with SQLITE or SPATIALITE, remove the prefix
       QString cleanedUri = mAuthDatabaseConnectionUri;
-      if ( cleanedUri.startsWith( QStringLiteral( "SQLITE:" ) ) || cleanedUri.startsWith( QStringLiteral( "SPATIALITE:" ) ) )
+      if ( cleanedUri.startsWith( QStringLiteral( "SQLITE:" ), Qt::CaseInsensitive ) || cleanedUri.startsWith( QStringLiteral( "SPATIALITE:" ), Qt::CaseInsensitive ) )
       {
         cleanedUri = cleanedUri.mid( cleanedUri.indexOf( QStringLiteral( ":" ) ) + 1 );
       }
@@ -333,7 +333,7 @@ bool QgsAuthManager::initPrivate( const QString &pluginPath, const QString &auth
   {
     QString cleanedUri = mAuthDatabaseConnectionUri;
     // Remove SQLITE or SPATIALITE prefix from the connection URI
-    if ( cleanedUri.startsWith( QStringLiteral( "SQLITE:" ) ) || cleanedUri.startsWith( QStringLiteral( "SPATIALITE:" ) ) )
+    if ( cleanedUri.startsWith( QStringLiteral( "SQLITE:" ), Qt::CaseInsensitive ) || cleanedUri.startsWith( QStringLiteral( "SPATIALITE:" ), Qt::CaseInsensitive ) )
     {
       cleanedUri = cleanedUri.mid( cleanedUri.indexOf( QStringLiteral( ":" ) ) + 1 );
     }
@@ -353,6 +353,16 @@ bool QgsAuthManager::initPrivate( const QString &pluginPath, const QString &auth
       }
     }
 
+    if ( !dbinfo.exists() )
+    {
+      QgsDebugMsgLevel( QStringLiteral( "Auth db file does not exist, creating: %1" ).arg( dbinfo.filePath() ), 2 );
+      if ( !createConfigTables() )
+        return false;
+
+      if ( !createCertTables() )
+        return false;
+    }
+
     if ( !dbinfo.permission( QFile::ReadOwner | QFile::WriteOwner ) )
     {
       const QString err = tr( "Auth db %1 is not readable or writable by user" ).arg( dbinfo.filePath() );
@@ -361,13 +371,15 @@ bool QgsAuthManager::initPrivate( const QString &pluginPath, const QString &auth
       return false;
     }
   }
+  else
+  {
+    // Create the database and tables if necessary
+    if ( !createCertTables() )
+      return false;
 
-  // Create the database and tables if necessary
-  if ( !createCertTables() )
-    return false;
-
-  if ( !createCertTables() )
-    return false;
+    if ( !createCertTables() )
+      return false;
+  }
 
   updateConfigAuthMethods();
 
