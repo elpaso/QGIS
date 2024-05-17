@@ -189,7 +189,7 @@ Q_GLOBAL_STATIC( QString, sCfgIntDir )
 Q_GLOBAL_STATIC( QString, sBuildOutputPath )
 Q_GLOBAL_STATIC( QStringList, sGdalSkipList )
 Q_GLOBAL_STATIC( QStringList, sDeferredSkippedGdalDrivers )
-Q_GLOBAL_STATIC( QString, sAuthDbDirPath )
+Q_GLOBAL_STATIC( QString, sAuthDbDirConnectionUri )
 
 Q_GLOBAL_STATIC( QString, sUserName )
 Q_GLOBAL_STATIC( QString, sUserFullName )
@@ -376,11 +376,30 @@ void QgsApplication::init( QString profileFolder )
   *sConfigPath() = profileFolder + '/'; // make sure trailing slash is included
   *sDefaultSvgPaths() << qgisSettingsDirPath() + QStringLiteral( "svg/" );
 
-  *sAuthDbDirPath() = qgisSettingsDirPath();
+  // Default to profile directory
+  setAuthDatabaseConnectionUri( qgisSettingsDirPath() );
+
   if ( getenv( "QGIS_AUTH_DB_DIR_PATH" ) )
   {
-    setAuthDatabaseDirPath( getenv( "QGIS_AUTH_DB_DIR_PATH" ) );
+    // Warning for deprecate usage of QGIS_AUTH_DB_DIR_PATH
+    QgsMessageLog::logMessage( tr( "QGIS_AUTH_DB_DIR_PATH is deprecated, use QGIS_AUTH_DB_CONNECTION_URI instead" ), tr( "Core" ), Qgis::Warning );
+    setAuthDatabaseConnectionUri( getenv( "QGIS_AUTH_DB_DIR_PATH" ) );
   }
+
+  if ( getenv( "QGIS_AUTH_DB_CONNECTION_URI" ) )
+  {
+    setAuthDatabaseConnectionUri( getenv( "QGIS_AUTH_DB_CONNECTION_URI" ) );
+  }
+
+  // If the authentication DB URI is filesytem based, make sure it ends with the file name "qgis-auth.db"
+  if ( QgsAuthManager::isFilesystemBasedDatabase( *sAuthDbDirConnectionUri() ) && !( *sAuthDbDirConnectionUri() ).endsWith( QStringLiteral( "qgis-auth.db" ), Qt::CaseInsensitive ) )
+  {
+    if ( ( *sAuthDbDirConnectionUri() ).endsWith( QLatin1Char( '/' ) ) )
+      ( *sAuthDbDirConnectionUri() ).append( QStringLiteral( "qgis-auth.db" ) );
+    else
+      ( *sAuthDbDirConnectionUri() ).append( QStringLiteral( "/qgis-auth.db" ) );
+  }
+
 
   // force use of OpenGL renderer for Qt3d.
   qputenv( "QT3D_RENDERER", "opengl" );
@@ -696,8 +715,13 @@ void QgsApplication::setAuthDatabaseDirPath( const QString &authDbDirPath )
   QFileInfo fi( authDbDirPath );
   if ( fi.exists() && fi.isDir() && fi.isWritable() )
   {
-    *sAuthDbDirPath() = fi.canonicalFilePath() + QDir::separator();
+    *sAuthDbDirConnectionUri() = fi.canonicalFilePath() + QDir::separator();
   }
+}
+
+void QgsApplication::setAuthDatabaseConnectionUri( const QString &authDbConnectionUri )
+{
+  *sAuthDbDirConnectionUri() = authDbConnectionUri;
 }
 
 QString QgsApplication::prefixPath()
@@ -1194,8 +1218,21 @@ QString QgsApplication::qgisUserDatabaseFilePath()
 
 QString QgsApplication::qgisAuthDatabaseFilePath()
 {
-  return *sAuthDbDirPath() + QStringLiteral( "qgis-auth.db" );
+  // Throw if the connection URI is not a filesystem based directory (i.e. this
+  // is a mistake in the configuration).
+  if ( QgsAuthManager::isFilesystemBasedDatabase( *sAuthDbDirConnectionUri() ) )
+  {
+    QgsDebugError( QStringLiteral( "QGIS_AUTH_DB_CONNECTION_URI is not a valid directory: %1" ).arg( *sAuthDbDirConnectionUri() ) );
+    throw QgsException( tr( "QGIS_AUTH_DB_CONNECTION_URI is not a valid directory: %1" ).arg( *sAuthDbDirConnectionUri() ) );
+  }
+  return *sAuthDbDirConnectionUri();
 }
+
+QString QgsApplication::authenticationDatabaseConnectionUri()
+{
+  return *sAuthDbDirConnectionUri();
+}
+
 
 QString QgsApplication::splashPath()
 {
@@ -1537,7 +1574,7 @@ void QgsApplication::initQgis()
   QgsProject::instance();
 
   // Setup authentication manager for lazy initialization
-  authManager()->setup( pluginPath(), qgisAuthDatabaseFilePath() );
+  authManager()->setup( pluginPath(), authenticationDatabaseConnectionUri() );
 
   // Make sure we have a NAM created on the main thread.
   // Note that this might call QgsApplication::authManager to
@@ -1621,7 +1658,7 @@ QString QgsApplication::showSettings()
                         "Default Theme Path:\t%7\n"
                         "SVG Search Paths:\t%8\n"
                         "User DB Path:\t%9\n"
-                        "Auth DB Path:\t%10\n" )
+                        "Auth DB URI:\t%10\n" )
                     .arg( myEnvironmentVar,
                           prefixPath(),
                           pluginPath(),
@@ -1631,7 +1668,7 @@ QString QgsApplication::showSettings()
                           defaultThemePath(),
                           svgPaths().join( tr( "\n\t\t", "match indentation of application state" ) ),
                           qgisMasterDatabaseFilePath() )
-                    .arg( qgisAuthDatabaseFilePath() );
+                    .arg( authenticationDatabaseConnectionUri() );
   return myState;
 }
 

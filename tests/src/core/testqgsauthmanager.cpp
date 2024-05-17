@@ -93,7 +93,7 @@ void TestQgsAuthManager::initTestCase()
             "Authentication system is DISABLED" );
 
   // verify QGIS_AUTH_DB_DIR_PATH (temp auth db path) worked
-  const QString db1( QFileInfo( QgsApplication::authManager()->authenticationDatabasePath() ).canonicalFilePath() );
+  const QString db1( QFileInfo( QgsApplication::authManager()->authenticationDatabaseUri() ).canonicalFilePath() );
   const QString db2( QFileInfo( mTempDir + "/qgis-auth.db" ).canonicalFilePath() );
   QVERIFY2( db1 == db2, "Auth db temp path does not match db path of manager" );
 

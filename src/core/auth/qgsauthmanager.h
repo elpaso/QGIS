@@ -17,8 +17,10 @@
 #ifndef QGSAUTHMANAGER_H
 #define QGSAUTHMANAGER_H
 
+
 #include "qgis_core.h"
 #include "qgis_sip.h"
+#include "qgsexception.h"
 #include <QObject>
 #include <QRecursiveMutex>
 #include <QNetworkReply>
@@ -27,6 +29,7 @@
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QStringList>
+#include <QDir>
 
 #ifndef QT_NO_SSL
 #include <QSslCertificate>
@@ -86,7 +89,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
      * \param authDatabasePath the authentication DB path
      * \return TRUE on success
      * \see QgsApplication::pluginPath
-     * \see QgsApplication::qgisAuthDatabaseFilePath
+     * \see QgsApplication::authDatabaseConnectionUri
      * \deprecated Since QGIS 3.36, use setup() instead.
      */
     Q_DECL_DEPRECATED bool init( const QString &pluginPath = QString(),  const QString &authDatabasePath = QString() ) SIP_DEPRECATED;
@@ -98,9 +101,9 @@ class CORE_EXPORT QgsAuthManager : public QObject
      * to lazy-initialize when required.
      *
      * \param pluginPath the plugin path
-     * \param authDatabasePath the authentication DB path
+     * \param authDatabaseUri the authentication DB connection URI
      */
-    void setup( const QString &pluginPath = QString(),  const QString &authDatabasePath = QString() );
+    void setup( const QString &pluginPath = QString(),  const QString &authDatabaseUri = QString() );
 
     ~QgsAuthManager() override;
 
@@ -113,6 +116,11 @@ class CORE_EXPORT QgsAuthManager : public QObject
     //! Name of the authentication database table that stores server exceptions/configs
     const QString authDatabaseServersTable() const { return AUTH_SERVERS_TABLE; }
 
+    /**
+     * Returns true if the database URI is a local file path using SQLITE or SPATIALITE drivers.
+     * \since QGIS 3.40
+     */
+    static bool isFilesystemBasedDatabase( const QString &uri );
 
     //! Whether QCA has the qca-ossl plugin, which a base run-time requirement
     bool isDisabled() const;
@@ -121,10 +129,17 @@ class CORE_EXPORT QgsAuthManager : public QObject
     const QString disabledMessage() const;
 
     /**
-     * The standard authentication database file in ~/.qgis3/ or defined location
-     * \see QgsApplication::qgisAuthDatabaseFilePath
+     * Returns the path to the filesystem based uthentication database file (in ~/.qgis3/ or defined location)
+     * or an empty string if the database is not filesystem based.
+     * \see QgsApplication::auuthDatabaseFilePath
      */
-    const QString authenticationDatabasePath() const { return mAuthDbPath; }
+    const QString authenticationDatabasePath() const SIP_THROW( QgsException );
+
+    /**
+     * Returns the authentication database connection URI.
+     * \since QGIS 3.40
+     */
+    const QString authenticationDatabaseUri() const { return mAuthDatabaseConnectionUri; }
 
     /**
      * Main call to initially set or continually check master password is set
@@ -358,7 +373,7 @@ class CORE_EXPORT QgsAuthManager : public QObject
     /**
      * Erase all rows from all tables in authentication database
      * \param backup Whether to backup of current database
-     * \param backuppath Where the backup is locate
+     * \param backuppath Where the backup is located
      * \returns Whether operation succeeded
      */
     bool eraseAuthenticationDatabase( bool backup, QString *backuppath SIP_INOUT = nullptr );
@@ -887,11 +902,10 @@ class CORE_EXPORT QgsAuthManager : public QObject
     static const QString AUTH_CFG_REGEX;
 
     QString mPluginPath;
-    QString mAuthDatabasePath;
+    QString mAuthDatabaseConnectionUri;
     mutable bool mLazyInitResult = false;
 
     bool mAuthInit = false;
-    QString mAuthDbPath;
 
     std::unique_ptr<QCA::Initializer> mQcaInitializer;
 

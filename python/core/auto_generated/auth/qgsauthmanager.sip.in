@@ -13,6 +13,7 @@
 
 
 
+
 class QgsAuthManager : QObject
 {
 %Docstring(signature="appended")
@@ -46,13 +47,13 @@ init initialize QCA, prioritize qca-ossl plugin and optionally set up the authen
 
 .. seealso:: :py:func:`QgsApplication.pluginPath`
 
-.. seealso:: :py:func:`QgsApplication.qgisAuthDatabaseFilePath`
+.. seealso:: :py:func:`QgsApplication.authDatabaseConnectionUri`
 
 .. deprecated:: QGIS 3.36
   use :py:func:`~QgsAuthManager.setup` instead.
 %End
 
-    void setup( const QString &pluginPath = QString(),  const QString &authDatabasePath = QString() );
+    void setup( const QString &pluginPath = QString(),  const QString &authDatabaseUri = QString() );
 %Docstring
 Sets up the authentication manager configuration.
 
@@ -60,7 +61,7 @@ This method does not initialize the authentication framework, instead that is de
 to lazy-initialize when required.
 
 :param pluginPath: the plugin path
-:param authDatabasePath: the authentication DB path
+:param authDatabaseUri: the authentication DB connection URI
 %End
 
     ~QgsAuthManager();
@@ -80,6 +81,12 @@ Name of the authentication database table that stores configs
 Name of the authentication database table that stores server exceptions/configs
 %End
 
+    static bool isFilesystemBasedDatabase( const QString &uri );
+%Docstring
+Returns true if the database URI is a local file path using SQLITE or SPATIALITE drivers.
+
+.. versionadded:: 3.40
+%End
 
     bool isDisabled() const;
 %Docstring
@@ -91,11 +98,19 @@ Whether QCA has the qca-ossl plugin, which a base run-time requirement
 Standard message for when QCA's qca-ossl plugin is missing and system is disabled
 %End
 
-    const QString authenticationDatabasePath() const;
+    const QString authenticationDatabasePath() const throw( QgsException );
 %Docstring
-The standard authentication database file in ~/.qgis3/ or defined location
+Returns the path to the filesystem based uthentication database file (in ~/.qgis3/ or defined location)
+or an empty string if the database is not filesystem based.
 
-.. seealso:: :py:func:`QgsApplication.qgisAuthDatabaseFilePath`
+.. seealso:: :py:func:`QgsApplication.auuthDatabaseFilePath`
+%End
+
+    const QString authenticationDatabaseUri() const;
+%Docstring
+Returns the authentication database connection URI.
+
+.. versionadded:: 3.40
 %End
 
     bool setMasterPassword( bool verify = false );
@@ -360,7 +375,7 @@ Close connection to current authentication database and back it up
 Erase all rows from all tables in authentication database
 
 :param backup: Whether to backup of current database
-:param backuppath: Where the backup is locate
+:param backuppath: Where the backup is located
 
 :return: Whether operation succeeded
 %End

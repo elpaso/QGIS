@@ -265,9 +265,19 @@ Returns the path to the settings directory in user's home dir
 Returns the path to the user qgis.db file.
 %End
 
-    static QString qgisAuthDatabaseFilePath();
+    static QString qgisAuthDatabaseFilePath() throw( QgsException );
 %Docstring
-Returns the path to the user authentication database file: qgis-auth.db.
+Returns the path to the filesystem-based user authentication database file: qgis-auth.db.
+or an empty string if the authentication database is not filesystem-based.
+
+.. seealso:: :py:func:`authenticationDatabaseConnectionUri`
+%End
+
+    static QString authenticationDatabaseConnectionUri();
+%Docstring
+Returns the URI to the user authentication database.
+
+.. versionadded:: 3.40.
 %End
 
     static QString splashPath();
@@ -510,9 +520,18 @@ Alters pkg data path - used by 3rd party apps
 Alters default svg paths - used by 3rd party apps.
 %End
 
-    static void setAuthDatabaseDirPath( const QString &authDbDirPath );
+ static void setAuthDatabaseDirPath( const QString &authDbDirPath ) /Deprecated/;
 %Docstring
 Alters authentication data base directory path - used by 3rd party apps
+
+.. deprecated:: QGIS 3.40.
+   Use :py:func:`~QgsApplication.setAuthDatabaseConnectionUri` instead.
+%End
+
+    static void setAuthDatabaseConnectionUri( const QString &authDbConnectionUri ) /Deprecated/;
+%Docstring
+Alters authentication data base connection URI
+\sice since QGIS 3.40.
 %End
 
     static void initQgis();

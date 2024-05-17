@@ -124,12 +124,61 @@ QSqlDatabase QgsAuthManager::authDatabaseConnection() const
   if ( !QSqlDatabase::contains( connectionName ) )
   {
     QgsDebugMsgLevel( QStringLiteral( "No existing connection, creating a new one" ), 2 );
-    authdb = QSqlDatabase::addDatabase( QStringLiteral( "QPSQL" ), connectionName );
-    authdb.setHostName( "127.0.0.1" );
-    authdb.setDatabaseName( "qgis_tests" );
-    authdb.setUserName( "ale" );
-    authdb.setPassword( "ale" );
-    //authdb.setDatabaseName( authenticationDatabasePath() );
+
+    if ( isFilesystemBasedDatabase( mAuthDatabaseConnectionUri ) )
+    {
+
+      // If the URI starts with SQLITE or SPATIALITE, remove the prefix
+      QString cleanedUri = mAuthDatabaseConnectionUri;
+      if ( cleanedUri.startsWith( QStringLiteral( "SQLITE:" ) ) || cleanedUri.startsWith( QStringLiteral( "SPATIALITE:" ) ) )
+      {
+        cleanedUri = cleanedUri.mid( cleanedUri.indexOf( QStringLiteral( ":" ) ) + 1 );
+      }
+      authdb = QSqlDatabase::addDatabase( QStringLiteral( "QSQLITE" ), connectionName );
+      authdb.setDatabaseName( cleanedUri );
+    }
+    else
+    {
+      // Parse uri from the schema:
+      // driver://username:password@host:port/database?table=table_name&schema=schema_name
+      QStringList parts = mAuthDatabaseConnectionUri.split( QStringLiteral( "://" ) );
+      if ( parts.size() != 2 )
+      {
+        QgsDebugError( QStringLiteral( "Invalid authentication database URI: %1" ).arg( mAuthDatabaseConnectionUri ) );
+        return authdb;
+      }
+      QStringList uriParts = parts.at( 1 ).split( QStringLiteral( "@" ) );
+      if ( uriParts.size() != 2 )
+      {
+        QgsDebugError( QStringLiteral( "Invalid authentication database URI: %1" ).arg( mAuthDatabaseConnectionUri ) );
+        return authdb;
+      }
+      QStringList userPass = uriParts.at( 0 ).split( QStringLiteral( ":" ) );
+      if ( userPass.size() != 2 )
+      {
+        QgsDebugError( QStringLiteral( "Invalid authentication database URI: %1" ).arg( mAuthDatabaseConnectionUri ) );
+        return authdb;
+      }
+      QStringList hostPort = uriParts.at( 1 ).split( QStringLiteral( ":" ) );
+      if ( hostPort.size() != 2 )
+      {
+        QgsDebugError( QStringLiteral( "Invalid authentication database URI: %1" ).arg( mAuthDatabaseConnectionUri ) );
+        return authdb;
+      }
+      QString driver = parts.at( 0 ).toUpper();
+      QString user = userPass.at( 0 );
+      QString pass = userPass.at( 1 );
+      QString host = hostPort.at( 0 );
+      QString port = hostPort.at( 1 );
+      QString database = QStringLiteral( "qgis_auth" );
+      authdb = QSqlDatabase::addDatabase( driver, connectionName );
+      authdb.setHostName( host );
+      authdb.setPort( port.toInt() );
+      authdb.setDatabaseName( database );
+      authdb.setUserName( user );
+      authdb.setPassword( pass );
+    }
+
     // for background threads, remove database when current thread finishes
     if ( QThread::currentThread() != QCoreApplication::instance()->thread() )
     {
@@ -173,6 +222,20 @@ QSqlDatabase QgsAuthManager::authDatabaseConnection() const
   return authdb;
 }
 
+bool QgsAuthManager::isFilesystemBasedDatabase( const QString &uri )
+{
+  // Loop through all registered SQL drivers and return false if
+  // the URI starts with one of them except the SQLite based drivers
+  for ( const QString &driver : QSqlDatabase::drivers() )
+  {
+    if ( driver != ( QStringLiteral( "QSQLITE" ) ) && driver != ( QStringLiteral( "QSPATIALITE" ) ) && uri.startsWith( driver ) )
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool QgsAuthManager::init( const QString &pluginPath, const QString &authDatabasePath )
 {
   return initPrivate( pluginPath, authDatabasePath );
@@ -190,7 +253,7 @@ bool QgsAuthManager::ensureInitialized() const
     return mLazyInitResult;
   }
 
-  mLazyInitResult = const_cast< QgsAuthManager * >( this )->initPrivate( mPluginPath, mAuthDatabasePath );
+  mLazyInitResult = const_cast< QgsAuthManager * >( this )->initPrivate( mPluginPath, mAuthDatabaseConnectionUri );
   sInitialized = true;
   sInitializationMutex.unlock();
 
@@ -262,118 +325,106 @@ bool QgsAuthManager::initPrivate( const QString &pluginPath, const QString &auth
     return isDisabled();
   }
 
-  mAuthDbPath = QDir::cleanPath( authDatabasePath );
-  QgsDebugMsgLevel( QStringLiteral( "Auth database path: %1" ).arg( authenticationDatabasePath() ), 2 );
+  mAuthDatabaseConnectionUri = isFilesystemBasedDatabase( authDatabasePath ) ? QDir::cleanPath( authDatabasePath ) : authDatabasePath;
+  QgsDebugMsgLevel( QStringLiteral( "Auth database URI: %1" ).arg( mAuthDatabaseConnectionUri ), 2 );
 
-  QFileInfo dbinfo( authenticationDatabasePath() );
-  QFileInfo dbdirinfo( dbinfo.path() );
-  QgsDebugMsgLevel( QStringLiteral( "Auth db directory path: %1" ).arg( dbdirinfo.filePath() ), 2 );
-
-  if ( !dbdirinfo.exists() )
+  // If based on SQLITE, check filesystem permissions and create directory if needed
+  if ( isFilesystemBasedDatabase( mAuthDatabaseConnectionUri ) )
   {
-    QgsDebugMsgLevel( QStringLiteral( "Auth db directory path does not exist, making path: %1" ).arg( dbdirinfo.filePath() ), 2 );
-    if ( !QDir().mkpath( dbdirinfo.filePath() ) )
+    QString cleanedUri = mAuthDatabaseConnectionUri;
+    // Remove SQLITE or SPATIALITE prefix from the connection URI
+    if ( cleanedUri.startsWith( QStringLiteral( "SQLITE:" ) ) || cleanedUri.startsWith( QStringLiteral( "SPATIALITE:" ) ) )
     {
-      const char *err = QT_TR_NOOP( "Auth db directory path could not be created" );
-      QgsDebugError( err );
-      emit messageOut( tr( err ), authManTag(), CRITICAL );
-      return false;
+      cleanedUri = cleanedUri.mid( cleanedUri.indexOf( QStringLiteral( ":" ) ) + 1 );
     }
-  }
+    QFileInfo dbinfo( cleanedUri );
+    QFileInfo dbdirinfo( dbinfo.path() );
+    QgsDebugMsgLevel( QStringLiteral( "Auth db directory path: %1" ).arg( dbdirinfo.filePath() ), 2 );
 
-  if ( dbinfo.exists() )
-  {
+    if ( !dbdirinfo.exists() )
+    {
+      QgsDebugMsgLevel( QStringLiteral( "Auth db directory path does not exist, making path: %1" ).arg( dbdirinfo.filePath() ), 2 );
+      if ( !QDir().mkpath( dbdirinfo.filePath() ) )
+      {
+        const char *err = QT_TR_NOOP( "Auth db directory path could not be created" );
+        QgsDebugError( err );
+        emit messageOut( tr( err ), authManTag(), CRITICAL );
+        return false;
+      }
+    }
+
     if ( !dbinfo.permission( QFile::ReadOwner | QFile::WriteOwner ) )
     {
-      const char *err = QT_TR_NOOP( "Auth db is not readable or writable by user" );
+      const QString err = tr( "Auth db %1 is not readable or writable by user" ).arg( dbinfo.filePath() );
       QgsDebugError( err );
-      emit messageOut( tr( err ), authManTag(), CRITICAL );
+      emit messageOut( err, authManTag(), CRITICAL );
       return false;
     }
-    if ( dbinfo.size() > 0 )
-    {
-      QgsDebugMsgLevel( QStringLiteral( "Auth db exists and has data" ), 2 );
-
-      if ( !createCertTables() )
-        return false;
-
-      if ( !createCertTables() )
-        return false;
-
-      updateConfigAuthMethods();
-
-#ifndef QT_NO_SSL
-      initSslCaches();
-#endif
-
-      // set the master password from first line of file defined by QGIS_AUTH_PASSWORD_FILE env variable
-      const char *passenv = "QGIS_AUTH_PASSWORD_FILE";
-      if ( getenv( passenv ) && masterPasswordHashInDatabase() )
-      {
-        QString passpath( getenv( passenv ) );
-        // clear the env variable, so it can not be accessed from plugins, etc.
-        // (note: stored QgsApplication::systemEnvVars() skips this env variable as well)
-#ifdef Q_OS_WIN
-        putenv( passenv );
-#else
-        unsetenv( passenv );
-#endif
-        QString masterpass;
-        QFile passfile( passpath );
-        if ( passfile.exists() && passfile.open( QIODevice::ReadOnly | QIODevice::Text ) )
-        {
-          QTextStream passin( &passfile );
-          while ( !passin.atEnd() )
-          {
-            masterpass = passin.readLine();
-            break;
-          }
-          passfile.close();
-        }
-        if ( !masterpass.isEmpty() )
-        {
-          if ( setMasterPassword( masterpass, true ) )
-          {
-            QgsDebugMsgLevel( QStringLiteral( "Authentication master password set from QGIS_AUTH_PASSWORD_FILE" ), 2 );
-          }
-          else
-          {
-            QgsDebugError( "QGIS_AUTH_PASSWORD_FILE set, but FAILED to set password using: " + passpath );
-            return false;
-          }
-        }
-        else
-        {
-          QgsDebugError( "QGIS_AUTH_PASSWORD_FILE set, but FAILED to read password from: " + passpath );
-          return false;
-        }
-      }
-
-      return true;
-    }
   }
-  else
-  {
-    QgsDebugMsgLevel( QStringLiteral( "Auth db does not exist: creating through QSqlDatabase initial connection" ), 2 );
 
-    if ( !createConfigTables() )
-      return false;
+  // Create the database and tables if necessary
+  if ( !createCertTables() )
+    return false;
 
-    if ( !createCertTables() )
-      return false;
-  }
+  if ( !createCertTables() )
+    return false;
+
+  updateConfigAuthMethods();
 
 #ifndef QT_NO_SSL
   initSslCaches();
 #endif
 
+  // set the master password from first line of file defined by QGIS_AUTH_PASSWORD_FILE env variable
+  const char *passenv = "QGIS_AUTH_PASSWORD_FILE";
+  if ( getenv( passenv ) && masterPasswordHashInDatabase() )
+  {
+    QString passpath( getenv( passenv ) );
+    // clear the env variable, so it can not be accessed from plugins, etc.
+    // (note: stored QgsApplication::systemEnvVars() skips this env variable as well)
+#ifdef Q_OS_WIN
+    putenv( passenv );
+#else
+    unsetenv( passenv );
+#endif
+    QString masterpass;
+    QFile passfile( passpath );
+    if ( passfile.exists() && passfile.open( QIODevice::ReadOnly | QIODevice::Text ) )
+    {
+      QTextStream passin( &passfile );
+      while ( !passin.atEnd() )
+      {
+        masterpass = passin.readLine();
+        break;
+      }
+      passfile.close();
+    }
+    if ( !masterpass.isEmpty() )
+    {
+      if ( setMasterPassword( masterpass, true ) )
+      {
+        QgsDebugMsgLevel( QStringLiteral( "Authentication master password set from QGIS_AUTH_PASSWORD_FILE" ), 2 );
+      }
+      else
+      {
+        QgsDebugError( "QGIS_AUTH_PASSWORD_FILE set, but FAILED to set password using: " + passpath );
+        return false;
+      }
+    }
+    else
+    {
+      QgsDebugError( "QGIS_AUTH_PASSWORD_FILE set, but FAILED to read password from: " + passpath );
+      return false;
+    }
+  }
+
   return true;
 }
 
-void QgsAuthManager::setup( const QString &pluginPath, const QString &authDatabasePath )
+void QgsAuthManager::setup( const QString &pluginPath, const QString &authDatabaseUri )
 {
   mPluginPath = pluginPath;
-  mAuthDatabasePath = authDatabasePath;
+  mAuthDatabaseConnectionUri = authDatabaseUri;
 }
 
 bool QgsAuthManager::createConfigTables()
@@ -543,6 +594,15 @@ const QString QgsAuthManager::disabledMessage() const
   ensureInitialized();
 
   return tr( "Authentication system is DISABLED:\n%1" ).arg( mAuthDisabledMessage );
+}
+
+const QString QgsAuthManager::authenticationDatabasePath() const SIP_DEPRECATED
+{
+  if ( !QgsAuthManager::isFilesystemBasedDatabase( mAuthDatabaseConnectionUri ) )
+  {
+    throw QgsException( tr( "QGIS_AUTH_DB_CONNECTION_URI is not a valid filesystem based DB URI: %1" ).arg( mAuthDatabaseConnectionUri ) );
+  }
+  return authenticationDatabaseUri();
 }
 
 bool QgsAuthManager::setMasterPassword( bool verify )
@@ -1567,7 +1627,7 @@ bool QgsAuthManager::backupAuthenticationDatabase( QString *backuppath )
   ensureInitialized();
 
   QMutexLocker locker( mMutex.get() );
-  if ( !QFile::exists( authenticationDatabasePath() ) )
+  if ( !QFile::exists( authenticationDatabaseUri() ) )
   {
     const char *err = QT_TR_NOOP( "No authentication database found" );
     QgsDebugError( err );
@@ -1582,10 +1642,10 @@ bool QgsAuthManager::backupAuthenticationDatabase( QString *backuppath )
 
   // duplicate current db file to 'qgis-auth_YYYY-MM-DD-HHMMSS.db' backup
   QString datestamp( QDateTime::currentDateTime().toString( QStringLiteral( "yyyy-MM-dd-hhmmss" ) ) );
-  QString dbbackup( authenticationDatabasePath() );
+  QString dbbackup( authenticationDatabaseUri() );
   dbbackup.replace( QLatin1String( ".db" ), QStringLiteral( "_%1.db" ).arg( datestamp ) );
 
-  if ( !QFile::copy( authenticationDatabasePath(), dbbackup ) )
+  if ( !QFile::copy( authenticationDatabaseUri(), dbbackup ) )
   {
     const char *err = QT_TR_NOOP( "Could not back up authentication database" );
     QgsDebugError( err );
@@ -1608,6 +1668,13 @@ bool QgsAuthManager::eraseAuthenticationDatabase( bool backup, QString *backuppa
   if ( isDisabled() )
     return false;
 
+  const bool isLocalFile = QFileInfo::exists( authenticationDatabaseUri() );
+
+  if ( backup && !isLocalFile )
+  {
+    emit messageOut( tr( "Backup is not supported on remote DB." ), authManTag(), WARNING );
+  }
+
   QString dbbackup;
   if ( backup && !backupAuthenticationDatabase( &dbbackup ) )
   {
@@ -1617,14 +1684,14 @@ bool QgsAuthManager::eraseAuthenticationDatabase( bool backup, QString *backuppa
   if ( backuppath && !dbbackup.isEmpty() )
     *backuppath = dbbackup;
 
-  QFileInfo dbinfo( authenticationDatabasePath() );
+  QFileInfo dbinfo( authenticationDatabaseUri() );
   if ( dbinfo.exists() )
   {
     if ( !dbinfo.permission( QFile::ReadOwner | QFile::WriteOwner ) )
     {
-      const char *err = QT_TR_NOOP( "Auth db is not readable or writable by user" );
+      const QString err = tr( "Auth db %1 is not readable or writable by user" ).arg( dbinfo.filePath() );
       QgsDebugError( err );
-      emit messageOut( tr( err ), authManTag(), CRITICAL );
+      emit messageOut( err, authManTag(), CRITICAL );
       return false;
     }
   }
@@ -1636,7 +1703,7 @@ bool QgsAuthManager::eraseAuthenticationDatabase( bool backup, QString *backuppa
     return false;
   }
 
-  if ( !QFile::remove( authenticationDatabasePath() ) )
+  if ( !QFile::remove( authenticationDatabaseUri() ) )
   {
     const char *err = QT_TR_NOOP( "Authentication database could not be deleted" );
     QgsDebugError( err );
@@ -4090,7 +4157,7 @@ bool QgsAuthManager::authDbOpen() const
     if ( !authdb.open() )
     {
       QgsDebugError( QStringLiteral( "Unable to establish database connection\nDatabase: %1\nDriver error: %2\nDatabase error: %3" )
-                     .arg( authenticationDatabasePath(),
+                     .arg( authenticationDatabaseUri(),
                            authdb.lastError().driverText(),
                            authdb.lastError().databaseText() ) );
       emit messageOut( tr( "Unable to establish authentication database connection" ), authManTag(), CRITICAL );
@@ -4212,9 +4279,19 @@ QString QgsAuthManager::authPasswordHelperKeyName() const
 {
   ensureInitialized();
 
-  const QFileInfo info( mAuthDbPath );
-  const QString dbProfilePath = info.dir().dirName();
+  QString dbProfilePath;
+
+  if ( isFilesystemBasedDatabase( mAuthDatabaseConnectionUri ) )
+  {
+    const QFileInfo info( mAuthDatabaseConnectionUri );
+    dbProfilePath = info.dir().dirName();
+  }
+  else
+  {
+    dbProfilePath = QCryptographicHash::hash( ( mAuthDatabaseConnectionUri.toUtf8() ), QCryptographicHash::Md5 ).toHex();
+  }
 
   // if not running from the default profile, ensure that a different key is used
   return AUTH_PASSWORD_HELPER_KEY_NAME_BASE + ( dbProfilePath.compare( QLatin1String( "default" ), Qt::CaseInsensitive ) == 0 ? QString() : dbProfilePath );
+
 }

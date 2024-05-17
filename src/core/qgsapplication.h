@@ -332,8 +332,18 @@ class CORE_EXPORT QgsApplication : public QApplication
     //! Returns the path to the user qgis.db file.
     static QString qgisUserDatabaseFilePath();
 
-    //! Returns the path to the user authentication database file: qgis-auth.db.
-    static QString qgisAuthDatabaseFilePath();
+    /**
+     *  Returns the path to the filesystem-based user authentication database file: qgis-auth.db.
+     *  or an empty string if the authentication database is not filesystem-based.
+     *  \see authenticationDatabaseConnectionUri()
+     */
+    static QString qgisAuthDatabaseFilePath() SIP_THROW( QgsException );
+
+    /**
+     * Returns the URI to the user authentication database.
+     * \since QGIS 3.40.
+     */
+    static QString authenticationDatabaseConnectionUri();
 
     //! Returns the path to the splash screen image directory.
     static QString splashPath();
@@ -530,8 +540,17 @@ class CORE_EXPORT QgsApplication : public QApplication
     //! Alters default svg paths - used by 3rd party apps.
     static void setDefaultSvgPaths( const QStringList &pathList );
 
-    //! Alters authentication data base directory path - used by 3rd party apps
-    static void setAuthDatabaseDirPath( const QString &authDbDirPath );
+    /**
+     *  Alters authentication data base directory path - used by 3rd party apps
+     *  \deprecated since QGIS 3.40. Use setAuthDatabaseConnectionUri() instead.
+    */
+    Q_DECL_DEPRECATED static void setAuthDatabaseDirPath( const QString &authDbDirPath ) SIP_DEPRECATED;
+
+    /**
+     *  Alters authentication data base connection URI
+     *  \sice since QGIS 3.40.
+    */
+    static void setAuthDatabaseConnectionUri( const QString &authDbConnectionUri ) SIP_DEPRECATED;
 
     //! loads providers
     static void initQgis();
