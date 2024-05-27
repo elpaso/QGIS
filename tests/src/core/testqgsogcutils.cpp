@@ -55,6 +55,8 @@ class TestQgsOgcUtils : public QObject
     void testGeometryFromGML();
     void testGeometryToGML();
 
+    void testGeometryZToGML();
+
     void testExpressionFromOgcFilter();
     void testExpressionFromOgcFilter_data();
 
@@ -107,6 +109,13 @@ void TestQgsOgcUtils::testGeometryFromGML()
   geomBox = QgsOgcUtils::geometryFromGML( QStringLiteral( "<gml:Envelope srsName=\"foo\"><gml:lowerCorner>135.2239 34.4879</gml:lowerCorner><gml:upperCorner>135.8578 34.8471</gml:upperCorner></gml:Envelope>" ) );
   QVERIFY( !geomBox.isNull() );
   QVERIFY( geomBox.wkbType() == Qgis::WkbType::Polygon );
+
+  // Test GML3 Z
+  geom = QgsOgcUtils::geometryFromGML( QStringLiteral( "<gml:Point srsName=\"EPSG:4326\"><gml:pos srsDimension=\"3\">0 1 2</gml:pos></gml:Point>" ) );
+  QVERIFY( !geom.isNull() );
+  QVERIFY( geom.wkbType() == Qgis::WkbType::PointZ );
+  QVERIFY( geom.asJson( 0 ).contains( QStringLiteral( "[1, 2, 3]" ) ) );
+
 }
 
 static bool compareElements( QDomElement &element1, QDomElement &element2 )
@@ -272,6 +281,28 @@ void TestQgsOgcUtils::testGeometryToGML()
   ogcElem = comparableElement( doc.toString( -1 ) );
   QVERIFY( compareElements( xmlElem, ogcElem ) );
   doc.removeChild( elemLine );
+}
+
+void TestQgsOgcUtils::testGeometryZToGML()
+{
+
+  QDomDocument doc;
+  const QgsGeometry geomPoint( QgsGeometry::fromWkt( QStringLiteral( "POINTZ (111 222 333)" ) ) );
+
+  // Elements to compare
+  QDomElement xmlElem;
+  QDomElement ogcElem;
+
+  // Test GML3
+  QDomElement elemPoint = QgsOgcUtils::geometryToGML( geomPoint, doc, QStringLiteral( "GML3" ) );
+  QVERIFY( !elemPoint.isNull() );
+
+  doc.appendChild( elemPoint );
+
+  xmlElem = comparableElement( QStringLiteral( "<gml:Point><gml:pos srsDimension=\"3\">111 222 333</gml:pos></gml:Point>" ) );
+  ogcElem = comparableElement( doc.toString( -1 ) );
+  QVERIFY( compareElements( xmlElem, ogcElem ) );
+
 }
 
 void TestQgsOgcUtils::testExpressionFromOgcFilterWFS20_data()

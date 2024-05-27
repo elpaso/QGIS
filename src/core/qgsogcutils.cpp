@@ -208,7 +208,7 @@ QgsGeometry QgsOgcUtils::geometryFromGML( const QString &xmlString, const Contex
 
 QgsGeometry QgsOgcUtils::geometryFromGMLPoint( const QDomElement &geometryElement )
 {
-  QgsPolylineXY pointCoordinate;
+  QgsPolyline pointCoordinate;
 
   const QDomNodeList coordList = geometryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "coordinates" ) );
   if ( !coordList.isEmpty() )
@@ -238,7 +238,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPoint( const QDomElement &geometryElemen
     return QgsGeometry();
   }
 
-  QgsPolylineXY::const_iterator point_it = pointCoordinate.constBegin();
+  QgsPolyline::const_iterator point_it = pointCoordinate.constBegin();
   char e = htonl( 1 ) != 1;
   double x = point_it->x();
   double y = point_it->y();
@@ -263,7 +263,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPoint( const QDomElement &geometryElemen
 
 QgsGeometry QgsOgcUtils::geometryFromGMLLineString( const QDomElement &geometryElement )
 {
-  QgsPolylineXY lineCoordinates;
+  QgsPolyline lineCoordinates;
 
   const QDomNodeList coordList = geometryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "coordinates" ) );
   if ( !coordList.isEmpty() )
@@ -306,7 +306,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLLineString( const QDomElement &geometryE
   memcpy( &( wkb )[wkbPosition], &nPoints, sizeof( int ) );
   wkbPosition += sizeof( int );
 
-  QgsPolylineXY::const_iterator iter;
+  QgsPolyline::const_iterator iter;
   for ( iter = lineCoordinates.constBegin(); iter != lineCoordinates.constEnd(); ++iter )
   {
     x = iter->x();
@@ -325,10 +325,10 @@ QgsGeometry QgsOgcUtils::geometryFromGMLLineString( const QDomElement &geometryE
 QgsGeometry QgsOgcUtils::geometryFromGMLPolygon( const QDomElement &geometryElement )
 {
   //read all the coordinates (as QgsPoint) into memory. Each linear ring has an entry in the vector
-  QgsMultiPolylineXY ringCoordinates;
+  QgsMultiPolyline ringCoordinates;
 
   //read coordinates for outer boundary
-  QgsPolylineXY exteriorPointList;
+  QgsPolyline exteriorPointList;
   const QDomNodeList outerBoundaryList = geometryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "outerBoundaryIs" ) );
   if ( !outerBoundaryList.isEmpty() ) //outer ring is necessary
   {
@@ -920,7 +920,7 @@ QDomElement QgsOgcUtils::filterElement( QDomDocument &doc, GMLVersion gmlVersion
 }
 
 
-bool QgsOgcUtils::readGMLCoordinates( QgsPolylineXY &coords, const QDomElement &elem )
+bool QgsOgcUtils::readGMLCoordinates( QgsPolyline &coords, const QDomElement &elem )
 {
   QString coordSeparator = QStringLiteral( "," );
   QString tupleSeparator = QStringLiteral( " " );
@@ -939,7 +939,8 @@ bool QgsOgcUtils::readGMLCoordinates( QgsPolylineXY &coords, const QDomElement &
 
   const QStringList tupels = elem.text().split( tupleSeparator, Qt::SkipEmptyParts );
   QStringList tuple_coords;
-  double x, y;
+  double x, y, z;
+  z = std::numeric_limits<double>::quiet_NaN();
   bool conversionSuccess;
 
   QStringList::const_iterator it;
@@ -960,7 +961,7 @@ bool QgsOgcUtils::readGMLCoordinates( QgsPolylineXY &coords, const QDomElement &
     {
       return true;
     }
-    coords.push_back( QgsPointXY( x, y ) );
+    coords.append( QgsPoint( x, y, z ) );
   }
   return false;
 }
@@ -1001,12 +1002,13 @@ QgsRectangle QgsOgcUtils::rectangleFromGMLBox( const QDomNode &boxNode )
   return rect;
 }
 
-bool QgsOgcUtils::readGMLPositions( QgsPolylineXY &coords, const QDomElement &elem )
+bool QgsOgcUtils::readGMLPositions( QgsPolyline &coords, const QDomElement &elem )
 {
   coords.clear();
 
   const QStringList pos = elem.text().split( ' ', Qt::SkipEmptyParts );
-  double x, y;
+  double x, y, z;
+  z = std::numeric_limits<double>::quiet_NaN();
   bool conversionSuccess;
   const int posSize = pos.size();
 
@@ -1040,7 +1042,7 @@ bool QgsOgcUtils::readGMLPositions( QgsPolylineXY &coords, const QDomElement &el
     {
       return true;
     }
-    coords.push_back( QgsPointXY( x, y ) );
+    coords.append( QgsPoint( x, y, z ) );
   }
   return false;
 }
@@ -1250,7 +1252,9 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
     {
       case Qgis::WkbType::Point25D:
       case Qgis::WkbType::Point:
+      case Qgis::WkbType::PointZ:
       case Qgis::WkbType::MultiPoint25D:
+      case Qgis::WkbType::MultiPointZ:
       case Qgis::WkbType::MultiPoint:
         baseCoordElem = doc.createElement( QStringLiteral( "gml:pos" ) );
         break;
@@ -1258,7 +1262,6 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
         baseCoordElem = doc.createElement( QStringLiteral( "gml:posList" ) );
         break;
     }
-    baseCoordElem.setAttribute( QStringLiteral( "srsDimension" ), QStringLiteral( "2" ) );
     cs = ' ';
   }
   else
@@ -1273,6 +1276,10 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
     switch ( geometry.wkbType() )
     {
       case Qgis::WkbType::Point25D:
+      case Qgis::WkbType::PointZ:
+        hasZValue = true;
+        //intentional fall-through
+        [[fallthrough]];
       case Qgis::WkbType::Point:
       {
         QDomElement pointElem = doc.createElement( QStringLiteral( "gml:Point" ) );
@@ -1288,13 +1295,26 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
           wkbPtr >> y >> x;
         else
           wkbPtr >> x >> y;
-        const QDomText coordText = doc.createTextNode( qgsDoubleToString( x, precision ) + cs + qgsDoubleToString( y, precision ) );
+
+        QString coordString = qgsDoubleToString( x, precision ) + cs + qgsDoubleToString( y, precision );
+
+        // Add Z
+        if ( hasZValue && gmlVersion != GML_2_1_2 )
+        {
+          double z = 0;
+          wkbPtr >> z;
+          coordString += cs + qgsDoubleToString( z, precision );
+        }
+        const QDomText coordText = doc.createTextNode( coordString );
 
         coordElem.appendChild( coordText );
+        if ( gmlVersion != GML_2_1_2 )
+          coordElem.setAttribute( QStringLiteral( "srsDimension" ), hasZValue ? QStringLiteral( "3" ) : QStringLiteral( "2" ) );
         pointElem.appendChild( coordElem );
         return pointElem;
       }
       case Qgis::WkbType::MultiPoint25D:
+      case Qgis::WkbType::MultiPointZ:
         hasZValue = true;
         //intentional fall-through
         [[fallthrough]];
@@ -1325,21 +1345,34 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
             wkbPtr >> y >> x;
           else
             wkbPtr >> x >> y;
-          const QDomText coordText = doc.createTextNode( qgsDoubleToString( x, precision ) + cs + qgsDoubleToString( y, precision ) );
+
+          QString coordString = qgsDoubleToString( x, precision ) + cs + qgsDoubleToString( y, precision );
+          // Add Z
+          if ( hasZValue && gmlVersion != GML_2_1_2 )
+          {
+            double z = 0;
+            wkbPtr >> z;
+            coordString += cs + qgsDoubleToString( z, precision );
+          }
+          const QDomText coordText = doc.createTextNode( coordString );
 
           coordElem.appendChild( coordText );
+          if ( gmlVersion != GML_2_1_2 )
+            coordElem.setAttribute( QStringLiteral( "srsDimension" ), hasZValue ? QStringLiteral( "3" ) : QStringLiteral( "2" ) );
           pointElem.appendChild( coordElem );
 
           if ( hasZValue )
           {
             wkbPtr += sizeof( double );
           }
+
           pointMemberElem.appendChild( pointElem );
           multiPointElem.appendChild( pointMemberElem );
         }
         return multiPointElem;
       }
       case Qgis::WkbType::LineString25D:
+      case Qgis::WkbType::LineStringZ:
         hasZValue = true;
         //intentional fall-through
         [[fallthrough]];
@@ -1379,10 +1412,13 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
         }
         const QDomText coordText = doc.createTextNode( coordString );
         coordElem.appendChild( coordText );
+        if ( gmlVersion != GML_2_1_2 )
+          coordElem.setAttribute( QStringLiteral( "srsDimension" ), hasZValue ? QStringLiteral( "3" ) : QStringLiteral( "2" ) );
         lineStringElem.appendChild( coordElem );
         return lineStringElem;
       }
       case Qgis::WkbType::MultiLineString25D:
+      case Qgis::WkbType::MultiLineStringZ:
         hasZValue = true;
         //intentional fall-through
         [[fallthrough]];
@@ -1434,6 +1470,8 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
           }
           const QDomText coordText = doc.createTextNode( coordString );
           coordElem.appendChild( coordText );
+          if ( gmlVersion != GML_2_1_2 )
+            coordElem.setAttribute( QStringLiteral( "srsDimension" ), hasZValue ? QStringLiteral( "3" ) : QStringLiteral( "2" ) );
           lineStringElem.appendChild( coordElem );
           lineStringMemberElem.appendChild( lineStringElem );
           multiLineStringElem.appendChild( lineStringMemberElem );
@@ -1441,6 +1479,7 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
         return multiLineStringElem;
       }
       case Qgis::WkbType::Polygon25D:
+      case Qgis::WkbType::PolygonZ:
         hasZValue = true;
         //intentional fall-through
         [[fallthrough]];
@@ -1496,13 +1535,17 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
           }
           const QDomText coordText = doc.createTextNode( coordString );
           coordElem.appendChild( coordText );
+          if ( gmlVersion != GML_2_1_2 )
+            coordElem.setAttribute( QStringLiteral( "srsDimension" ), hasZValue ? QStringLiteral( "3" ) : QStringLiteral( "2" ) );
           ringElem.appendChild( coordElem );
           boundaryElem.appendChild( ringElem );
           polygonElem.appendChild( boundaryElem );
         }
+
         return polygonElem;
       }
       case Qgis::WkbType::MultiPolygon25D:
+      case Qgis::WkbType::MultiPolygonZ:
         hasZValue = true;
         //intentional fall-through
         [[fallthrough]];
@@ -1567,6 +1610,8 @@ QDomElement QgsOgcUtils::geometryToGML( const QgsGeometry &geometry,
             }
             const QDomText coordText = doc.createTextNode( coordString );
             coordElem.appendChild( coordText );
+            if ( gmlVersion != GML_2_1_2 )
+              coordElem.setAttribute( QStringLiteral( "srsDimension" ), hasZValue ? QStringLiteral( "3" ) : QStringLiteral( "2" ) );
             ringElem.appendChild( coordElem );
             boundaryElem.appendChild( ringElem );
             polygonElem.appendChild( boundaryElem );
