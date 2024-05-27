@@ -330,7 +330,7 @@ class CORE_EXPORT QgsOgcUtils
      * \param elem the \verbatim <gml:coordinates> \endverbatim element
      * \returns boolean FALSE on success
     */
-    static bool readGMLCoordinates( QgsPolylineXY &coords, const QDomElement &elem );
+    static bool readGMLCoordinates( QgsPolyline &coords, const QDomElement &elem );
 
     /**
      * Reads the \verbatim <gml:pos> \endverbatim or \verbatim <gml:posList> \endverbatim
@@ -340,7 +340,7 @@ class CORE_EXPORT QgsOgcUtils
      *              \verbatim <gml:posList> \endverbatim element
      * \returns boolean FALSE on success
      */
-    static bool readGMLPositions( QgsPolylineXY &coords, const QDomElement &elem );
+    static bool readGMLPositions( QgsPolyline &coords, const QDomElement &elem );
 
 
     /**
