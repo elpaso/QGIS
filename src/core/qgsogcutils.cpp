@@ -26,6 +26,8 @@
 #include "qgsexpressioncontextutils.h"
 #include "qgslogger.h"
 #include "qgsstringutils.h"
+#include "qgsmultipolygon.h"
+#include "qgspolygon.h"
 
 #include <QColor>
 #include <QStringList>
@@ -92,7 +94,7 @@ QgsGeometry QgsOgcUtils::geometryFromGML( const QDomNode &geometryNode, const Co
 
   if ( !( geomType == QLatin1String( "Point" ) || geomType == QLatin1String( "LineString" ) || geomType == QLatin1String( "Polygon" ) ||
           geomType == QLatin1String( "MultiPoint" ) || geomType == QLatin1String( "MultiLineString" ) || geomType == QLatin1String( "MultiPolygon" ) ||
-          geomType == QLatin1String( "Box" ) || geomType == QLatin1String( "Envelope" ) ) )
+          geomType == QLatin1String( "Box" ) || geomType == QLatin1String( "Envelope" ) || geomType == QLatin1String( "MultiCurve" ) ) )
   {
     const QDomNode geometryChild = geometryNode.firstChild();
     if ( geometryChild.isNull() )
@@ -105,7 +107,7 @@ QgsGeometry QgsOgcUtils::geometryFromGML( const QDomNode &geometryNode, const Co
 
   if ( !( geomType == QLatin1String( "Point" ) || geomType == QLatin1String( "LineString" ) || geomType == QLatin1String( "Polygon" ) ||
           geomType == QLatin1String( "MultiPoint" ) || geomType == QLatin1String( "MultiLineString" ) || geomType == QLatin1String( "MultiPolygon" ) ||
-          geomType == QLatin1String( "Box" ) || geomType == QLatin1String( "Envelope" ) ) )
+          geomType == QLatin1String( "Box" ) || geomType == QLatin1String( "Envelope" )  || geomType == QLatin1String( "MultiCurve" ) ) )
     return QgsGeometry();
 
   if ( geomType == QLatin1String( "Point" ) )
@@ -128,6 +130,10 @@ QgsGeometry QgsOgcUtils::geometryFromGML( const QDomNode &geometryNode, const Co
   {
     geometry = geometryFromGMLMultiLineString( geometryTypeElement );
   }
+  else if ( geomType == QLatin1String( "MultiCurve" ) )
+  {
+    geometry = geometryFromGMLMultiLineString( geometryTypeElement );
+  }
   else if ( geomType == QLatin1String( "MultiPolygon" ) )
   {
     geometry = geometryFromGMLMultiPolygon( geometryTypeElement );
@@ -142,6 +148,7 @@ QgsGeometry QgsOgcUtils::geometryFromGML( const QDomNode &geometryNode, const Co
   }
   else //unknown type
   {
+    QgsDebugMsgLevel( QStringLiteral( "Unknown geometry type %1" ).arg( geomType ), 2 );
     return geometry;
   }
 
@@ -238,13 +245,14 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPoint( const QDomElement &geometryElemen
     return QgsGeometry();
   }
 
+  const bool hasZ { !std::isnan( pointCoordinate.first().z() ) };
   QgsPolyline::const_iterator point_it = pointCoordinate.constBegin();
-  char e = htonl( 1 ) != 1;
-  double x = point_it->x();
-  double y = point_it->y();
-  const int size = 1 + sizeof( int ) + 2 * sizeof( double );
+  const char e = htonl( 1 ) != 1;
+  const double x = point_it->x();
+  const double y = point_it->y();
+  const int size = 1 + sizeof( int ) + ( hasZ ? 3 : 2 ) * sizeof( double );
 
-  Qgis::WkbType type = Qgis::WkbType::Point;
+  const Qgis::WkbType type { hasZ ? Qgis::WkbType::PointZ : Qgis::WkbType::Point };
   unsigned char *wkb = new unsigned char[size];
 
   int wkbPosition = 0; //current offset from wkb beginning (in bytes)
@@ -255,6 +263,13 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPoint( const QDomElement &geometryElemen
   memcpy( &( wkb )[wkbPosition], &x, sizeof( double ) );
   wkbPosition += sizeof( double );
   memcpy( &( wkb )[wkbPosition], &y, sizeof( double ) );
+
+  if ( hasZ )
+  {
+    wkbPosition += sizeof( double );
+    double z = point_it->z();
+    memcpy( &( wkb )[wkbPosition], &z, sizeof( double ) );
+  }
 
   QgsGeometry g;
   g.fromWkb( wkb, size );
@@ -288,10 +303,12 @@ QgsGeometry QgsOgcUtils::geometryFromGMLLineString( const QDomElement &geometryE
     }
   }
 
-  char e = htonl( 1 ) != 1;
-  const int size = 1 + 2 * sizeof( int ) + lineCoordinates.size() * 2 * sizeof( double );
+  const bool hasZ { !std::isnan( lineCoordinates.first().z() ) };
 
-  Qgis::WkbType type = Qgis::WkbType::LineString;
+  char e = htonl( 1 ) != 1;
+  const int size = 1 + 2 * sizeof( int ) + lineCoordinates.size() * ( hasZ ? 3 : 2 ) * sizeof( double );
+
+  const Qgis::WkbType type{ hasZ ? Qgis::WkbType::LineStringZ : Qgis::WkbType::LineString };
   unsigned char *wkb = new unsigned char[size];
 
   int wkbPosition = 0; //current offset from wkb beginning (in bytes)
@@ -315,6 +332,14 @@ QgsGeometry QgsOgcUtils::geometryFromGMLLineString( const QDomElement &geometryE
     wkbPosition += sizeof( double );
     memcpy( &( wkb )[wkbPosition], &y, sizeof( double ) );
     wkbPosition += sizeof( double );
+
+    if ( hasZ )
+    {
+      double z = iter->z();
+      memcpy( &( wkb )[wkbPosition], &z, sizeof( double ) );
+      wkbPosition += sizeof( double );
+    }
+
   }
 
   QgsGeometry g;
@@ -347,7 +372,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPolygon( const QDomElement &geometryElem
     const QDomNodeList innerBoundaryList = geometryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "innerBoundaryIs" ) );
     for ( int i = 0; i < innerBoundaryList.size(); ++i )
     {
-      QgsPolylineXY interiorPointList;
+      QgsPolyline interiorPointList;
       coordinatesElement = innerBoundaryList.at( i ).firstChild().firstChild().toElement();
       if ( coordinatesElement.isNull() )
       {
@@ -383,7 +408,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPolygon( const QDomElement &geometryElem
     const QDomNodeList interiorList = geometryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "interior" ) );
     for ( int i = 0; i < interiorList.size(); ++i )
     {
-      QgsPolylineXY interiorPointList;
+      QgsPolyline interiorPointList;
       const QDomElement posElement = interiorList.at( i ).firstChild().firstChild().toElement();
       if ( posElement.isNull() )
       {
@@ -404,20 +429,23 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPolygon( const QDomElement &geometryElem
     return QgsGeometry();
 
   int npoints = 0;//total number of points
-  for ( QgsMultiPolylineXY::const_iterator it = ringCoordinates.constBegin(); it != ringCoordinates.constEnd(); ++it )
+  for ( QgsMultiPolyline::const_iterator it = ringCoordinates.constBegin(); it != ringCoordinates.constEnd(); ++it )
   {
     npoints += it->size();
   }
-  const int size = 1 + 2 * sizeof( int ) + nrings * sizeof( int ) + 2 * npoints * sizeof( double );
 
-  Qgis::WkbType type = Qgis::WkbType::Polygon;
+  const bool hasZ { !std::isnan( ringCoordinates.first().first().z() ) };
+
+  const int size = 1 + 2 * sizeof( int ) + nrings * sizeof( int ) + ( hasZ ? 3 : 2 ) * npoints * sizeof( double );
+
+  const Qgis::WkbType type { hasZ ? Qgis::WkbType::PolygonZ : Qgis::WkbType::Polygon };
   unsigned char *wkb = new unsigned char[size];
 
   //char e = QgsApplication::endian();
   char e = htonl( 1 ) != 1;
   int wkbPosition = 0; //current offset from wkb beginning (in bytes)
   int nPointsInRing = 0;
-  double x, y;
+  double x, y, z;
 
   //fill the contents into *wkb
   memcpy( &( wkb )[wkbPosition], &e, 1 );
@@ -426,13 +454,13 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPolygon( const QDomElement &geometryElem
   wkbPosition += sizeof( int );
   memcpy( &( wkb )[wkbPosition], &nrings, sizeof( int ) );
   wkbPosition += sizeof( int );
-  for ( QgsMultiPolylineXY::const_iterator it = ringCoordinates.constBegin(); it != ringCoordinates.constEnd(); ++it )
+  for ( QgsMultiPolyline::const_iterator it = ringCoordinates.constBegin(); it != ringCoordinates.constEnd(); ++it )
   {
     nPointsInRing = it->size();
     memcpy( &( wkb )[wkbPosition], &nPointsInRing, sizeof( int ) );
     wkbPosition += sizeof( int );
     //iterate through the string list converting the strings to x-/y- doubles
-    QgsPolylineXY::const_iterator iter;
+    QgsPolyline::const_iterator iter;
     for ( iter = it->begin(); iter != it->end(); ++iter )
     {
       x = iter->x();
@@ -442,6 +470,13 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPolygon( const QDomElement &geometryElem
       wkbPosition += sizeof( double );
       memcpy( &( wkb )[wkbPosition], &y, sizeof( double ) );
       wkbPosition += sizeof( double );
+
+      if ( hasZ )
+      {
+        z = iter->z();
+        memcpy( &( wkb )[wkbPosition], &z, sizeof( double ) );
+        wkbPosition += sizeof( double );
+      }
     }
   }
 
@@ -452,8 +487,8 @@ QgsGeometry QgsOgcUtils::geometryFromGMLPolygon( const QDomElement &geometryElem
 
 QgsGeometry QgsOgcUtils::geometryFromGMLMultiPoint( const QDomElement &geometryElement )
 {
-  QgsPolylineXY pointList;
-  QgsPolylineXY currentPoint;
+  QgsPolyline pointList;
+  QgsPolyline currentPoint;
   const QDomNodeList pointMemberList = geometryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "pointMember" ) );
   if ( pointMemberList.size() < 1 )
   {
@@ -512,28 +547,30 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPoint( const QDomElement &geometryE
   if ( nPoints < 1 )
     return QgsGeometry();
 
-  //calculate the required wkb size
-  const int size = 1 + 2 * sizeof( int ) + pointList.size() * ( 2 * sizeof( double ) + 1 + sizeof( int ) );
+  const bool hasZ { !std::isnan( pointList.first().z() ) };
 
-  Qgis::WkbType type = Qgis::WkbType::MultiPoint;
+  //calculate the required wkb size
+  const int size = 1 + 2 * sizeof( int ) + pointList.size() * ( ( hasZ ? 3 : 2 ) * sizeof( double ) + 1 + sizeof( int ) );
+
+  const Qgis::WkbType type { hasZ ? Qgis::WkbType::MultiPointZ :  Qgis::WkbType::MultiPoint };
   unsigned char *wkb = new unsigned char[size];
 
   //fill the wkb content
   char e = htonl( 1 ) != 1;
   int wkbPosition = 0; //current offset from wkb beginning (in bytes)
-  double x, y;
+  double x, y, z;
   memcpy( &( wkb )[wkbPosition], &e, 1 );
   wkbPosition += 1;
   memcpy( &( wkb )[wkbPosition], &type, sizeof( int ) );
   wkbPosition += sizeof( int );
   memcpy( &( wkb )[wkbPosition], &nPoints, sizeof( int ) );
   wkbPosition += sizeof( int );
-  type = Qgis::WkbType::Point;
-  for ( QgsPolylineXY::const_iterator it = pointList.constBegin(); it != pointList.constEnd(); ++it )
+  const Qgis::WkbType pointType { hasZ ? Qgis::WkbType::PointZ : Qgis::WkbType::Point };
+  for ( QgsPolyline::const_iterator it = pointList.constBegin(); it != pointList.constEnd(); ++it )
   {
     memcpy( &( wkb )[wkbPosition], &e, 1 );
     wkbPosition += 1;
-    memcpy( &( wkb )[wkbPosition], &type, sizeof( int ) );
+    memcpy( &( wkb )[wkbPosition], &pointType, sizeof( int ) );
     wkbPosition += sizeof( int );
     x = it->x();
     memcpy( &( wkb )[wkbPosition], &x, sizeof( double ) );
@@ -541,6 +578,13 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPoint( const QDomElement &geometryE
     y = it->y();
     memcpy( &( wkb )[wkbPosition], &y, sizeof( double ) );
     wkbPosition += sizeof( double );
+
+    if ( hasZ )
+    {
+      z = it->z();
+      memcpy( &( wkb )[wkbPosition], &z, sizeof( double ) );
+      wkbPosition += sizeof( double );
+    }
   }
 
   QgsGeometry g;
@@ -559,7 +603,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
   //<gml:MultiLineString
   //<gml:LineString
 
-  QList< QgsPolylineXY > lineCoordinates; //first list: lines, second list: points of one line
+  QList< QgsPolyline > lineCoordinates; //first list: lines, second list: points of one line
   QDomElement currentLineStringElement;
   QDomNodeList currentCoordList;
   QDomNodeList currentPosList;
@@ -578,7 +622,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
       currentCoordList = currentLineStringElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "coordinates" ) );
       if ( !currentCoordList.isEmpty() )
       {
-        QgsPolylineXY currentPointList;
+        QgsPolyline currentPointList;
         if ( readGMLCoordinates( currentPointList, currentCoordList.at( 0 ).toElement() ) != 0 )
         {
           return QgsGeometry();
@@ -592,7 +636,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
         {
           return QgsGeometry();
         }
-        QgsPolylineXY currentPointList;
+        QgsPolyline currentPointList;
         if ( readGMLPositions( currentPointList, currentPosList.at( 0 ).toElement() ) != 0 )
         {
           return QgsGeometry();
@@ -612,7 +656,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
         currentCoordList = currentLineStringElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "coordinates" ) );
         if ( !currentCoordList.isEmpty() )
         {
-          QgsPolylineXY currentPointList;
+          QgsPolyline currentPointList;
           if ( readGMLCoordinates( currentPointList, currentCoordList.at( 0 ).toElement() ) != 0 )
           {
             return QgsGeometry();
@@ -627,7 +671,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
           {
             return QgsGeometry();
           }
-          QgsPolylineXY currentPointList;
+          QgsPolyline currentPointList;
           if ( readGMLPositions( currentPointList, currentPosList.at( 0 ).toElement() ) != 0 )
           {
             return QgsGeometry();
@@ -638,7 +682,46 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
     }
     else
     {
-      return QgsGeometry();
+      // Try with LineStringSegment
+      const QDomNodeList curveMemberList = geometryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "curveMember" ) );
+      if ( !curveMemberList.isEmpty())
+      {
+
+        // TODO check each one of the two syntaxes (with or withot Curve) that all members only contain linestrings
+
+        const QDomNodeList curveList = curveMemberList.item( 0 ).elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "Curve" ) );
+
+        const QDomNodeList lineStringSegmentList = curveMemberList.item(0).elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "LineStringSegment" ) );
+        if ( !lineStringSegmentList.isEmpty() )
+        {
+
+          for ( int i = 0; i < lineStringSegmentList.size(); ++i )
+          {
+            currentLineStringElement = lineStringSegmentList.at( i ).toElement();
+            currentPosList = currentLineStringElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "posList" ) );
+            if ( currentPosList.size() < 1 )
+            {
+              return QgsGeometry();
+            }
+            QgsPolyline currentPointList;
+            if ( readGMLPositions( currentPointList, currentPosList.at( 0 ).toElement() ) != 0 )
+            {
+              return QgsGeometry();
+            }
+            lineCoordinates.push_back( currentPointList );
+
+          }
+        }
+        else
+        {
+
+          return QgsGeometry();
+        }
+      }
+      else
+      {
+        return QgsGeometry();
+      }
     }
   }
 
@@ -646,38 +729,41 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
   if ( nLines < 1 )
     return QgsGeometry();
 
+  const bool hasZ { !std::isnan( lineCoordinates.first().first().z() ) };
+  const int coordSize { hasZ ? 3 : 2 };
+
   //calculate the required wkb size
   int size = ( lineCoordinates.size() + 1 ) * ( 1 + 2 * sizeof( int ) );
-  for ( QList< QgsPolylineXY >::const_iterator it = lineCoordinates.constBegin(); it != lineCoordinates.constEnd(); ++it )
+  for ( QList< QgsPolyline >::const_iterator it = lineCoordinates.constBegin(); it != lineCoordinates.constEnd(); ++it )
   {
-    size += it->size() * 2 * sizeof( double );
+    size += it->size() * coordSize * sizeof( double );
   }
 
-  Qgis::WkbType type = Qgis::WkbType::MultiLineString;
+  const Qgis::WkbType type { hasZ ? Qgis::WkbType::MultiLineStringZ : Qgis::WkbType::MultiLineString };
   unsigned char *wkb = new unsigned char[size];
 
   //fill the wkb content
   char e = htonl( 1 ) != 1;
   int wkbPosition = 0; //current offset from wkb beginning (in bytes)
   int nPoints; //number of points in a line
-  double x, y;
+  double x, y, z;
   memcpy( &( wkb )[wkbPosition], &e, 1 );
   wkbPosition += 1;
   memcpy( &( wkb )[wkbPosition], &type, sizeof( int ) );
   wkbPosition += sizeof( int );
   memcpy( &( wkb )[wkbPosition], &nLines, sizeof( int ) );
   wkbPosition += sizeof( int );
-  type = Qgis::WkbType::LineString;
-  for ( QList< QgsPolylineXY >::const_iterator it = lineCoordinates.constBegin(); it != lineCoordinates.constEnd(); ++it )
+  const Qgis::WkbType lineType { hasZ ? Qgis::WkbType::LineStringZ : Qgis::WkbType::LineString };
+  for ( QList< QgsPolyline >::const_iterator it = lineCoordinates.constBegin(); it != lineCoordinates.constEnd(); ++it )
   {
     memcpy( &( wkb )[wkbPosition], &e, 1 );
     wkbPosition += 1;
-    memcpy( &( wkb )[wkbPosition], &type, sizeof( int ) );
+    memcpy( &( wkb )[wkbPosition], &lineType, sizeof( int ) );
     wkbPosition += sizeof( int );
     nPoints = it->size();
     memcpy( &( wkb )[wkbPosition], &nPoints, sizeof( int ) );
     wkbPosition += sizeof( int );
-    for ( QgsPolylineXY::const_iterator iter = it->begin(); iter != it->end(); ++iter )
+    for ( QgsPolyline::const_iterator iter = it->begin(); iter != it->end(); ++iter )
     {
       x = iter->x();
       y = iter->y();
@@ -686,6 +772,13 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
       wkbPosition += sizeof( double );
       memcpy( &( wkb )[wkbPosition], &y, sizeof( double ) );
       wkbPosition += sizeof( double );
+
+      if ( hasZ )
+      {
+        z = iter->z();
+        memcpy( &( wkb )[wkbPosition], &z, sizeof( double ) );
+        wkbPosition += sizeof( double );
+      }
     }
   }
 
@@ -697,21 +790,19 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
 QgsGeometry QgsOgcUtils::geometryFromGMLMultiPolygon( const QDomElement &geometryElement )
 {
   //first list: different polygons, second list: different rings, third list: different points
-  QgsMultiPolygonXY multiPolygonPoints;
+  QVector<QgsMultiPolyline> multiPolygonPoints;
   QDomElement currentPolygonMemberElement;
   QDomNodeList polygonList;
   QDomElement currentPolygonElement;
   // rings in GML2
   QDomNodeList outerBoundaryList;
   QDomElement currentOuterBoundaryElement;
-  const QDomNodeList innerBoundaryList;
   QDomElement currentInnerBoundaryElement;
   // rings in GML3
   QDomNodeList exteriorList;
   QDomElement currentExteriorElement;
   QDomElement currentInteriorElement;
-  const QDomNodeList interiorList;
-  // lienar ring
+  // linear ring
   QDomNodeList linearRingNodeList;
   QDomElement currentLinearRingElement;
   // Coordinates or position list
@@ -719,7 +810,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPolygon( const QDomElement &geometr
   QDomNodeList currentPosList;
 
   const QDomNodeList polygonMemberList = geometryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "polygonMember" ) );
-  QgsPolygonXY currentPolygonList;
+  QgsMultiPolyline currentPolygonList;
   for ( int i = 0; i < polygonMemberList.size(); ++i )
   {
     currentPolygonList.resize( 0 ); // preserve capacity - don't use clear
@@ -736,7 +827,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPolygon( const QDomElement &geometr
     if ( !outerBoundaryList.isEmpty() )
     {
       currentOuterBoundaryElement = outerBoundaryList.at( 0 ).toElement();
-      QgsPolylineXY ringCoordinates;
+      QgsPolyline ringCoordinates;
 
       linearRingNodeList = currentOuterBoundaryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "LinearRing" ) );
       if ( linearRingNodeList.size() < 1 )
@@ -759,7 +850,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPolygon( const QDomElement &geometr
       const QDomNodeList innerBoundaryList = currentPolygonElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "innerBoundaryIs" ) );
       for ( int j = 0; j < innerBoundaryList.size(); ++j )
       {
-        QgsPolylineXY ringCoordinates;
+        QgsPolyline ringCoordinates;
         currentInnerBoundaryElement = innerBoundaryList.at( j ).toElement();
         linearRingNodeList = currentInnerBoundaryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "LinearRing" ) );
         if ( linearRingNodeList.size() < 1 )
@@ -789,7 +880,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPolygon( const QDomElement &geometr
       }
 
       currentExteriorElement = exteriorList.at( 0 ).toElement();
-      QgsPolylineXY ringPositions;
+      QgsPolyline ringPositions;
 
       linearRingNodeList = currentExteriorElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "LinearRing" ) );
       if ( linearRingNodeList.size() < 1 )
@@ -812,7 +903,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPolygon( const QDomElement &geometr
       const QDomNodeList interiorList = currentPolygonElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "interior" ) );
       for ( int j = 0; j < interiorList.size(); ++j )
       {
-        QgsPolylineXY ringPositions;
+        QgsPolyline ringPositions;
         currentInteriorElement = interiorList.at( j ).toElement();
         linearRingNodeList = currentInteriorElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "LinearRing" ) );
         if ( linearRingNodeList.size() < 1 )
@@ -841,10 +932,10 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPolygon( const QDomElement &geometr
 
   int size = 1 + 2 * sizeof( int );
   //calculate the wkb size
-  for ( QgsMultiPolygonXY::const_iterator it = multiPolygonPoints.constBegin(); it != multiPolygonPoints.constEnd(); ++it )
+  for ( auto it = multiPolygonPoints.constBegin(); it != multiPolygonPoints.constEnd(); ++it )
   {
     size += 1 + 2 * sizeof( int );
-    for ( QgsPolygonXY::const_iterator iter = it->begin(); iter != it->end(); ++iter )
+    for ( auto iter = it->begin(); iter != it->end(); ++iter )
     {
       size += sizeof( int ) + 2 * iter->size() * sizeof( double );
     }
@@ -869,7 +960,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPolygon( const QDomElement &geometr
 
   type = Qgis::WkbType::Polygon;
 
-  for ( QgsMultiPolygonXY::const_iterator it = multiPolygonPoints.constBegin(); it != multiPolygonPoints.constEnd(); ++it )
+  for ( auto it = multiPolygonPoints.constBegin(); it != multiPolygonPoints.constEnd(); ++it )
   {
     memcpy( &( wkb )[wkbPosition], &e, 1 );
     wkbPosition += 1;
@@ -878,12 +969,12 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiPolygon( const QDomElement &geometr
     nRings = it->size();
     memcpy( &( wkb )[wkbPosition], &nRings, sizeof( int ) );
     wkbPosition += sizeof( int );
-    for ( QgsPolygonXY::const_iterator iter = it->begin(); iter != it->end(); ++iter )
+    for ( auto iter = it->begin(); iter != it->end(); ++iter )
     {
       nPointsInRing = iter->size();
       memcpy( &( wkb )[wkbPosition], &nPointsInRing, sizeof( int ) );
       wkbPosition += sizeof( int );
-      for ( QgsPolylineXY::const_iterator iterator = iter->begin(); iterator != iter->end(); ++iterator )
+      for ( auto iterator = iter->begin(); iterator != iter->end(); ++iterator )
       {
         x = iterator->x();
         y = iterator->y();
@@ -1008,7 +1099,6 @@ bool QgsOgcUtils::readGMLPositions( QgsPolyline &coords, const QDomElement &elem
 
   const QStringList pos = elem.text().split( ' ', Qt::SkipEmptyParts );
   double x, y, z;
-  z = std::numeric_limits<double>::quiet_NaN();
   bool conversionSuccess;
   const int posSize = pos.size();
 
@@ -1041,6 +1131,18 @@ bool QgsOgcUtils::readGMLPositions( QgsPolyline &coords, const QDomElement &elem
     if ( !conversionSuccess )
     {
       return true;
+    }
+    if ( srsDimension > 2 )
+    {
+      z = pos.at( i * srsDimension + 2 ).toDouble( &conversionSuccess );
+      if ( !conversionSuccess )
+      {
+        return true;
+      }
+    }
+    else
+    {
+      z = std::numeric_limits<double>::quiet_NaN();
     }
     coords.append( QgsPoint( x, y, z ) );
   }
