@@ -119,7 +119,7 @@ void TestQgsOgcUtils::testGeometryFromGML()
   geom = QgsOgcUtils::geometryFromGML( QStringLiteral( "<gml:Point srsName=\"EPSG:4326\"><gml:pos srsDimension=\"3\">0 1 2</gml:pos></gml:Point>" ) );
   QVERIFY( !geom.isNull() );
   QVERIFY( geom.wkbType() == Qgis::WkbType::PointZ );
-  QVERIFY( geom.equals( QgsGeometry::fromWkt( QStringLiteral( "POINTZ(0 1 2)"))) );
+  QVERIFY( geom.equals( QgsGeometry::fromWkt( QStringLiteral( "POINTZ(0 1 2)" ) ) ) );
 
   // Test polygon GML3 Z
   geom = QgsOgcUtils::geometryFromGML( QStringLiteral( R"GML(<gml:Polygon srsName="EPSG:4326"><gml:exterior><gml:LinearRing><gml:posList srsDimension="3">0 0 1200 0 1 1250 1 1 1230 1 0 1210 0 0 1200</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon>)GML" ) );
@@ -140,14 +140,14 @@ void TestQgsOgcUtils::testGeometryFromGMLWithZ_data()
   QTest::addColumn<Qgis::WkbType>( "type" );
   QTest::addColumn<QString>( "WKT" );
 
-#if 0
+#if 1
   QTest::newRow( "PointZ" )
     << QStringLiteral( "<gml:Point srsName=\"EPSG:4326\"><gml:pos srsDimension=\"3\">0 1 2</gml:pos></gml:Point>" )
     << Qgis::WkbType::PointZ
     << QStringLiteral( "POINTZ( 0 1 2)" );
 
   QTest::newRow( "LineStringZ" )
-    << QStringLiteral( R"GML(<gml:LineString srsName="EPSG:4326"><gml:posList srsDimension="3">0 0 1200 0 1 1250 1 1 1230 1 0 1210</gml:posList></gml:LineString>)GML")
+    << QStringLiteral( R"GML(<gml:LineString srsName="EPSG:4326"><gml:posList srsDimension="3">0 0 1200 0 1 1250 1 1 1230 1 0 1210</gml:posList></gml:LineString>)GML" )
     << Qgis::WkbType::LineStringZ
     << QStringLiteral( "LINESTRINGZ(0 0 1200, 0 1 1250, 1 1 1230, 1 0 1210)" );
 
@@ -261,7 +261,6 @@ void TestQgsOgcUtils::testGeometryToGML()
 
 void TestQgsOgcUtils::testGeometryZToGML()
 {
-
   QDomDocument doc;
   const QgsGeometry geomPoint( QgsGeometry::fromWkt( QStringLiteral( "POINTZ (111 222 333)" ) ) );
 
@@ -278,7 +277,6 @@ void TestQgsOgcUtils::testGeometryZToGML()
   xmlElem = comparableElement( QStringLiteral( R"GML(<gml:Point><gml:pos srsDimension="3">111 222 333</gml:pos></gml:Point>)GML" ) );
   ogcElem = comparableElement( doc.toString( -1 ) );
   QVERIFY( QgsTestUtils::compareDomElements( xmlElem, ogcElem ) );
-
 }
 
 void TestQgsOgcUtils::testExpressionFromOgcFilterWFS20_data()

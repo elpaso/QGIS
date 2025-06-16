@@ -28,12 +28,16 @@
 #include "qgsstringutils.h"
 #include "qgsmultipolygon.h"
 #include "qgspolygon.h"
+#include "qgsogrutils.h"
 
 #include <QColor>
 #include <QStringList>
 #include <QTextStream>
 #include <QObject>
 #include <QRegularExpression>
+
+
+#include "ogr_api.h"
 
 #ifndef Q_OS_WIN
 #include <netinet/in.h>
@@ -132,7 +136,7 @@ QgsGeometry QgsOgcUtils::geometryFromGML( const QDomNode &geometryNode, const Co
   }
   else if ( geomType == QLatin1String( "MultiCurve" ) )
   {
-    geometry = geometryFromGMLMultiLineString( geometryTypeElement );
+    geometry = geometryFromGMLMultiCurve( geometryTypeElement );
   }
   else if ( geomType == QLatin1String( "MultiPolygon" ) )
   {
@@ -603,6 +607,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
   //<gml:MultiLineString
   //<gml:LineString
 
+
   QList< QgsPolyline > lineCoordinates; //first list: lines, second list: points of one line
   QDomElement currentLineStringElement;
   QDomNodeList currentCoordList;
@@ -682,46 +687,7 @@ QgsGeometry QgsOgcUtils::geometryFromGMLMultiLineString( const QDomElement &geom
     }
     else
     {
-      // Try with LineStringSegment
-      const QDomNodeList curveMemberList = geometryElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "curveMember" ) );
-      if ( !curveMemberList.isEmpty())
-      {
-
-        // TODO check each one of the two syntaxes (with or withot Curve) that all members only contain linestrings
-
-        const QDomNodeList curveList = curveMemberList.item( 0 ).elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "Curve" ) );
-
-        const QDomNodeList lineStringSegmentList = curveMemberList.item(0).elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "LineStringSegment" ) );
-        if ( !lineStringSegmentList.isEmpty() )
-        {
-
-          for ( int i = 0; i < lineStringSegmentList.size(); ++i )
-          {
-            currentLineStringElement = lineStringSegmentList.at( i ).toElement();
-            currentPosList = currentLineStringElement.elementsByTagNameNS( GML_NAMESPACE, QStringLiteral( "posList" ) );
-            if ( currentPosList.size() < 1 )
-            {
-              return QgsGeometry();
-            }
-            QgsPolyline currentPointList;
-            if ( readGMLPositions( currentPointList, currentPosList.at( 0 ).toElement() ) != 0 )
-            {
-              return QgsGeometry();
-            }
-            lineCoordinates.push_back( currentPointList );
-
-          }
-        }
-        else
-        {
-
-          return QgsGeometry();
-        }
-      }
-      else
-      {
-        return QgsGeometry();
-      }
+      return QgsGeometry();
     }
   }
 
@@ -1031,7 +997,6 @@ bool QgsOgcUtils::readGMLCoordinates( QgsPolyline &coords, const QDomElement &el
   const QStringList tupels = elem.text().split( tupleSeparator, Qt::SkipEmptyParts );
   QStringList tuple_coords;
   double x, y, z;
-  z = std::numeric_limits<double>::quiet_NaN();
   bool conversionSuccess;
 
   QStringList::const_iterator it;
@@ -1051,6 +1016,18 @@ bool QgsOgcUtils::readGMLCoordinates( QgsPolyline &coords, const QDomElement &el
     if ( !conversionSuccess )
     {
       return true;
+    }
+    if ( tuple_coords.size() > 2 )
+    {
+      z = tuple_coords.at( 2 ).toDouble( &conversionSuccess );
+      if ( !conversionSuccess )
+      {
+        return true;
+      }
+    }
+    else
+    {
+      z = std::numeric_limits<double>::quiet_NaN();
     }
     coords.append( QgsPoint( x, y, z ) );
   }
@@ -3969,4 +3946,21 @@ QgsOgcCrsUtils::CRSFlavor QgsOgcCrsUtils::parseCrsName( const QString &crsName, 
   }
 
   return CRSFlavor::UNKNOWN;
+}
+
+
+QgsGeometry QgsOgcUtils::geometryFromGMLUsingGdal( const QDomElement &geometryElement )
+{
+  QString gml;
+  QTextStream gmlStream( &gml );
+  geometryElement.save( gmlStream, 0 );
+  const OGRGeometryH ogrGeom = OGR_G_CreateFromGML( gml.toUtf8().constData() );
+  const QgsGeometry geom { QgsOgrUtils::ogrGeometryToQgsGeometry( ogrGeom ) };
+  OGR_G_DestroyGeometry( ogrGeom );
+  return geom;
+}
+
+QgsGeometry QgsOgcUtils::geometryFromGMLMultiCurve( const QDomElement &geometryElement )
+{
+  return geometryFromGMLUsingGdal( geometryElement );
 }

@@ -311,8 +311,13 @@ class CORE_EXPORT QgsOgcUtils
     static QgsGeometry geometryFromGMLMultiPoint( const QDomElement &geometryElement );
     //! Static method that creates geometry from GML MultiLineString
     static QgsGeometry geometryFromGMLMultiLineString( const QDomElement &geometryElement );
+    //! Static method that creates geometry from GML MultiCurve
+    static QgsGeometry geometryFromGMLMultiCurve( const QDomElement &geometryElement );
     //! Static method that creates geometry from GML MultiPolygon
     static QgsGeometry geometryFromGMLMultiPolygon( const QDomElement &geometryElement );
+
+    //! Static method that creates geometry from GML using GDAL parser
+    static QgsGeometry geometryFromGMLUsingGdal( const QDomElement &geometryElement );
 
     /**
      * Creates an empty \verbatim <Filter> \endverbatim QDomElement
@@ -378,6 +383,8 @@ class CORE_EXPORT QgsOgcUtils
     //! handles \verbatim <PropertyIsNull> \endverbatim tag
     static QgsExpressionNodeBinaryOperator *nodePropertyIsNullFromOgcFilter( QDomElement &element, QString &errorMessage );
 };
+
+
 
 #ifndef SIP_RUN
 
