@@ -60,6 +60,12 @@ QgsWfsConnection::QgsWfsConnection( const QString &connName )
     mUri.setParam( QgsWFSConstants::URI_PARAM_WFST_1_1_PREFER_COORDINATES, settingsPreferCoordinatesForWfsT11->value( detailsParameters ) ? QStringLiteral( "true" ) : QStringLiteral( "false" ) );
   }
 
+  if ( settingsWfsForceInitialGetFeature->exists( detailsParameters ) )
+  {
+    mUri.removeParam( QgsWFSConstants::URI_PARAM_FORCE_INITIAL_GET_FEATURE ); // setParam allow for duplicates!
+    mUri.setParam( QgsWFSConstants::URI_PARAM_FORCE_INITIAL_GET_FEATURE, settingsWfsForceInitialGetFeature->value( detailsParameters ) ? QStringLiteral( "true" ) : QStringLiteral( "false" ) );
+  }
+
   if ( settingsPreferredHttpMethod->exists( detailsParameters ) )
   {
     mUri.removeParam( QgsWFSConstants::URI_PARAM_HTTPMETHOD ); // setParam allow for duplicates!

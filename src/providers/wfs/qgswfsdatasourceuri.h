@@ -96,6 +96,9 @@ class QgsWFSDataSourceURI
     //! Returns whether there is a geometry type filter.
     bool hasGeometryTypeFilter() const;
 
+    //! Returns whether an initial get features should always be issued.
+    bool forceInitialGetFeature() const;
+
     //! Gets the geometry type filter.
     Qgis::WkbType geometryTypeFilter() const;
 

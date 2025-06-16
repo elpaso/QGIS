@@ -433,6 +433,16 @@ void QgsWFSSharedData::getVersionValues( QgsOgcUtils::GMLVersion &gmlVersion, Qg
   }
 }
 
+bool QgsWFSSharedData::initialGetFeatureIssued() const
+{
+  return mInitialGetFeatureIssued;
+}
+
+void QgsWFSSharedData::setInitialGetFeatureIssued( bool initialGetFeatureIssued )
+{
+  mInitialGetFeatureIssued = initialGetFeatureIssued;
+}
+
 bool QgsWFSSharedData::detectPotentialServerAxisOrderIssueFromSingleFeatureExtent() const
 {
   Q_ASSERT( !mComputedExtent.isNull() );
