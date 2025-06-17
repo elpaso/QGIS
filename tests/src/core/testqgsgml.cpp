@@ -1641,9 +1641,9 @@ void TestQgsGML::testZ_data()
   QTest::addColumn<int>( "expectedWkbType" );
   QTest::addColumn<QString>( "expectedWkt" );
 
-  QTest::newRow( "point with z" ) << QStringLiteral( R"gml(<gml:Point srsName="EPSG:4326"><gml:coordinates>0,1,2</gml:coordinates></gml:Point>)gml" )
-                                  << static_cast<int>( Qgis::WkbType::PointZ )
-                                  << QStringLiteral( "POINT Z (0 1 2)" );
+  QTest::newRow( "point with z gml 2" ) << QStringLiteral( R"gml(<gml:Point srsName="EPSG:4326"><gml:coordinates>0,1,2</gml:coordinates></gml:Point>)gml" )
+                                        << static_cast<int>( Qgis::WkbType::PointZ )
+                                        << QStringLiteral( "POINT Z (0 1 2)" );
 
   QTest::newRow( "point with z gml 3" ) << QStringLiteral( R"gml(<gml:Point srsName="EPSG:4326"><gml:pos srsDimension="3">0 1 2</gml:pos></gml:Point>)gml" )
                                         << static_cast<int>( Qgis::WkbType::PointZ )
@@ -1651,42 +1651,42 @@ void TestQgsGML::testZ_data()
 
   // Note: this is not supported "point with z gml 3 no srsDimension" <gml:Point srsName="EPSG:4326"><gml:pos>0 1 2</gml:pos></gml:Point>
 
-  QTest::newRow( "linestring with z" ) << QStringLiteral( R"gml(<gml:LineString srsName="EPSG:4326"><gml:coordinates>0,1,2 3,4,5</gml:coordinates></gml:LineString>)gml" )
-                                       << static_cast<int>( Qgis::WkbType::LineStringZ )
-                                       << QStringLiteral( "LINESTRING Z (0 1 2, 3 4 5)" );
+  QTest::newRow( "linestring with z gml 2" ) << QStringLiteral( R"gml(<gml:LineString srsName="EPSG:4326"><gml:coordinates>0,1,2 3,4,5</gml:coordinates></gml:LineString>)gml" )
+                                             << static_cast<int>( Qgis::WkbType::LineStringZ )
+                                             << QStringLiteral( "LINESTRING Z (0 1 2, 3 4 5)" );
 
   QTest::newRow( "linestring with z gml 3" ) << QStringLiteral( R"gml(<gml:Curve srsName="EPSG:4326"><gml:segments><gml:LineStringSegment><gml:posList srsDimension="3">0 1 2 3 4 5</gml:posList></gml:LineStringSegment></gml:segments></gml:Curve>)gml" )
                                              << static_cast<int>( Qgis::WkbType::LineStringZ )
                                              << QStringLiteral( "LINESTRING Z (0 1 2, 3 4 5)" );
 
-  QTest::newRow( "polygon with z" ) << QStringLiteral( R"gml(<gml:Polygon srsName="EPSG:4326"><gml:outerBoundaryIs><gml:LinearRing><gml:coordinates>0,1,2 3,4,5 6,7,8 0,1,2</gml:coordinates></gml:LinearRing></gml:outerBoundaryIs></gml:Polygon>)gml" )
-                                    << static_cast<int>( Qgis::WkbType::PolygonZ )
-                                    << QStringLiteral( "POLYGON Z ((0 1 2, 3 4 5, 6 7 8, 0 1 2))" );
+  QTest::newRow( "polygon with z gml 2" ) << QStringLiteral( R"gml(<gml:Polygon srsName="EPSG:4326"><gml:outerBoundaryIs><gml:LinearRing><gml:coordinates>0,1,2 3,4,5 6,7,8 0,1,2</gml:coordinates></gml:LinearRing></gml:outerBoundaryIs></gml:Polygon>)gml" )
+                                          << static_cast<int>( Qgis::WkbType::PolygonZ )
+                                          << QStringLiteral( "POLYGON Z ((0 1 2, 3 4 5, 6 7 8, 0 1 2))" );
 
   QTest::newRow( "polygon with z gml 3" ) << QStringLiteral( R"gml(<gml:Polygon srsName="EPSG:4326"><gml:exterior><gml:LinearRing><gml:posList srsDimension="3">0 1 2 3 4 5 6 7 8 0 1 2</gml:posList></gml:LinearRing></gml:exterior></gml:Polygon>)gml" )
                                           << static_cast<int>( Qgis::WkbType::PolygonZ )
                                           << QStringLiteral( "POLYGON Z ((0 1 2, 3 4 5, 6 7 8, 0 1 2))" );
 
   // Multi-geometries
-  QTest::newRow( "multipoint with z" ) << QStringLiteral( R"gml(<gml:MultiPoint srsName="EPSG:4326"><gml:pointMember><gml:Point><gml:coordinates>0,1,2</gml:coordinates></gml:Point></gml:pointMember><gml:pointMember><gml:Point><gml:coordinates>3,4,5</gml:coordinates></gml:Point></gml:pointMember></gml:MultiPoint>)gml" )
-                                       << static_cast<int>( Qgis::WkbType::MultiPointZ )
-                                       << QStringLiteral( "MULTIPOINT Z ((0 1 2),(3 4 5))" );
+  QTest::newRow( "multipoint with z gml 2" ) << QStringLiteral( R"gml(<gml:MultiPoint srsName="EPSG:4326"><gml:pointMember><gml:Point><gml:coordinates>0,1,2</gml:coordinates></gml:Point></gml:pointMember><gml:pointMember><gml:Point><gml:coordinates>3,4,5</gml:coordinates></gml:Point></gml:pointMember></gml:MultiPoint>)gml" )
+                                             << static_cast<int>( Qgis::WkbType::MultiPointZ )
+                                             << QStringLiteral( "MULTIPOINT Z ((0 1 2),(3 4 5))" );
 
   QTest::newRow( "multipoint with z gml 3" ) << QStringLiteral( R"gml(<gml:MultiPoint srsName="EPSG:4326"><gml:pointMember><gml:Point><gml:pos srsDimension="3">0 1 2</gml:pos></gml:Point></gml:pointMember><gml:pointMember><gml:Point><gml:pos srsDimension="3">3 4 5</gml:pos></gml:Point></gml:pointMember></gml:MultiPoint>)gml" )
                                              << static_cast<int>( Qgis::WkbType::MultiPointZ )
                                              << QStringLiteral( "MULTIPOINT Z ((0 1 2),(3 4 5))" );
 
-  QTest::newRow( "multilinestring with z" ) << QStringLiteral( R"gml(<gml:MultiLineString srsName="EPSG:4326"><gml:lineStringMember><gml:LineString><gml:coordinates>0,1,2 3,4,5</gml:coordinates></gml:LineString></gml:lineStringMember><gml:lineStringMember><gml:LineString><gml:coordinates>6,7,8 9,10,11</gml:coordinates></gml:LineString></gml:lineStringMember></gml:MultiLineString>)gml" )
-                                            << static_cast<int>( Qgis::WkbType::MultiLineStringZ )
-                                            << QStringLiteral( "MULTILINESTRING Z ((0 1 2, 3 4 5),(6 7 8, 9 10 11))" );
+  QTest::newRow( "multilinestring with z gml 2" ) << QStringLiteral( R"gml(<gml:MultiLineString srsName="EPSG:4326"><gml:lineStringMember><gml:LineString><gml:coordinates>0,1,2 3,4,5</gml:coordinates></gml:LineString></gml:lineStringMember><gml:lineStringMember><gml:LineString><gml:coordinates>6,7,8 9,10,11</gml:coordinates></gml:LineString></gml:lineStringMember></gml:MultiLineString>)gml" )
+                                                  << static_cast<int>( Qgis::WkbType::MultiLineStringZ )
+                                                  << QStringLiteral( "MULTILINESTRING Z ((0 1 2, 3 4 5),(6 7 8, 9 10 11))" );
 
   QTest::newRow( "multilinestring with z gml 3" ) << QStringLiteral( R"gml(<gml:MultiCurve srsName="EPSG:4326"><gml:curveMember><gml:Curve><gml:segments><gml:LineStringSegment><gml:posList srsDimension="3">0 1 2 3 4 5</gml:posList></gml:LineStringSegment></gml:segments></gml:Curve></gml:curveMember><gml:curveMember><gml:Curve><gml:segments><gml:LineStringSegment><gml:posList srsDimension="3">6 7 8 9 10 11</gml:posList></gml:LineStringSegment></gml:segments></gml:Curve></gml:curveMember></gml:MultiCurve>)gml" )
                                                   << static_cast<int>( Qgis::WkbType::MultiLineStringZ )
                                                   << QStringLiteral( "MULTILINESTRING Z ((0 1 2, 3 4 5),(6 7 8, 9 10 11))" );
 
-  QTest::newRow( "multipolygon with z" ) << QStringLiteral( R"gml(<gml:MultiPolygon srsName="EPSG:4326"><gml:polygonMember><gml:Polygon><gml:outerBoundaryIs><gml:LinearRing><gml:coordinates>0,1,2 3,4,5 6,7,8 0,1,2</gml:coordinates></gml:LinearRing></gml:outerBoundaryIs></gml:Polygon></gml:polygonMember><gml:polygonMember><gml:Polygon><gml:outerBoundaryIs><gml:LinearRing><gml:coordinates>9,10,11 12,13,14 15,16,17 9,10,11</gml:coordinates></gml:LinearRing></gml:outerBoundaryIs></gml:Polygon></gml:polygonMember></gml:MultiPolygon>)gml" )
-                                         << static_cast<int>( Qgis::WkbType::MultiPolygonZ )
-                                         << QStringLiteral( "MULTIPOLYGON Z (((0 1 2, 3 4 5, 6 7 8, 0 1 2)),((9 10 11, 12 13 14, 15 16 17, 9 10 11)))" );
+  QTest::newRow( "multipolygon with z gml 2" ) << QStringLiteral( R"gml(<gml:MultiPolygon srsName="EPSG:4326"><gml:polygonMember><gml:Polygon><gml:outerBoundaryIs><gml:LinearRing><gml:coordinates>0,1,2 3,4,5 6,7,8 0,1,2</gml:coordinates></gml:LinearRing></gml:outerBoundaryIs></gml:Polygon></gml:polygonMember><gml:polygonMember><gml:Polygon><gml:outerBoundaryIs><gml:LinearRing><gml:coordinates>9,10,11 12,13,14 15,16,17 9,10,11</gml:coordinates></gml:LinearRing></gml:outerBoundaryIs></gml:Polygon></gml:polygonMember></gml:MultiPolygon>)gml" )
+                                               << static_cast<int>( Qgis::WkbType::MultiPolygonZ )
+                                               << QStringLiteral( "MULTIPOLYGON Z (((0 1 2, 3 4 5, 6 7 8, 0 1 2)),((9 10 11, 12 13 14, 15 16 17, 9 10 11)))" );
 
   QTest::newRow( "multipolygon with z gml 3" ) << QStringLiteral( R"gml(<gml:MultiPolygon srsName="EPSG:4326"><gml:polygonMember><gml:Polygon><gml:outerBoundaryIs><gml:LinearRing><gml:coordinates>0,1,2 3,4,5 6,7,8 0,1,2</gml:coordinates></gml:LinearRing></gml:outerBoundaryIs></gml:Polygon></gml:polygonMember><gml:polygonMember><gml:Polygon><gml:outerBoundaryIs><gml:LinearRing><gml:coordinates>9,10,11 12,13,14 15,16,17 9,10,11</gml:coordinates></gml:LinearRing></gml:outerBoundaryIs></gml:Polygon></gml:polygonMember></gml:MultiPolygon>)gml" )
                                                << static_cast<int>( Qgis::WkbType::MultiPolygonZ )
