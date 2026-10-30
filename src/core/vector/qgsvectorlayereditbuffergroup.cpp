@@ -259,8 +259,8 @@ bool QgsVectorLayerEditBufferGroup::commitChanges( QStringList &commitErrors, bo
     for ( orderedLayersIterator = orderedLayers.constBegin(); orderedLayersIterator != orderedLayers.constEnd(); ++orderedLayersIterator )
     {
       bool featuresAdded;
-      ( *orderedLayersIterator )->editBuffer()->commitChangesAddFeatures( featuresAdded, commitErrors );
-      if ( ! success )
+      success = ( *orderedLayersIterator )->editBuffer()->commitChangesAddFeatures( featuresAdded, commitErrors );
+      if ( !success )
         break;
 
       if ( featuresAdded && transactionLayers.contains( ( *orderedLayersIterator ) ) )
